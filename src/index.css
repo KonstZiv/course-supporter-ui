@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Smooth scrolling, better text rendering */
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Selection color */
+  ::selection {
+    background-color: rgba(27, 77, 92, 0.2);
+  }
+}
+
+@layer components {
+  /* Elegant card style */
+  .card {
+    @apply bg-white rounded-2xl shadow-card border border-canvas-dark/40
+           transition-shadow duration-300 hover:shadow-card-lg;
+  }
+
+  /* Button base */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2
+           px-5 py-2.5 rounded-xl font-medium text-body
+           transition-all duration-200 cursor-pointer
+           focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+  .btn-primary {
+    @apply btn bg-navy text-white hover:bg-navy-light
+           focus:ring-navy/40 active:scale-[0.97];
+  }
+  .btn-secondary {
+    @apply btn bg-canvas-dark text-ink hover:bg-canvas-dark/80
+           border border-canvas-dark focus:ring-navy/20;
+  }
+  .btn-accent {
+    @apply btn bg-amber text-white hover:bg-amber-light
+           focus:ring-amber/40;
+  }
+  .btn-danger {
+    @apply btn bg-coral text-white hover:bg-coral-light
+           focus:ring-coral/40;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-ink-light hover:bg-canvas-dark/50
+           focus:ring-navy/20;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-sm rounded-lg;
+  }
+  .btn-lg {
+    @apply px-7 py-3.5 text-lg rounded-2xl;
+  }
+
+  /* Input style */
+  .input {
+    @apply w-full px-4 py-3 rounded-xl border border-canvas-dark
+           bg-white text-ink text-body placeholder:text-ink-muted
+           focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy
+           transition-all duration-200;
+  }
+
+  /* Page heading */
+  .page-title {
+    @apply font-display text-3xl text-ink tracking-tight;
+  }
+  .page-subtitle {
+    @apply text-lg text-ink-light mt-1;
+  }
+}
+
+/* ─── React Flow overrides ─── */
+.react-flow__background {
+  background-color: #FAFAF7 !important;
+}
+
+.react-flow__minimap {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 2px 8px rgba(26,26,46,0.1) !important;
+  border: 1px solid rgba(26,26,46,0.08) !important;
+}
+
+.react-flow__controls {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 2px 8px rgba(26,26,46,0.1) !important;
+  border: 1px solid rgba(26,26,46,0.08) !important;
+}
+
+.react-flow__controls-button {
+  border-bottom: 1px solid rgba(26,26,46,0.06) !important;
+  background: white !important;
+  width: 32px !important;
+  height: 32px !important;
+}
+.react-flow__controls-button:hover {
+  background: #F0EDE6 !important;
+}
+
+.react-flow__edge-path {
+  stroke: #1B4D5C !important;
+  stroke-width: 2 !important;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(26,26,46,0.15);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(26,26,46,0.25);
+}
