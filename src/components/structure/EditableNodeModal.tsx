@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Loader2, AlertCircle, RefreshCw } from 'lucide-react'
+import { Loader2, AlertCircle, RefreshCw, Scale } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { editableApi } from '../../api/editable'
 import { ApiError } from '../../api/client'
 import { EditableNodeCard } from './EditableNodeCard'
+import { ReconciliationPanel } from '../reconciliation/ReconciliationPanel'
 import type { EditableTreeResponse, EditableNodeResponse } from '../../types/api'
 
 interface EditableNodeModalProps {
@@ -33,6 +34,7 @@ export function EditableNodeModal({ nodeId, nodeTitle, open, onClose }: Editable
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const [showReconciliation, setShowReconciliation] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -68,6 +70,7 @@ export function EditableNodeModal({ nodeId, nodeTitle, open, onClose }: Editable
   }, [])
 
   return (
+  <>
     <Modal open={open} onClose={onClose} title={nodeTitle} wide>
       {loading ? (
         <div className="flex items-center justify-center py-16">
@@ -99,13 +102,23 @@ export function EditableNodeModal({ nodeId, nodeTitle, open, onClose }: Editable
             <span className="text-xs text-ink-muted">
               {tree.nodes.length} {tree.nodes.length === 1 ? 'вузол' : 'вузлів'}
             </span>
-            <button
-              onClick={load}
-              className="p-1 rounded hover:bg-canvas-dark/30 transition-colors"
-              title="Оновити"
-            >
-              <RefreshCw size={12} className="text-ink-muted" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setShowReconciliation(true)}
+                className="flex items-center gap-1 px-2 py-1 rounded text-xs text-navy hover:bg-navy-pale transition-colors"
+                title="Узгодити структуру"
+              >
+                <Scale size={12} />
+                Узгодити
+              </button>
+              <button
+                onClick={load}
+                className="p-1 rounded hover:bg-canvas-dark/30 transition-colors"
+                title="Оновити"
+              >
+                <RefreshCw size={12} className="text-ink-muted" />
+              </button>
+            </div>
           </div>
           {tree.nodes.map((node) => (
             <EditableNodeCard
@@ -127,5 +140,14 @@ export function EditableNodeModal({ nodeId, nodeTitle, open, onClose }: Editable
         </div>
       )}
     </Modal>
+
+    <ReconciliationPanel
+      nodeId={nodeId}
+      nodeTitle={nodeTitle}
+      open={showReconciliation}
+      onClose={() => setShowReconciliation(false)}
+      onApplied={() => load()}
+    />
+  </>
   )
 }

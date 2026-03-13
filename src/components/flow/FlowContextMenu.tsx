@@ -6,6 +6,7 @@ import {
   Upload,
   Sparkles,
   BookOpen,
+  Scale,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { nodesApi } from '../../api/nodes'
@@ -13,6 +14,7 @@ import { generationApi } from '../../api/generation'
 import { useCourseStore } from '../../stores/course'
 import { Modal } from '../ui/Modal'
 import { EditableNodeModal } from '../structure/EditableNodeModal'
+import { ReconciliationPanel } from '../reconciliation/ReconciliationPanel'
 
 export interface MenuPosition {
   x: number
@@ -32,6 +34,7 @@ export function FlowContextMenu({ position, onClose }: Props) {
   const [showRename, setShowRename] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const [showEditable, setShowEditable] = useState(false)
+  const [showReconciliation, setShowReconciliation] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [renameTitle, setRenameTitle] = useState(position.nodeTitle)
   const [busy, setBusy] = useState(false)
@@ -39,12 +42,12 @@ export function FlowContextMenu({ position, onClose }: Props) {
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (showAdd || showRename || showEditable) return
+      if (showAdd || showRename || showEditable || showReconciliation) return
       if (ref.current && !ref.current.contains(e.target as HTMLElement)) onClose()
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [onClose, showAdd, showRename, showEditable])
+  }, [onClose, showAdd, showRename, showEditable, showReconciliation])
 
   const addChild = useCallback(async () => {
     if (!newTitle.trim()) return
@@ -120,6 +123,7 @@ export function FlowContextMenu({ position, onClose }: Props) {
     { icon: Pencil, label: 'Перейменувати', action: () => setShowRename(true) },
     { icon: Sparkles, label: 'Згенерувати структуру', action: generate, accent: true },
     { icon: BookOpen, label: 'Опис вузла', action: () => setShowEditable(true), accent: true },
+    { icon: Scale, label: 'Узгодити структуру', action: () => setShowReconciliation(true), accent: true },
     ...(position.isRoot
       ? []
       : [{ icon: Trash2, label: 'Видалити', action: deleteNode, danger: true }]),
@@ -207,6 +211,14 @@ export function FlowContextMenu({ position, onClose }: Props) {
         nodeTitle={position.nodeTitle}
         open={showEditable}
         onClose={() => setShowEditable(false)}
+      />
+
+      {/* Reconciliation panel */}
+      <ReconciliationPanel
+        nodeId={position.nodeId}
+        nodeTitle={position.nodeTitle}
+        open={showReconciliation}
+        onClose={() => setShowReconciliation(false)}
       />
     </>
   )

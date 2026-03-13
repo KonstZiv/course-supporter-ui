@@ -194,6 +194,32 @@ export interface EditableNodeUpdateRequest {
   web_references?: Array<Record<string, unknown>> | null
 }
 
+// ─── Reconciliation ───
+
+export type ReconciliationIssueType = 'contradiction' | 'gap' | 'overlap' | 'inconsistency'
+
+export interface ReconciliationIssue {
+  id: string
+  editable_node_id: string
+  node_title: string
+  field: string
+  issue_type: ReconciliationIssueType
+  description: string
+  current_value: unknown
+  suggested_value: unknown
+  reasoning: string
+}
+
+export interface ReconciliationPreviewResponse {
+  issues: ReconciliationIssue[]
+  context_summary: string
+}
+
+export interface ReconcileApplyRequest {
+  accepted_issue_ids: string[]
+  issues: ReconciliationIssue[]
+}
+
 // ─── Cost Report ───
 
 export interface CostReport {
