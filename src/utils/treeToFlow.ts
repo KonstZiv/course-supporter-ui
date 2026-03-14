@@ -1,7 +1,10 @@
 import type { Node, Edge } from '@xyflow/react'
 import type { NodeWithMaterials } from '../types/api'
 
+import type { Freshness } from '../stores/reconciliation'
+
 export interface FlowNodeData {
+  [key: string]: unknown
   nodeId: string
   title: string
   description: string | null
@@ -10,6 +13,8 @@ export interface FlowNodeData {
   fingerprint: string | null
   isRoot: boolean
   depth: number
+  reconciliationFreshness?: Freshness | null
+  reconciliationPolling?: boolean
 }
 
 /**

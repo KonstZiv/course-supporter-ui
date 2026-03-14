@@ -2,6 +2,7 @@ import { api } from './client'
 import type {
   JobResponse,
   ReconciliationPreviewResponse,
+  ReconciliationStatusResponse,
   ReconciliationIssue,
   EditableTreeResponse,
 } from '../types/api'
@@ -9,6 +10,9 @@ import type {
 export const reconciliationApi = {
   preview: (nodeId: string) =>
     api.post<JobResponse>(`/api/v1/nodes/${nodeId}/reconcile/preview`),
+
+  getStatus: (nodeId: string) =>
+    api.get<ReconciliationStatusResponse>(`/api/v1/nodes/${nodeId}/reconcile/status`),
 
   getResult: (nodeId: string, jobId: string) =>
     api.get<ReconciliationPreviewResponse>(

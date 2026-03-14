@@ -220,6 +220,21 @@ export interface ReconcileApplyRequest {
   issues: ReconciliationIssue[]
 }
 
+export type ReconciliationFreshness =
+  | 'fresh'
+  | 'stale_materials'
+  | 'stale_edited'
+  | 'stale_both'
+  | 'none'
+
+export interface ReconciliationStatusResponse {
+  has_preview: boolean
+  preview: ReconciliationPreviewResponse | null
+  freshness: ReconciliationFreshness
+  job_id: string | null
+  job_status: string | null
+}
+
 // ─── Cost Report ───
 
 export interface CostReport {

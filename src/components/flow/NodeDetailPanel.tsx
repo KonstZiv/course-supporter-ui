@@ -57,7 +57,7 @@ export function NodeDetailPanel() {
       setUploading(true)
       setUploadProgress({ done: 0, total: files.length })
       for (let i = 0; i < files.length; i++) {
-        const file = files[i]
+        const file = files[i]!
         const ext = file.name.split('.').pop()?.toLowerCase() || ''
         const type = ['mp4', 'mp3', 'wav', 'webm'].includes(ext)
           ? 'video'

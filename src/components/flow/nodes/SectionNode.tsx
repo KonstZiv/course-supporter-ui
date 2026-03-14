@@ -1,7 +1,20 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { FolderOpen, Paperclip } from 'lucide-react'
+import { FolderOpen, Paperclip, Loader2 } from 'lucide-react'
 import type { FlowNodeData } from '../../../utils/treeToFlow'
+
+function ReconciliationDot({ freshness, polling }: { freshness?: string | null; polling?: boolean }) {
+  if (polling) {
+    return <Loader2 size={12} className="animate-spin text-navy shrink-0" />
+  }
+  if (freshness === 'fresh') {
+    return <span className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0" title="Узгодження актуальне" />
+  }
+  if (freshness?.startsWith('stale')) {
+    return <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" title="Узгодження застаріло" />
+  }
+  return null
+}
 
 export const SectionNode = memo(function SectionNode({
   data,
@@ -19,13 +32,23 @@ export const SectionNode = memo(function SectionNode({
   return (
     <div
       className={`
-        w-[280px] bg-white rounded-2xl shadow-card p-4
+        w-[280px] bg-white rounded-2xl shadow-card p-4 relative
         border-2 transition-all duration-200 cursor-pointer
         ${borderColor}
         ${selected ? 'shadow-card-lg scale-[1.02]' : 'hover:shadow-card-lg'}
       `}
     >
       <Handle type="target" position={Position.Top} className="!bg-navy !w-2.5 !h-2.5 !border-2 !border-white" />
+
+      {/* Reconciliation polling overlay */}
+      {data.reconciliationPolling && (
+        <div className="absolute inset-0 bg-white/60 rounded-2xl flex items-center justify-center z-10">
+          <div className="flex items-center gap-2 text-xs text-navy">
+            <Loader2 size={16} className="animate-spin" />
+            <span>Іде узгодження...</span>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-start gap-3 mb-2">
@@ -36,9 +59,12 @@ export const SectionNode = memo(function SectionNode({
           <FolderOpen size={16} className={allReady ? 'text-forest' : hasPending ? 'text-amber' : 'text-navy'} />
         </div>
         <div className="min-w-0 flex-1">
-          <h4 className="font-medium text-sm text-ink leading-snug truncate">
-            {data.title}
-          </h4>
+          <div className="flex items-center gap-1.5">
+            <h4 className="font-medium text-sm text-ink leading-snug truncate">
+              {data.title}
+            </h4>
+            <ReconciliationDot freshness={data.reconciliationFreshness} polling={data.reconciliationPolling} />
+          </div>
           {data.description && (
             <p className="text-ink-muted text-xs mt-0.5 line-clamp-1">
               {data.description}

@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Loader2, AlertCircle, RefreshCw, CheckCircle2 } from 'lucide-react'
+import { Loader2, AlertCircle, RefreshCw, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { reconciliationApi } from '../../api/reconciliation'
 import { jobsApi } from '../../api/jobs'
 import { ApiError } from '../../api/client'
 import { usePolling } from '../../hooks/usePolling'
+import { useReconciliationStore } from '../../stores/reconciliation'
 import { IssueCard } from './IssueCard'
 import { ReconciliationSummary } from './ReconciliationSummary'
 import type {
@@ -12,7 +13,7 @@ import type {
   EditableTreeResponse,
 } from '../../types/api'
 
-type Phase = 'polling' | 'result' | 'applying' | 'done' | 'error'
+type Phase = 'loading' | 'polling' | 'result' | 'applying' | 'done' | 'error'
 
 interface Props {
   nodeId: string
@@ -22,17 +23,26 @@ interface Props {
   onApplied?: (tree: EditableTreeResponse) => void
 }
 
+const STALE_LABELS: Record<string, string> = {
+  stale_materials: 'Матеріали змінились з моменту останнього аналізу',
+  stale_edited: 'Структура була відредагована після аналізу',
+  stale_both: 'Матеріали та структура змінились після аналізу',
+}
+
 export function ReconciliationPanel({ nodeId, nodeTitle, open, onClose, onApplied }: Props) {
-  const [phase, setPhase] = useState<Phase>('polling')
+  const [phase, setPhase] = useState<Phase>('loading')
   const [jobId, setJobId] = useState<string | null>(null)
   const [preview, setPreview] = useState<ReconciliationPreviewResponse | null>(null)
   const [accepted, setAccepted] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
   const [elapsedSec, setElapsedSec] = useState(0)
+  const [staleness, setStaleness] = useState<string | null>(null)
 
   const timerRef = useRef<ReturnType<typeof setInterval>>(undefined)
 
-  // Start elapsed timer
+  const reconState = useReconciliationStore((s) => s.nodes[nodeId])
+  const setNodeStatus = useReconciliationStore((s) => s.setNodeStatus)
+
   const startTimer = useCallback(() => {
     setElapsedSec(0)
     timerRef.current = setInterval(() => setElapsedSec((s) => s + 1), 1000)
@@ -42,22 +52,79 @@ export function ReconciliationPanel({ nodeId, nodeTitle, open, onClose, onApplie
     if (timerRef.current) clearInterval(timerRef.current)
   }, [])
 
-  // Trigger preview on open
+  // On open: check store / fetch status
   useEffect(() => {
     if (!open) return
-    setPhase('polling')
-    setPreview(null)
     setAccepted(new Set())
     setError(null)
-    setJobId(null)
+    setStaleness(null)
 
     let cancelled = false
 
-    async function start() {
+    async function init() {
+      // Check store first
+      if (reconState?.preview && reconState.freshness === 'fresh') {
+        setPreview(reconState.preview)
+        setAccepted(new Set(reconState.preview.issues.map((i) => i.id)))
+        setPhase('result')
+        return
+      }
+
+      // If polling in progress, show spinner
+      if (reconState?.jobStatus === 'queued' || reconState?.jobStatus === 'active') {
+        setJobId(reconState.jobId)
+        setPhase('polling')
+        startTimer()
+        return
+      }
+
+      // Fetch status from API
+      setPhase('loading')
+      try {
+        const status = await reconciliationApi.getStatus(nodeId)
+        if (cancelled) return
+
+        // Update store
+        setNodeStatus(nodeId, {
+          jobId: status.job_id,
+          jobStatus: status.job_status as 'queued' | 'active' | 'complete' | 'failed' | null,
+          preview: status.preview,
+          freshness: status.freshness,
+        })
+
+        if (status.job_status === 'queued' || status.job_status === 'active') {
+          setJobId(status.job_id)
+          setPhase('polling')
+          startTimer()
+          return
+        }
+
+        if (status.has_preview && status.preview) {
+          setPreview(status.preview)
+          setAccepted(new Set(status.preview.issues.map((i) => i.id)))
+          if (status.freshness !== 'fresh') {
+            setStaleness(status.freshness)
+          }
+          setPhase('result')
+          return
+        }
+
+        // No preview — trigger new one
+        await triggerPreview()
+      } catch (e) {
+        if (cancelled) return
+        setError(e instanceof Error ? e.message : 'Не вдалося завантажити статус')
+        setPhase('error')
+      }
+    }
+
+    async function triggerPreview() {
       try {
         const job = await reconciliationApi.preview(nodeId)
         if (cancelled) return
         setJobId(job.id)
+        setNodeStatus(nodeId, { jobId: job.id, jobStatus: 'queued' })
+        setPhase('polling')
         startTimer()
       } catch (e) {
         if (cancelled) return
@@ -66,12 +133,13 @@ export function ReconciliationPanel({ nodeId, nodeTitle, open, onClose, onApplie
       }
     }
 
-    start()
+    init()
     return () => {
       cancelled = true
       stopTimer()
     }
-  }, [open, nodeId, startTimer, stopTimer])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, nodeId])
 
   // Poll job status
   const pollFn = useCallback(async (): Promise<boolean> => {
@@ -86,6 +154,14 @@ export function ReconciliationPanel({ nodeId, nodeTitle, open, onClose, onApplie
         const allIds = new Set(result.issues.map((i) => i.id))
         setAccepted(allIds)
         setPhase('result')
+
+        // Update store
+        setNodeStatus(nodeId, {
+          jobId,
+          jobStatus: 'complete',
+          preview: result,
+          freshness: 'fresh',
+        })
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Не вдалося отримати результат')
         setPhase('error')
@@ -97,11 +173,12 @@ export function ReconciliationPanel({ nodeId, nodeTitle, open, onClose, onApplie
       stopTimer()
       setError(job.error_message || 'Завдання завершилось з помилкою')
       setPhase('error')
+      setNodeStatus(nodeId, { jobId, jobStatus: 'failed' })
       return true
     }
 
     return false
-  }, [jobId, nodeId, stopTimer])
+  }, [jobId, nodeId, stopTimer, setNodeStatus])
 
   usePolling(pollFn, 3000, phase === 'polling' && jobId !== null)
 
@@ -115,7 +192,6 @@ export function ReconciliationPanel({ nodeId, nodeTitle, open, onClose, onApplie
     })
   }, [])
 
-  // Select / deselect all
   const selectAll = useCallback(() => {
     if (!preview) return
     setAccepted(new Set(preview.issues.map((i) => i.id)))
@@ -148,30 +224,36 @@ export function ReconciliationPanel({ nodeId, nodeTitle, open, onClose, onApplie
     }
   }, [preview, accepted, nodeId, onApplied, onClose])
 
-  // Retry from scratch
-  const retry = useCallback(() => {
+  // Refresh — trigger new preview
+  const refresh = useCallback(async () => {
     setPhase('polling')
     setPreview(null)
+    setStaleness(null)
     setAccepted(new Set())
     setError(null)
     setJobId(null)
 
-    async function start() {
-      try {
-        const job = await reconciliationApi.preview(nodeId)
-        setJobId(job.id)
-        startTimer()
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Не вдалося запустити аналіз')
-        setPhase('error')
-      }
+    try {
+      const job = await reconciliationApi.preview(nodeId)
+      setJobId(job.id)
+      setNodeStatus(nodeId, { jobId: job.id, jobStatus: 'queued' })
+      startTimer()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Не вдалося запустити аналіз')
+      setPhase('error')
     }
-
-    start()
-  }, [nodeId, startTimer])
+  }, [nodeId, startTimer, setNodeStatus])
 
   return (
     <Modal open={open} onClose={onClose} title={`Узгодження: ${nodeTitle}`} wide>
+      {/* Loading initial status */}
+      {phase === 'loading' && (
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <Loader2 size={28} className="animate-spin text-navy" />
+          <p className="text-sm text-ink">Завантаження...</p>
+        </div>
+      )}
+
       {/* Polling / loading */}
       {phase === 'polling' && (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
@@ -190,7 +272,7 @@ export function ReconciliationPanel({ nodeId, nodeTitle, open, onClose, onApplie
           <AlertCircle size={24} className="text-coral" />
           <p className="text-sm text-ink-muted max-w-md">{error}</p>
           <button
-            onClick={retry}
+            onClick={refresh}
             className="text-sm text-navy hover:underline flex items-center gap-1"
           >
             <RefreshCw size={12} /> Спробувати знову
@@ -217,6 +299,23 @@ export function ReconciliationPanel({ nodeId, nodeTitle, open, onClose, onApplie
       {/* Result */}
       {phase === 'result' && preview && (
         <div className="space-y-4">
+          {/* Staleness warning */}
+          {staleness && (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              <AlertTriangle size={16} className="text-amber-500 mt-0.5 shrink-0" />
+              <div className="text-xs text-amber-800">
+                <p className="font-medium">Результат може бути неактуальним</p>
+                <p>{STALE_LABELS[staleness] ?? staleness}</p>
+                <button
+                  onClick={refresh}
+                  className="text-amber-700 underline mt-1 inline-flex items-center gap-1"
+                >
+                  <RefreshCw size={10} /> Оновити
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Context summary */}
           {preview.context_summary && (
             <p className="text-xs text-ink-muted bg-canvas-dark/30 rounded-lg px-3 py-2">

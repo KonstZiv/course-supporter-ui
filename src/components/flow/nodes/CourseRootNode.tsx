@@ -1,7 +1,20 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { BookOpen, Layers, Paperclip } from 'lucide-react'
+import { BookOpen, Layers, Paperclip, Loader2 } from 'lucide-react'
 import type { FlowNodeData } from '../../../utils/treeToFlow'
+
+function ReconciliationIndicator({ freshness, polling }: { freshness?: string | null; polling?: boolean }) {
+  if (polling) {
+    return <Loader2 size={14} className="animate-spin text-amber-light shrink-0" />
+  }
+  if (freshness === 'fresh') {
+    return <span className="w-2.5 h-2.5 rounded-full bg-green-400 shrink-0" title="Узгодження актуальне" />
+  }
+  if (freshness?.startsWith('stale')) {
+    return <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" title="Узгодження застаріло" />
+  }
+  return null
+}
 
 export const CourseRootNode = memo(function CourseRootNode({
   data,
@@ -11,20 +24,33 @@ export const CourseRootNode = memo(function CourseRootNode({
     <div
       className={`
         w-[320px] bg-gradient-to-br from-navy to-navy-dark
-        rounded-2xl shadow-card-lg text-white p-5
+        rounded-2xl shadow-card-lg text-white p-5 relative
         border-2 transition-all duration-200 cursor-pointer
         ${selected ? 'border-amber shadow-glow scale-[1.02]' : 'border-transparent hover:border-amber/40'}
       `}
     >
+      {/* Reconciliation polling overlay */}
+      {data.reconciliationPolling && (
+        <div className="absolute inset-0 bg-navy/50 rounded-2xl flex items-center justify-center z-10">
+          <div className="flex items-center gap-2 text-xs text-white/90">
+            <Loader2 size={16} className="animate-spin" />
+            <span>Іде узгодження...</span>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start gap-3 mb-3">
         <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
           <BookOpen size={20} className="text-amber-light" />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="font-display text-lg leading-snug truncate">
-            {data.title}
-          </h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className="font-display text-lg leading-snug truncate">
+              {data.title}
+            </h3>
+            <ReconciliationIndicator freshness={data.reconciliationFreshness} polling={data.reconciliationPolling} />
+          </div>
           {data.description && (
             <p className="text-white/60 text-sm mt-0.5 line-clamp-2">
               {data.description}
