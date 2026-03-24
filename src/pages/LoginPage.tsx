@@ -32,7 +32,7 @@ export function LoginPage() {
       } else if (res.status === 401 || res.status === 403) {
         setError('Невірний API ключ. Перевірте та спробуйте ще раз.')
       } else {
-        setError(`Помилка з\'єднання: ${res.status}`)
+        setError(`Помилка з'єднання: ${res.status}`)
       }
     } catch {
       setError('Не вдалося з\'єднатися з сервером. Перевірте URL API.')
