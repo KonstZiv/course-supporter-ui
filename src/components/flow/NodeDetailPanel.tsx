@@ -18,7 +18,7 @@ import {
   Link2,
 } from 'lucide-react'
 import { useDropzone } from 'react-dropzone'
-import type { NodeWithMaterials, MaterialEntrySummary } from '../../types/api'
+import type { NodeWithMaterials, MaterialEntrySummary, MaterialRole } from '../../types/api'
 
 const iconMap: Record<string, typeof FileText> = {
   FileText, Video, FileImage, Globe, File: FileIcon,
@@ -42,6 +42,7 @@ export function NodeDetailPanel() {
   const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 })
   const [linkUrl, setLinkUrl] = useState('')
   const [addingLink, setAddingLink] = useState(false)
+  const [materialRole, setMaterialRole] = useState<MaterialRole>('educational')
 
   const node = tree && selectedNodeId ? findNode(tree, selectedNodeId) : null
 
@@ -66,13 +67,13 @@ export function NodeDetailPanel() {
             : ['html', 'htm'].includes(ext)
               ? 'web'
               : 'text'
-        await materialsApi.upload(node.id, file, type)
+        await materialsApi.upload(node.id, file, type, materialRole)
         setUploadProgress({ done: i + 1, total: files.length })
       }
       await refresh()
       setUploading(false)
     },
-    [node, refresh],
+    [node, refresh, materialRole],
   )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -110,13 +111,13 @@ export function NodeDetailPanel() {
     try {
       const url = linkUrl.trim()
       const isVideo = /youtu\.?be|vimeo|\.mp4/i.test(url)
-      await materialsApi.uploadUrl(node.id, url, isVideo ? 'video' : 'web')
+      await materialsApi.uploadUrl(node.id, url, isVideo ? 'video' : 'web', materialRole)
       setLinkUrl('')
       await refresh()
     } finally {
       setAddingLink(false)
     }
-  }, [node, linkUrl, refresh])
+  }, [node, linkUrl, refresh, materialRole])
 
   if (!node) return null
 
@@ -190,6 +191,30 @@ export function NodeDetailPanel() {
           </div>
         )}
 
+        {/* Material role toggle */}
+        <div className="mt-3 flex rounded-lg border border-canvas-dark/40 overflow-hidden">
+          <button
+            onClick={() => setMaterialRole('educational')}
+            className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+              materialRole === 'educational'
+                ? 'bg-navy text-white'
+                : 'bg-white text-ink-muted hover:bg-canvas'
+            }`}
+          >
+            📚 Учбовий
+          </button>
+          <button
+            onClick={() => setMaterialRole('methodological')}
+            className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+              materialRole === 'methodological'
+                ? 'bg-plum text-white'
+                : 'bg-white text-ink-muted hover:bg-canvas'
+            }`}
+          >
+            📋 Методичний
+          </button>
+        </div>
+
         {/* URL input */}
         <div className="mt-3 flex gap-2">
           <div className="relative flex-1">
@@ -237,7 +262,14 @@ export function NodeDetailPanel() {
                   <p className="text-sm font-medium text-ink truncate">
                     {mat.filename || mat.source_url || mat.source_type}
                   </p>
-                  <StatusBadge state={mat.state} />
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <StatusBadge state={mat.state} />
+                    {mat.material_role === 'methodological' && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-plum/10 text-plum font-medium">
+                        методичний
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   {mat.state === 'error' && (

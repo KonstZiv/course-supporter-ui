@@ -4,6 +4,7 @@ export type SourceType = 'video' | 'presentation' | 'text' | 'web'
 export type MaterialState = 'raw' | 'pending' | 'ready' | 'integrity_broken' | 'error'
 export type GenerationMode = 'free' | 'guided'
 export type ValidationState = 'validated' | 'pending_validation' | 'validation_failed'
+export type MaterialRole = 'educational' | 'methodological'
 export type JobStatus = 'queued' | 'active' | 'complete' | 'failed'
 
 // ─── Node ───
@@ -36,6 +37,7 @@ export interface MaterialEntrySummary {
   id: string
   node_id: string
   source_type: SourceType
+  material_role: MaterialRole
   order: number
   filename: string | null
   source_url: string

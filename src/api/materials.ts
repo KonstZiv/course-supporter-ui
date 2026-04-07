@@ -11,20 +11,32 @@ export interface MaterialCreateResponse {
 }
 
 export const materialsApi = {
-  upload: (nodeId: string, file: File, sourceType: string = 'presentation') => {
+  upload: (
+    nodeId: string,
+    file: File,
+    sourceType: string = 'presentation',
+    materialRole: string = 'educational',
+  ) => {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('source_type', sourceType)
+    formData.append('material_role', materialRole)
     return api.post<MaterialCreateResponse>(
       `/api/v1/nodes/${nodeId}/materials`,
       formData,
     )
   },
 
-  uploadUrl: (nodeId: string, url: string, sourceType: string = 'web') => {
+  uploadUrl: (
+    nodeId: string,
+    url: string,
+    sourceType: string = 'web',
+    materialRole: string = 'educational',
+  ) => {
     const formData = new FormData()
     formData.append('source_url', url)
     formData.append('source_type', sourceType)
+    formData.append('material_role', materialRole)
     return api.post<MaterialCreateResponse>(
       `/api/v1/nodes/${nodeId}/materials`,
       formData,
