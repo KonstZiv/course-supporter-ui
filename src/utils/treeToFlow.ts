@@ -51,9 +51,9 @@ export function treeToFlow(
       id: `e-${parentId}-${node.id}`,
       source: parentId,
       target: node.id,
-      type: 'smoothstep',
+      type: 'default',
       animated: false,
-      style: { stroke: '#1B4D5C', strokeWidth: 2 },
+      style: { stroke: '#C0BDB6', strokeWidth: 1.5 },
     })
   }
 
