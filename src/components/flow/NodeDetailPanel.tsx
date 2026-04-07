@@ -3,6 +3,7 @@ import { useCourseStore } from '../../stores/course'
 import { materialsApi } from '../../api/materials'
 import { nodesApi } from '../../api/nodes'
 import { StatusBadge } from '../ui/StatusBadge'
+import { Modal } from '../ui/Modal'
 import { sourceTypeMeta } from '../../utils/sourceTypeIcon'
 import {
   X,
@@ -33,6 +34,97 @@ function findNode(tree: NodeWithMaterials, id: string): NodeWithMaterials | null
   return null
 }
 
+/* ── Upload confirmation dialog ── */
+
+interface UploadConfirmProps {
+  open: boolean
+  files: { name: string; sourceType: string }[]
+  linkUrl?: string
+  onConfirm: (role: MaterialRole) => void
+  onCancel: () => void
+}
+
+function UploadConfirmDialog({ open, files, linkUrl, onConfirm, onCancel }: UploadConfirmProps) {
+  const [role, setRole] = useState<MaterialRole | null>(null)
+
+  // Reset role when dialog opens
+  const handleConfirm = () => {
+    if (role) {
+      onConfirm(role)
+      setRole(null)
+    }
+  }
+  const handleCancel = () => {
+    setRole(null)
+    onCancel()
+  }
+
+  const label = linkUrl
+    ? linkUrl.slice(0, 50) + (linkUrl.length > 50 ? '…' : '')
+    : files.length === 1
+      ? files[0]!.name
+      : `${files.length} файлів`
+
+  return (
+    <Modal open={open} onClose={handleCancel} title="Тип матеріалу">
+      <p className="text-sm text-ink-muted mb-1">
+        Завантаження: <span className="font-medium text-ink">{label}</span>
+      </p>
+      <p className="text-sm text-ink-muted mb-4">
+        Оберіть тип матеріалу перед завантаженням:
+      </p>
+
+      <div className="flex gap-3 mb-6">
+        <button
+          onClick={() => setRole('educational')}
+          className={`
+            flex-1 rounded-xl border-2 p-4 text-center transition-all
+            ${role === 'educational'
+              ? 'border-navy bg-navy/5 shadow-sm'
+              : 'border-canvas-dark hover:border-navy/40'}
+          `}
+        >
+          <span className="text-2xl block mb-1">📚</span>
+          <span className="text-sm font-medium text-ink">Учбовий</span>
+          <span className="text-[11px] text-ink-muted block mt-0.5">
+            Доносить інформацію студенту
+          </span>
+        </button>
+        <button
+          onClick={() => setRole('methodological')}
+          className={`
+            flex-1 rounded-xl border-2 p-4 text-center transition-all
+            ${role === 'methodological'
+              ? 'border-plum bg-plum/5 shadow-sm'
+              : 'border-canvas-dark hover:border-plum/40'}
+          `}
+        >
+          <span className="text-2xl block mb-1">📋</span>
+          <span className="text-sm font-medium text-ink">Методичний</span>
+          <span className="text-[11px] text-ink-muted block mt-0.5">
+            Декларує наміри курсу
+          </span>
+        </button>
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <button className="btn-secondary btn-sm" onClick={handleCancel}>
+          Скасувати
+        </button>
+        <button
+          className="btn-primary btn-sm"
+          onClick={handleConfirm}
+          disabled={role === null}
+        >
+          Завантажити
+        </button>
+      </div>
+    </Modal>
+  )
+}
+
+/* ── Main panel ── */
+
 export function NodeDetailPanel() {
   const tree = useCourseStore((s) => s.tree)
   const selectedNodeId = useCourseStore((s) => s.selectedNodeId)
@@ -42,7 +134,11 @@ export function NodeDetailPanel() {
   const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 })
   const [linkUrl, setLinkUrl] = useState('')
   const [addingLink, setAddingLink] = useState(false)
-  const [materialRole, setMaterialRole] = useState<MaterialRole>('educational')
+
+  // Upload confirmation state
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [pendingLink, setPendingLink] = useState<string | null>(null)
+  const showConfirm = pendingFiles.length > 0 || pendingLink !== null
 
   const node = tree && selectedNodeId ? findNode(tree, selectedNodeId) : null
 
@@ -52,29 +148,63 @@ export function NodeDetailPanel() {
     setTree(fresh)
   }, [tree, setTree])
 
-  const onDrop = useCallback(
-    async (files: File[]) => {
+  // File drop → show confirmation
+  const onDrop = useCallback((files: File[]) => {
+    if (files.length > 0) setPendingFiles(files)
+  }, [])
+
+  // Link add → show confirmation
+  const handleAddLink = useCallback(() => {
+    if (!linkUrl.trim()) return
+    setPendingLink(linkUrl.trim())
+  }, [linkUrl])
+
+  // Confirmed upload with role
+  const handleConfirmUpload = useCallback(
+    async (role: MaterialRole) => {
       if (!node) return
-      setUploading(true)
-      setUploadProgress({ done: 0, total: files.length })
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i]!
-        const ext = file.name.split('.').pop()?.toLowerCase() || ''
-        const type = ['mp4', 'mp3', 'wav', 'webm'].includes(ext)
-          ? 'video'
-          : ['pdf', 'pptx', 'ppt'].includes(ext)
-            ? 'presentation'
-            : ['html', 'htm'].includes(ext)
-              ? 'web'
-              : 'text'
-        await materialsApi.upload(node.id, file, type, materialRole)
-        setUploadProgress({ done: i + 1, total: files.length })
+
+      if (pendingFiles.length > 0) {
+        setUploading(true)
+        setUploadProgress({ done: 0, total: pendingFiles.length })
+        for (let i = 0; i < pendingFiles.length; i++) {
+          const file = pendingFiles[i]!
+          const ext = file.name.split('.').pop()?.toLowerCase() || ''
+          const type = ['mp4', 'mp3', 'wav', 'webm'].includes(ext)
+            ? 'video'
+            : ['pdf', 'pptx', 'ppt'].includes(ext)
+              ? 'presentation'
+              : ['html', 'htm'].includes(ext)
+                ? 'web'
+                : 'text'
+          await materialsApi.upload(node.id, file, type, role)
+          setUploadProgress({ done: i + 1, total: pendingFiles.length })
+        }
+        setPendingFiles([])
+        await refresh()
+        setUploading(false)
       }
-      await refresh()
-      setUploading(false)
+
+      if (pendingLink) {
+        setAddingLink(true)
+        try {
+          const isVideo = /youtu\.?be|vimeo|\.mp4/i.test(pendingLink)
+          await materialsApi.uploadUrl(node.id, pendingLink, isVideo ? 'video' : 'web', role)
+          setLinkUrl('')
+          setPendingLink(null)
+          await refresh()
+        } finally {
+          setAddingLink(false)
+        }
+      }
     },
-    [node, refresh, materialRole],
+    [node, pendingFiles, pendingLink, refresh],
   )
+
+  const handleCancelUpload = useCallback(() => {
+    setPendingFiles([])
+    setPendingLink(null)
+  }, [])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -105,19 +235,19 @@ export function NodeDetailPanel() {
     [refresh],
   )
 
-  const handleAddLink = useCallback(async () => {
-    if (!node || !linkUrl.trim()) return
-    setAddingLink(true)
-    try {
-      const url = linkUrl.trim()
-      const isVideo = /youtu\.?be|vimeo|\.mp4/i.test(url)
-      await materialsApi.uploadUrl(node.id, url, isVideo ? 'video' : 'web', materialRole)
-      setLinkUrl('')
-      await refresh()
-    } finally {
-      setAddingLink(false)
-    }
-  }, [node, linkUrl, refresh, materialRole])
+  // Toggle material role on existing material (clickable badge)
+  const handleToggleRole = useCallback(
+    async (mat: MaterialEntrySummary) => {
+      const newRole: MaterialRole = mat.material_role === 'educational' ? 'methodological' : 'educational'
+      try {
+        await materialsApi.updateRole(mat.id, newRole)
+        await refresh()
+      } catch {
+        // Silently fail — API might not support this yet
+      }
+    },
+    [refresh],
+  )
 
   if (!node) return null
 
@@ -191,30 +321,6 @@ export function NodeDetailPanel() {
           </div>
         )}
 
-        {/* Material role toggle */}
-        <div className="mt-3 flex rounded-lg border border-canvas-dark/40 overflow-hidden">
-          <button
-            onClick={() => setMaterialRole('educational')}
-            className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
-              materialRole === 'educational'
-                ? 'bg-navy text-white'
-                : 'bg-white text-ink-muted hover:bg-canvas'
-            }`}
-          >
-            📚 Учбовий
-          </button>
-          <button
-            onClick={() => setMaterialRole('methodological')}
-            className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
-              materialRole === 'methodological'
-                ? 'bg-plum text-white'
-                : 'bg-white text-ink-muted hover:bg-canvas'
-            }`}
-          >
-            📋 Методичний
-          </button>
-        </div>
-
         {/* URL input */}
         <div className="mt-3 flex gap-2">
           <div className="relative flex-1">
@@ -249,13 +355,14 @@ export function NodeDetailPanel() {
           node.materials.map((mat) => {
             const meta = sourceTypeMeta(mat.source_type)
             const Icon = iconMap[meta.icon] || FileIcon
+            const isMethodological = mat.material_role === 'methodological'
             return (
               <div
                 key={mat.id}
                 className="flex items-center gap-3 p-3 rounded-xl bg-canvas hover:bg-canvas-dark/50
                            transition-colors group"
               >
-                <div className={`w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0`}>
+                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0">
                   <Icon size={16} className={meta.color} />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -264,11 +371,19 @@ export function NodeDetailPanel() {
                   </p>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <StatusBadge state={mat.state} />
-                    {mat.material_role === 'methodological' && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-plum/10 text-plum font-medium">
-                        методичний
-                      </span>
-                    )}
+                    <button
+                      onClick={() => handleToggleRole(mat)}
+                      className={`
+                        text-[10px] px-1.5 py-0.5 rounded font-medium cursor-pointer
+                        transition-colors
+                        ${isMethodological
+                          ? 'bg-plum/10 text-plum hover:bg-plum/20'
+                          : 'bg-navy/6 text-ink-muted hover:bg-navy/12'}
+                      `}
+                      title="Натисніть щоб змінити тип"
+                    >
+                      {isMethodological ? '📋 методичний' : '📚 учбовий'}
+                    </button>
                   </div>
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -294,6 +409,15 @@ export function NodeDetailPanel() {
           })
         )}
       </div>
+
+      {/* Upload confirmation dialog */}
+      <UploadConfirmDialog
+        open={showConfirm}
+        files={pendingFiles.map((f) => ({ name: f.name, sourceType: '' }))}
+        linkUrl={pendingLink || undefined}
+        onConfirm={handleConfirmUpload}
+        onCancel={handleCancelUpload}
+      />
     </div>
   )
 }

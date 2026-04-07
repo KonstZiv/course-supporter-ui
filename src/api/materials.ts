@@ -54,4 +54,10 @@ export const materialsApi = {
 
   retry: (entryId: string) =>
     api.post<{ job_id: string }>(`/api/v1/materials/${entryId}/retry`),
+
+  updateRole: (entryId: string, materialRole: string) => {
+    const formData = new FormData()
+    formData.append('material_role', materialRole)
+    return api.patch<void>(`/api/v1/materials/${entryId}`, formData)
+  },
 }
