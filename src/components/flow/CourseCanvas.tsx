@@ -117,7 +117,7 @@ export function CourseCanvas() {
   }, [])
 
   const minimapNodeColor = useMemo(
-    () => (node: Node) => (node.type === 'courseRoot' ? '#1B4D5C' : '#2A6B7C'),
+    () => (node: Node) => (node.type === 'courseRoot' ? '#1B4D5C' : '#C0BDB6'),
     [],
   )
 
@@ -138,11 +138,11 @@ export function CourseCanvas() {
         maxZoom={1.5}
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="#D0CDC4" />
+        <Background variant={BackgroundVariant.Dots} gap={24} size={0.5} color="#D5D3CC" />
         <Controls showInteractive={false} />
         <MiniMap
           nodeColor={minimapNodeColor}
-          maskColor="rgba(250,250,247,0.8)"
+          maskColor="rgba(245,245,242,0.85)"
           pannable
           zoomable
         />

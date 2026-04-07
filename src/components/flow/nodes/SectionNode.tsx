@@ -8,10 +8,10 @@ function ReconciliationDot({ freshness, polling }: { freshness?: string | null; 
     return <Loader2 size={12} className="animate-spin text-navy shrink-0" />
   }
   if (freshness === 'fresh') {
-    return <span className="w-2.5 h-2.5 rounded-full bg-green-500 shrink-0" title="Узгодження актуальне" />
+    return <span className="w-2 h-2 rounded-full bg-forest shrink-0" title="Узгодження актуальне" />
   }
   if (freshness?.startsWith('stale')) {
-    return <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" title="Узгодження застаріло" />
+    return <span className="w-2 h-2 rounded-full bg-amber shrink-0" title="Узгодження застаріло" />
   }
   return null
 }
@@ -24,25 +24,27 @@ export const SectionNode = memo(function SectionNode({
   const hasPending = data.materials.some((m) => m.state === 'pending')
   const allReady = data.materials.length > 0 && data.materials.every((m) => m.state === 'ready')
 
-  let borderColor = 'border-transparent'
-  if (selected) borderColor = 'border-navy'
-  else if (hasError) borderColor = 'border-coral/40'
-  else if (allReady) borderColor = 'border-forest/30'
+  let accentColor = 'border-l-navy/30'
+  if (hasError) accentColor = 'border-l-coral'
+  else if (allReady) accentColor = 'border-l-forest'
+  else if (hasPending) accentColor = 'border-l-amber'
 
   return (
     <div
       className={`
-        w-[280px] bg-white rounded-2xl shadow-card p-4 relative
-        border-2 transition-all duration-200 cursor-pointer
-        ${borderColor}
-        ${selected ? 'shadow-card-lg scale-[1.02]' : 'hover:shadow-card-lg'}
+        w-[280px] bg-white rounded-xl p-4 relative
+        border-l-[3px] ${accentColor} border border-transparent
+        transition-all duration-200 cursor-pointer
+        ${selected
+          ? 'shadow-card-lg ring-2 ring-navy/15 scale-[1.01]'
+          : 'shadow-card hover:shadow-card-lg'}
       `}
     >
-      <Handle type="target" position={Position.Top} className="!bg-navy !w-2.5 !h-2.5 !border-2 !border-white" />
+      <Handle type="target" position={Position.Top} className="!bg-navy/30 !w-2 !h-2 !border-2 !border-white" />
 
       {/* Reconciliation polling overlay */}
       {data.reconciliationPolling && (
-        <div className="absolute inset-0 bg-white/60 rounded-2xl flex items-center justify-center z-10">
+        <div className="absolute inset-0 bg-white/70 rounded-xl flex items-center justify-center z-10 backdrop-blur-[1px]">
           <div className="flex items-center gap-2 text-xs text-navy">
             <Loader2 size={16} className="animate-spin" />
             <span>Іде узгодження...</span>
@@ -51,12 +53,12 @@ export const SectionNode = memo(function SectionNode({
       )}
 
       {/* Header */}
-      <div className="flex items-start gap-3 mb-2">
+      <div className="flex items-start gap-2.5 mb-2">
         <div className={`
-          w-8 h-8 rounded-lg flex items-center justify-center shrink-0
-          ${allReady ? 'bg-forest-pale' : hasPending ? 'bg-amber-pale' : 'bg-navy-pale'}
+          w-7 h-7 rounded-lg flex items-center justify-center shrink-0
+          ${allReady ? 'bg-forest/8' : hasPending ? 'bg-amber/8' : 'bg-navy/6'}
         `}>
-          <FolderOpen size={16} className={allReady ? 'text-forest' : hasPending ? 'text-amber' : 'text-navy'} />
+          <FolderOpen size={14} className={allReady ? 'text-forest' : hasPending ? 'text-amber' : 'text-navy/60'} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
@@ -80,21 +82,21 @@ export const SectionNode = memo(function SectionNode({
             <span
               key={m.id}
               className={`
-                inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-medium
-                ${m.state === 'ready' ? 'bg-forest-pale text-forest' : ''}
-                ${m.state === 'pending' ? 'bg-amber-pale text-amber-dark animate-pulse-soft' : ''}
-                ${m.state === 'error' ? 'bg-coral-pale text-coral' : ''}
-                ${m.state === 'raw' ? 'bg-canvas-dark text-ink-muted' : ''}
-                ${m.state === 'integrity_broken' ? 'bg-coral-pale text-coral' : ''}
+                inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-medium
+                ${m.state === 'ready' ? 'bg-forest/6 text-forest' : ''}
+                ${m.state === 'pending' ? 'bg-amber/8 text-amber-dark animate-pulse-soft' : ''}
+                ${m.state === 'error' ? 'bg-coral/8 text-coral' : ''}
+                ${m.state === 'raw' ? 'bg-canvas-dark/60 text-ink-muted' : ''}
+                ${m.state === 'integrity_broken' ? 'bg-coral/8 text-coral' : ''}
               `}
               title={`${m.filename || m.source_url || m.source_type} — ${m.state}`}
             >
-              <Paperclip size={10} />
+              <Paperclip size={9} />
               {m.filename?.slice(0, 14) || m.source_url?.slice(0, 14) || m.source_type}
             </span>
           ))}
           {data.materials.length > 5 && (
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-canvas-dark text-ink-muted">
+            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-canvas-dark/60 text-ink-muted">
               +{data.materials.length - 5}
             </span>
           )}
@@ -108,7 +110,7 @@ export const SectionNode = memo(function SectionNode({
         </div>
       )}
 
-      <Handle type="source" position={Position.Bottom} className="!bg-navy !w-2.5 !h-2.5 !border-2 !border-white" />
+      <Handle type="source" position={Position.Bottom} className="!bg-navy/30 !w-2 !h-2 !border-2 !border-white" />
     </div>
   )
 })

@@ -5,13 +5,13 @@ import type { FlowNodeData } from '../../../utils/treeToFlow'
 
 function ReconciliationIndicator({ freshness, polling }: { freshness?: string | null; polling?: boolean }) {
   if (polling) {
-    return <Loader2 size={14} className="animate-spin text-amber-light shrink-0" />
+    return <Loader2 size={14} className="animate-spin text-amber shrink-0" />
   }
   if (freshness === 'fresh') {
-    return <span className="w-2.5 h-2.5 rounded-full bg-green-400 shrink-0" title="Узгодження актуальне" />
+    return <span className="w-2 h-2 rounded-full bg-forest shrink-0" title="Узгодження актуальне" />
   }
   if (freshness?.startsWith('stale')) {
-    return <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" title="Узгодження застаріло" />
+    return <span className="w-2 h-2 rounded-full bg-amber shrink-0" title="Узгодження застаріло" />
   }
   return null
 }
@@ -23,16 +23,18 @@ export const CourseRootNode = memo(function CourseRootNode({
   return (
     <div
       className={`
-        w-[320px] bg-gradient-to-br from-navy to-navy-dark
-        rounded-2xl shadow-card-lg text-white p-5 relative
-        border-2 transition-all duration-200 cursor-pointer
-        ${selected ? 'border-amber shadow-glow scale-[1.02]' : 'border-transparent hover:border-amber/40'}
+        w-[320px] bg-white rounded-2xl p-5 relative
+        border-l-4 border-l-navy border border-transparent
+        transition-all duration-200 cursor-pointer
+        ${selected
+          ? 'shadow-card-lg ring-2 ring-navy/20 scale-[1.01]'
+          : 'shadow-card hover:shadow-card-lg'}
       `}
     >
       {/* Reconciliation polling overlay */}
       {data.reconciliationPolling && (
-        <div className="absolute inset-0 bg-navy/50 rounded-2xl flex items-center justify-center z-10">
-          <div className="flex items-center gap-2 text-xs text-white/90">
+        <div className="absolute inset-0 bg-white/70 rounded-2xl flex items-center justify-center z-10 backdrop-blur-[1px]">
+          <div className="flex items-center gap-2 text-xs text-navy">
             <Loader2 size={16} className="animate-spin" />
             <span>Іде узгодження...</span>
           </div>
@@ -41,18 +43,18 @@ export const CourseRootNode = memo(function CourseRootNode({
 
       {/* Header */}
       <div className="flex items-start gap-3 mb-3">
-        <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center shrink-0">
-          <BookOpen size={20} className="text-amber-light" />
+        <div className="w-10 h-10 rounded-xl bg-navy/8 flex items-center justify-center shrink-0">
+          <BookOpen size={20} className="text-navy" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <h3 className="font-display text-lg leading-snug truncate">
+            <h3 className="font-display text-lg text-ink leading-snug truncate">
               {data.title}
             </h3>
             <ReconciliationIndicator freshness={data.reconciliationFreshness} polling={data.reconciliationPolling} />
           </div>
           {data.description && (
-            <p className="text-white/60 text-sm mt-0.5 line-clamp-2">
+            <p className="text-ink-muted text-sm mt-0.5 line-clamp-2">
               {data.description}
             </p>
           )}
@@ -60,7 +62,7 @@ export const CourseRootNode = memo(function CourseRootNode({
       </div>
 
       {/* Stats */}
-      <div className="flex items-center gap-4 text-sm text-white/70">
+      <div className="flex items-center gap-4 text-sm text-ink-muted">
         <span className="flex items-center gap-1.5">
           <Layers size={14} />
           {data.childrenCount} розділів
@@ -79,10 +81,10 @@ export const CourseRootNode = memo(function CourseRootNode({
               key={m.id}
               className={`
                 text-[11px] px-2 py-0.5 rounded-full font-medium
-                ${m.state === 'ready' ? 'bg-white/20 text-white/90' : ''}
-                ${m.state === 'pending' ? 'bg-amber/30 text-amber-light animate-pulse-soft' : ''}
-                ${m.state === 'error' ? 'bg-coral/30 text-coral-light' : ''}
-                ${m.state === 'raw' ? 'bg-white/10 text-white/50' : ''}
+                ${m.state === 'ready' ? 'bg-forest/8 text-forest' : ''}
+                ${m.state === 'pending' ? 'bg-amber/10 text-amber-dark animate-pulse-soft' : ''}
+                ${m.state === 'error' ? 'bg-coral/10 text-coral' : ''}
+                ${m.state === 'raw' ? 'bg-canvas-dark text-ink-muted' : ''}
               `}
               title={m.filename || m.source_url || m.source_type}
             >
@@ -90,14 +92,14 @@ export const CourseRootNode = memo(function CourseRootNode({
             </span>
           ))}
           {data.materials.length > 4 && (
-            <span className="text-[11px] px-2 py-0.5 rounded-full bg-white/10 text-white/50">
+            <span className="text-[11px] px-2 py-0.5 rounded-full bg-canvas-dark text-ink-muted">
               +{data.materials.length - 4}
             </span>
           )}
         </div>
       )}
 
-      <Handle type="source" position={Position.Bottom} className="!bg-amber !w-3 !h-3 !border-2 !border-navy" />
+      <Handle type="source" position={Position.Bottom} className="!bg-navy/40 !w-2 !h-2 !border-2 !border-white" />
     </div>
   )
 })

@@ -74,38 +74,42 @@
   }
 }
 
-/* ─── React Flow overrides ─── */
+/* ─── React Flow overrides (ManyChat-inspired clean style) ─── */
 .react-flow__background {
-  background-color: #FAFAF7 !important;
+  background-color: #F5F5F2 !important;
 }
 
 .react-flow__minimap {
   border-radius: 12px !important;
   overflow: hidden !important;
-  box-shadow: 0 2px 8px rgba(26,26,46,0.1) !important;
-  border: 1px solid rgba(26,26,46,0.08) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08) !important;
+  border: 1px solid rgba(0,0,0,0.06) !important;
 }
 
 .react-flow__controls {
   border-radius: 12px !important;
   overflow: hidden !important;
-  box-shadow: 0 2px 8px rgba(26,26,46,0.1) !important;
-  border: 1px solid rgba(26,26,46,0.08) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08) !important;
+  border: 1px solid rgba(0,0,0,0.06) !important;
 }
 
 .react-flow__controls-button {
-  border-bottom: 1px solid rgba(26,26,46,0.06) !important;
+  border-bottom: 1px solid rgba(0,0,0,0.05) !important;
   background: white !important;
   width: 32px !important;
   height: 32px !important;
 }
 .react-flow__controls-button:hover {
-  background: #F0EDE6 !important;
+  background: #F0F0ED !important;
 }
 
 .react-flow__edge-path {
+  stroke: #C0BDB6 !important;
+  stroke-width: 1.5 !important;
+}
+
+.react-flow__edge-path:hover {
   stroke: #1B4D5C !important;
-  stroke-width: 2 !important;
 }
 
 /* Custom scrollbar */

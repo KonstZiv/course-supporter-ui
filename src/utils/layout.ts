@@ -18,10 +18,10 @@ export function applyDagreLayout(
   g.setDefaultEdgeLabel(() => ({}))
   g.setGraph({
     rankdir: direction,
-    ranksep: 80,
-    nodesep: 40,
-    marginx: 40,
-    marginy: 40,
+    ranksep: 100,
+    nodesep: 50,
+    marginx: 50,
+    marginy: 50,
   })
 
   for (const node of nodes) {
