@@ -164,11 +164,17 @@ export function NodeDetailPanel() {
     async (role: MaterialRole) => {
       if (!node) return
 
-      if (pendingFiles.length > 0) {
+      // Capture and clear immediately to close the dialog and prevent re-submission
+      const filesToUpload = [...pendingFiles]
+      const linkToUpload = pendingLink
+      setPendingFiles([])
+      setPendingLink(null)
+
+      if (filesToUpload.length > 0) {
         setUploading(true)
-        setUploadProgress({ done: 0, total: pendingFiles.length })
-        for (let i = 0; i < pendingFiles.length; i++) {
-          const file = pendingFiles[i]!
+        setUploadProgress({ done: 0, total: filesToUpload.length })
+        for (let i = 0; i < filesToUpload.length; i++) {
+          const file = filesToUpload[i]!
           const ext = file.name.split('.').pop()?.toLowerCase() || ''
           const type = ['mp4', 'mp3', 'wav', 'webm'].includes(ext)
             ? 'video'
@@ -178,20 +184,18 @@ export function NodeDetailPanel() {
                 ? 'web'
                 : 'text'
           await materialsApi.upload(node.id, file, type, role)
-          setUploadProgress({ done: i + 1, total: pendingFiles.length })
+          setUploadProgress({ done: i + 1, total: filesToUpload.length })
         }
-        setPendingFiles([])
         await refresh()
         setUploading(false)
       }
 
-      if (pendingLink) {
+      if (linkToUpload) {
         setAddingLink(true)
         try {
-          const isVideo = /youtu\.?be|vimeo|\.mp4/i.test(pendingLink)
-          await materialsApi.uploadUrl(node.id, pendingLink, isVideo ? 'video' : 'web', role)
+          const isVideo = /youtu\.?be|vimeo|\.mp4/i.test(linkToUpload)
+          await materialsApi.uploadUrl(node.id, linkToUpload, isVideo ? 'video' : 'web', role)
           setLinkUrl('')
-          setPendingLink(null)
           await refresh()
         } finally {
           setAddingLink(false)
