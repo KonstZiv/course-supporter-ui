@@ -108,7 +108,7 @@ export function FlowContextMenu({ position, onClose }: Props) {
     if (!newTitle.trim()) return
     setBusy(true)
     try {
-      await nodesApi.createChild(position.nodeId, newTitle.trim())
+      await nodesApi.createChild(position.nodeId, { title: newTitle.trim() })
       await refreshTree()
       setShowAdd(false)
       onClose()

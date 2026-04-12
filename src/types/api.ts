@@ -15,6 +15,7 @@ export interface NodeResponse {
   parent_id: string | null
   title: string
   description: string | null
+  default_language: string | null
   order: number
   node_fingerprint: string | null
   children_count: number
@@ -28,6 +29,7 @@ export interface NodeTreeResponse {
   parent_id: string | null
   title: string
   description: string | null
+  default_language: string | null
   order: number
   node_fingerprint: string | null
   children: NodeTreeResponse[]
@@ -41,6 +43,7 @@ export interface MaterialEntrySummary {
   order: number
   filename: string | null
   source_url: string
+  language: string | null
   state: MaterialState
   content_fingerprint: string | null
   error_message: string | null
@@ -52,6 +55,7 @@ export interface NodeWithMaterials {
   parent_id: string | null
   title: string
   description: string | null
+  default_language: string | null
   order: number
   node_fingerprint: string | null
   materials: MaterialEntrySummary[]
@@ -74,6 +78,7 @@ export interface MaterialEntryResponse {
   order: number
   filename: string | null
   source_url: string
+  language: string | null
   state: MaterialState
   content_fingerprint: string | null
   raw_hash: string | null

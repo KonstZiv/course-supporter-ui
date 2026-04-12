@@ -6,15 +6,27 @@ import type {
   NodeTreeResponse,
 } from '../types/api'
 
+export interface NodeCreateData {
+  title: string
+  description?: string
+  default_language?: string | null
+}
+
+export interface NodeUpdateData {
+  title?: string
+  description?: string | null
+  default_language?: string | null
+}
+
 export const nodesApi = {
   listRoots: (limit = 50, offset = 0) =>
     api.get<NodeListResponse>(`/api/v1/nodes?limit=${limit}&offset=${offset}`),
 
-  createRoot: (title: string, description?: string) =>
-    api.post<NodeResponse>('/api/v1/nodes', { title, description }),
+  createRoot: (data: NodeCreateData) =>
+    api.post<NodeResponse>('/api/v1/nodes', data),
 
-  createChild: (parentId: string, title: string, description?: string) =>
-    api.post<NodeResponse>(`/api/v1/nodes/${parentId}/children`, { title, description }),
+  createChild: (parentId: string, data: NodeCreateData) =>
+    api.post<NodeResponse>(`/api/v1/nodes/${parentId}/children`, data),
 
   getNode: (nodeId: string) =>
     api.get<NodeResponse>(`/api/v1/nodes/${nodeId}`),
@@ -25,7 +37,7 @@ export const nodesApi = {
   getDetail: (nodeId: string) =>
     api.get<NodeWithMaterials>(`/api/v1/nodes/${nodeId}/detail`),
 
-  update: (nodeId: string, data: { title?: string; description?: string }) =>
+  update: (nodeId: string, data: NodeUpdateData) =>
     api.patch<NodeResponse>(`/api/v1/nodes/${nodeId}`, data),
 
   delete: (nodeId: string) =>

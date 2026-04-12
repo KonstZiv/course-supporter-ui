@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { Modal } from '../components/ui/Modal'
 import { EmptyState } from '../components/ui/EmptyState'
+import { LanguageSelect, LanguageBadge } from '../components/ui/LanguageSelect'
 
 export function DashboardPage() {
   const [courses, setCourses] = useState<NodeResponse[]>([])
@@ -23,6 +24,7 @@ export function DashboardPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [newDesc, setNewDesc] = useState('')
+  const [newLang, setNewLang] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const navigate = useNavigate()
 
@@ -46,10 +48,15 @@ export function DashboardPage() {
     if (!newTitle.trim()) return
     setCreating(true)
     try {
-      const course = await nodesApi.createRoot(newTitle.trim(), newDesc.trim() || undefined)
+      const course = await nodesApi.createRoot({
+        title: newTitle.trim(),
+        description: newDesc.trim() || undefined,
+        default_language: newLang,
+      })
       setShowCreate(false)
       setNewTitle('')
       setNewDesc('')
+      setNewLang(null)
       navigate(`/course/${course.id}`)
     } finally {
       setCreating(false)
@@ -159,6 +166,7 @@ export function DashboardPage() {
                     <Paperclip size={12} />
                     {course.materials_count ?? 0} матеріалів
                   </span>
+                  <LanguageBadge code={course.default_language} />
                 </div>
               </button>
             </motion.div>
@@ -192,6 +200,16 @@ export function DashboardPage() {
               rows={3}
             />
           </div>
+          <LanguageSelect
+            label="Мова курсу"
+            value={newLang}
+            onChange={setNewLang}
+            autoLabel="Автовизначення з матеріалів"
+          />
+          <p className="text-xs text-ink-muted -mt-2">
+            Використовується за замовчуванням для всіх матеріалів курсу (STT,
+            генерація). Можна залишити авто.
+          </p>
           <div className="flex justify-end gap-2 pt-2">
             <button className="btn-secondary" onClick={() => setShowCreate(false)}>
               Скасувати

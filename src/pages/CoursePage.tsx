@@ -1,17 +1,40 @@
-import { useEffect, useCallback, type DragEvent } from 'react'
+import { useEffect, useCallback, useState, type DragEvent } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { nodesApi } from '../api/nodes'
 import { useCourseStore } from '../stores/course'
 import { CourseCanvas } from '../components/flow/CourseCanvas'
 import { NodeDetailPanel } from '../components/flow/NodeDetailPanel'
-import { ArrowLeft, Loader2, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Loader2, AlertTriangle, Pencil, Check, X } from 'lucide-react'
+import { LanguageSelect, LanguageBadge } from '../components/ui/LanguageSelect'
 
 export function CoursePage() {
   const { nodeId } = useParams<{ nodeId: string }>()
   const tree = useCourseStore((s) => s.tree)
+  const setTree = useCourseStore((s) => s.setTree)
   const selectedNodeId = useCourseStore((s) => s.selectedNodeId)
   const loading = useCourseStore((s) => s.loading)
   const error = useCourseStore((s) => s.error)
+
+  const [editingLang, setEditingLang] = useState(false)
+  const [draftLang, setDraftLang] = useState<string | null>(null)
+  const [savingLang, setSavingLang] = useState(false)
+
+  const startEditLang = () => {
+    setDraftLang(tree?.default_language ?? null)
+    setEditingLang(true)
+  }
+
+  const saveLang = async () => {
+    if (!tree) return
+    setSavingLang(true)
+    try {
+      const updated = await nodesApi.update(tree.id, { default_language: draftLang })
+      setTree({ ...tree, default_language: updated.default_language })
+      setEditingLang(false)
+    } finally {
+      setSavingLang(false)
+    }
+  }
 
   // Prevent browser from opening dropped files outside the dropzone
   const preventDrop = useCallback((e: DragEvent) => {
@@ -83,10 +106,55 @@ export function CoursePage() {
         >
           <ArrowLeft size={18} className="text-ink-muted" />
         </Link>
-        <div>
+        <div className="flex-1 min-w-0">
           <h1 className="font-display text-xl text-ink">{tree.title}</h1>
           {tree.description && (
             <p className="text-ink-muted text-sm">{tree.description}</p>
+          )}
+        </div>
+
+        {/* Course language — inline view / editor */}
+        <div className="flex items-center gap-2 shrink-0">
+          {editingLang ? (
+            <>
+              <LanguageSelect
+                value={draftLang}
+                onChange={setDraftLang}
+                autoLabel="Автовизначення"
+                disabled={savingLang}
+                className="min-w-[200px]"
+              />
+              <button
+                className="p-2 rounded-lg hover:bg-forest-pale text-forest"
+                onClick={saveLang}
+                disabled={savingLang}
+                title="Зберегти"
+              >
+                {savingLang ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Check size={18} />
+                )}
+              </button>
+              <button
+                className="p-2 rounded-lg hover:bg-canvas-dark text-ink-muted"
+                onClick={() => setEditingLang(false)}
+                disabled={savingLang}
+                title="Скасувати"
+              >
+                <X size={18} />
+              </button>
+            </>
+          ) : (
+            <button
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg
+                         hover:bg-canvas-dark text-sm"
+              onClick={startEditLang}
+              title="Змінити мову курсу"
+            >
+              <LanguageBadge code={tree.default_language} />
+              <Pencil size={12} className="text-ink-muted" />
+            </button>
           )}
         </div>
       </div>
