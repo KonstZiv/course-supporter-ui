@@ -233,7 +233,20 @@ export function NodeDetailPanel() {
 
   const handleRetry = useCallback(
     async (mat: MaterialEntrySummary) => {
-      await materialsApi.retry(mat.id)
+      // `force=true` is required to reprocess a material that already
+      // reached `ready` (e.g. after changing the course/material language).
+      // For error-state materials, force is harmless and still works.
+      const force = mat.state !== 'error'
+      if (
+        force &&
+        !confirm(
+          `Перезапустити обробку «${mat.filename || mat.source_url || mat.source_type}»? ` +
+            'Поточний результат буде замінено новим.',
+        )
+      ) {
+        return
+      }
+      await materialsApi.retry(mat.id, force)
       await refresh()
     },
     [refresh],
@@ -391,11 +404,15 @@ export function NodeDetailPanel() {
                   </div>
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {mat.state === 'error' && (
+                  {(mat.state === 'error' || mat.state === 'ready') && (
                     <button
                       onClick={() => handleRetry(mat)}
                       className="p-1.5 rounded-lg hover:bg-amber-pale transition-colors"
-                      title="Повторити обробку"
+                      title={
+                        mat.state === 'error'
+                          ? 'Повторити обробку'
+                          : 'Перезапустити обробку (force)'
+                      }
                     >
                       <RotateCcw size={14} className="text-amber" />
                     </button>
