@@ -19,7 +19,19 @@ import {
   Link2,
 } from 'lucide-react'
 import { useDropzone } from 'react-dropzone'
-import type { NodeWithMaterials, MaterialEntrySummary, MaterialRole } from '../../types/api'
+import type {
+  AssignmentType,
+  NodeWithMaterials,
+  MaterialEntrySummary,
+  MaterialRole,
+} from '../../types/api'
+
+const TASK_TYPE_OPTIONS: { value: AssignmentType; label: string; hint: string }[] = [
+  { value: 'test', label: 'Тест', hint: '5–10 хв, quiz' },
+  { value: 'short_task', label: 'Коротке завдання', hint: '20–60 хв' },
+  { value: 'task', label: 'Завдання', hint: 'мульти-крок' },
+  { value: 'project', label: 'Проєкт', hint: '1–2 тижні' },
+]
 
 const iconMap: Record<string, typeof FileText> = {
   FileText, Video, FileImage, Globe, File: FileIcon,
@@ -40,22 +52,24 @@ interface UploadConfirmProps {
   open: boolean
   files: { name: string; sourceType: string }[]
   linkUrl?: string
-  onConfirm: (role: MaterialRole) => void
+  onConfirm: (role: MaterialRole, taskType: AssignmentType | null) => void
   onCancel: () => void
 }
 
 function UploadConfirmDialog({ open, files, linkUrl, onConfirm, onCancel }: UploadConfirmProps) {
   const [role, setRole] = useState<MaterialRole | null>(null)
+  const [taskType, setTaskType] = useState<AssignmentType | null>(null)
 
-  // Reset role when dialog opens
   const handleConfirm = () => {
     if (role) {
-      onConfirm(role)
+      onConfirm(role, taskType)
       setRole(null)
+      setTaskType(null)
     }
   }
   const handleCancel = () => {
     setRole(null)
+    setTaskType(null)
     onCancel()
   }
 
@@ -105,6 +119,40 @@ function UploadConfirmDialog({ open, files, linkUrl, onConfirm, onCancel }: Uplo
             Декларує наміри курсу
           </span>
         </button>
+      </div>
+
+      <div className="mb-4">
+        <p className="text-sm text-ink-muted mb-2">
+          Якщо матеріал — це концретне завдання, оберіть тип:
+        </p>
+        <div className="grid grid-cols-4 gap-2">
+          <button
+            onClick={() => setTaskType(null)}
+            className={`
+              rounded-lg border p-2 text-xs transition-all
+              ${taskType === null
+                ? 'border-navy bg-navy/5 text-ink font-medium'
+                : 'border-canvas-dark text-ink-muted hover:border-navy/40'}
+            `}
+          >
+            Не завдання
+          </button>
+          {TASK_TYPE_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setTaskType(opt.value)}
+              title={opt.hint}
+              className={`
+                rounded-lg border p-2 text-xs transition-all
+                ${taskType === opt.value
+                  ? 'border-plum bg-plum/5 text-ink font-medium'
+                  : 'border-canvas-dark text-ink-muted hover:border-plum/40'}
+              `}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex justify-end gap-2">
@@ -159,9 +207,9 @@ export function NodeDetailPanel() {
     setPendingLink(linkUrl.trim())
   }, [linkUrl])
 
-  // Confirmed upload with role
+  // Confirmed upload with role and optional task_type
   const handleConfirmUpload = useCallback(
-    async (role: MaterialRole) => {
+    async (role: MaterialRole, taskType: AssignmentType | null) => {
       if (!node) return
 
       // Capture and clear immediately to close the dialog and prevent re-submission
@@ -183,7 +231,7 @@ export function NodeDetailPanel() {
               : ['html', 'htm'].includes(ext)
                 ? 'web'
                 : 'text'
-          await materialsApi.upload(node.id, file, type, role)
+          await materialsApi.upload(node.id, file, type, role, null, taskType)
           setUploadProgress({ done: i + 1, total: filesToUpload.length })
         }
         await refresh()
@@ -194,7 +242,14 @@ export function NodeDetailPanel() {
         setAddingLink(true)
         try {
           const isVideo = /youtu\.?be|vimeo|\.mp4/i.test(linkToUpload)
-          await materialsApi.uploadUrl(node.id, linkToUpload, isVideo ? 'video' : 'web', role)
+          await materialsApi.uploadUrl(
+            node.id,
+            linkToUpload,
+            isVideo ? 'video' : 'web',
+            role,
+            null,
+            taskType,
+          )
           setLinkUrl('')
           await refresh()
         } finally {
@@ -257,7 +312,7 @@ export function NodeDetailPanel() {
     async (mat: MaterialEntrySummary) => {
       const newRole: MaterialRole = mat.material_role === 'educational' ? 'methodological' : 'educational'
       try {
-        await materialsApi.updateRole(mat.id, newRole)
+        await materialsApi.update(mat.id, { material_role: newRole })
         await refresh()
       } catch {
         // Silently fail — API might not support this yet

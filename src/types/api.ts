@@ -5,6 +5,7 @@ export type MaterialState = 'raw' | 'pending' | 'ready' | 'integrity_broken' | '
 export type GenerationMode = 'free' | 'guided'
 export type ValidationState = 'validated' | 'pending_validation' | 'validation_failed'
 export type MaterialRole = 'educational' | 'methodological'
+export type AssignmentType = 'test' | 'short_task' | 'task' | 'project'
 export type JobStatus = 'queued' | 'active' | 'complete' | 'failed'
 
 // ─── Node ───
@@ -40,6 +41,7 @@ export interface MaterialEntrySummary {
   node_id: string
   source_type: SourceType
   material_role: MaterialRole
+  task_type: AssignmentType | null
   order: number
   filename: string | null
   source_url: string
@@ -75,6 +77,8 @@ export interface MaterialEntryResponse {
   id: string
   node_id: string
   source_type: SourceType
+  material_role: MaterialRole
+  task_type: AssignmentType | null
   order: number
   filename: string | null
   source_url: string

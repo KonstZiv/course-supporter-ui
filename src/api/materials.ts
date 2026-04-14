@@ -1,5 +1,9 @@
 import { api } from './client'
-import type { MaterialEntryResponse } from '../types/api'
+import type {
+  AssignmentType,
+  MaterialEntryResponse,
+  MaterialRole,
+} from '../types/api'
 
 export interface MaterialCreateResponse {
   id: string
@@ -17,12 +21,14 @@ export const materialsApi = {
     sourceType: string = 'presentation',
     materialRole: string = 'educational',
     language?: string | null,
+    taskType?: AssignmentType | null,
   ) => {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('source_type', sourceType)
     formData.append('material_role', materialRole)
     if (language) formData.append('language', language)
+    if (taskType) formData.append('task_type', taskType)
     return api.post<MaterialCreateResponse>(
       `/api/v1/nodes/${nodeId}/materials`,
       formData,
@@ -35,12 +41,14 @@ export const materialsApi = {
     sourceType: string = 'web',
     materialRole: string = 'educational',
     language?: string | null,
+    taskType?: AssignmentType | null,
   ) => {
     const formData = new FormData()
     formData.append('source_url', url)
     formData.append('source_type', sourceType)
     formData.append('material_role', materialRole)
     if (language) formData.append('language', language)
+    if (taskType) formData.append('task_type', taskType)
     return api.post<MaterialCreateResponse>(
       `/api/v1/nodes/${nodeId}/materials`,
       formData,
@@ -61,9 +69,15 @@ export const materialsApi = {
       `/api/v1/materials/${entryId}/retry${force ? '?force=true' : ''}`,
     ),
 
-  updateRole: (entryId: string, materialRole: string) => {
-    const formData = new FormData()
-    formData.append('material_role', materialRole)
-    return api.patch<void>(`/api/v1/materials/${entryId}`, formData)
-  },
+  update: (
+    entryId: string,
+    patch: {
+      material_role?: MaterialRole
+      task_type?: AssignmentType | null
+    },
+  ) =>
+    api.patch<MaterialEntryResponse>(
+      `/api/v1/materials/${entryId}`,
+      patch,
+    ),
 }
