@@ -3,6 +3,7 @@ import { useAuthStore } from './stores/auth'
 import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { CoursePage } from './pages/CoursePage'
+import { CostPage } from './pages/CostPage'
 import { AppLayout } from './components/layout/AppLayout'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -25,6 +26,7 @@ export default function App() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="course/:nodeId" element={<CoursePage />} />
+        <Route path="cost" element={<CostPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
