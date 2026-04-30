@@ -1,12 +1,13 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../stores/auth'
-import { BookOpen, LayoutDashboard, LogOut } from 'lucide-react'
+import { BookOpen, DollarSign, LayoutDashboard, LogOut } from 'lucide-react'
 import { clsx } from 'clsx'
 
 export function Header() {
   const logout = useAuthStore((s) => s.logout)
   const location = useLocation()
   const isHome = location.pathname === '/'
+  const isCost = location.pathname === '/cost'
 
   return (
     <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-canvas-dark/40">
@@ -35,6 +36,18 @@ export function Header() {
           >
             <LayoutDashboard size={16} />
             Курси
+          </Link>
+          <Link
+            to="/cost"
+            className={clsx(
+              'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors',
+              isCost
+                ? 'bg-navy-pale text-navy'
+                : 'text-ink-light hover:bg-canvas-dark hover:text-ink',
+            )}
+          >
+            <DollarSign size={16} />
+            Витрати
           </Link>
           <button
             onClick={logout}

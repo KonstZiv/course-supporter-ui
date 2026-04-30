@@ -246,15 +246,36 @@ export interface ReconciliationStatusResponse {
   job_status: string | null
 }
 
-// ─── Cost Report ───
+// ─── Cost (vision §3 KD5, post-0.7 contract) ───
+//
+// Tenant-wide cost summary. Backend always echoes resolved `from`/`to`
+// (Tenant.created_at fallback for `from`, today UTC for `to`) so both
+// fields are required on the wire. KD5 invariant:
+//   total_usd == sum(by_course.cost_usd) + unattributed_cost_usd
+// where `unattributed_cost_usd` aggregates ESCs whose Job has no
+// course_node_id (orphan jobs).
+//
+// Drill-down (`CourseCostResponse`, `ByNodeEntry`, `ByActionEntry`) is
+// out of scope for 0.UI — Phase 1+ task adds the per-course view and
+// the corresponding types here. Keep this block minimal until then.
 
-export interface CostReport {
-  summary: {
-    total_calls: number
-    successful_calls: number
-    failed_calls: number
-    total_cost_usd: number
-    total_tokens_in: number
-    total_tokens_out: number
-  }
+export interface ByCourseEntry {
+  course_node_id: string
+  course_title: string
+  cost_usd: number
+}
+
+export interface ByProviderEntry {
+  provider: string
+  model_id: string
+  cost_usd: number
+}
+
+export interface CostSummaryResponse {
+  from: string
+  to: string
+  total_usd: number
+  unattributed_cost_usd: number
+  by_course: ByCourseEntry[]
+  by_provider: ByProviderEntry[]
 }

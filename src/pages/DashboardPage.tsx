@@ -1,15 +1,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { nodesApi } from '../api/nodes'
-import { reportsApi } from '../api/reports'
-import type { NodeResponse, CostReport } from '../types/api'
+import type { NodeResponse } from '../types/api'
 import { motion } from 'framer-motion'
 import {
   Plus,
   BookOpen,
   Layers,
   Paperclip,
-  DollarSign,
   Loader2,
   ArrowRight,
 } from 'lucide-react'
@@ -19,7 +17,6 @@ import { LanguageSelect, LanguageBadge } from '../components/ui/LanguageSelect'
 
 export function DashboardPage() {
   const [courses, setCourses] = useState<NodeResponse[]>([])
-  const [report, setReport] = useState<CostReport | null>(null)
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [newTitle, setNewTitle] = useState('')
@@ -31,12 +28,8 @@ export function DashboardPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [coursesRes, costRes] = await Promise.all([
-        nodesApi.listRoots(50),
-        reportsApi.cost().catch(() => null),
-      ])
+      const coursesRes = await nodesApi.listRoots(50)
       setCourses(coursesRes.items)
-      setReport(costRes)
     } finally {
       setLoading(false)
     }
@@ -90,8 +83,8 @@ export function DashboardPage() {
       </div>
 
       {/* Stats row */}
-      {report && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      {courses.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
           <StatCard
             icon={BookOpen}
             label="Курсів"
@@ -103,12 +96,6 @@ export function DashboardPage() {
             label="Всього вузлів"
             value={String(courses.reduce((s, c) => s + (c.children_count ?? 0), 0))}
             color="forest"
-          />
-          <StatCard
-            icon={DollarSign}
-            label="Витрати LLM"
-            value={`$${report.summary.total_cost_usd.toFixed(2)}`}
-            color="amber"
           />
         </div>
       )}
@@ -234,10 +221,10 @@ function StatCard({
   icon: typeof BookOpen
   label: string
   value: string
-  color: 'navy' | 'forest' | 'amber'
+  color: 'navy' | 'forest'
 }) {
-  const bg = { navy: 'bg-navy-pale', forest: 'bg-forest-pale', amber: 'bg-amber-pale' }
-  const fg = { navy: 'text-navy', forest: 'text-forest', amber: 'text-amber' }
+  const bg = { navy: 'bg-navy-pale', forest: 'bg-forest-pale' }
+  const fg = { navy: 'text-navy', forest: 'text-forest' }
 
   return (
     <div className="card p-4 flex items-center gap-4">
