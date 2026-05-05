@@ -80,12 +80,12 @@ function UploadConfirmDialog({ open, files, linkUrl, onConfirm, onCancel }: Uplo
       : `${files.length} файлів`
 
   return (
-    <Modal open={open} onClose={handleCancel} title="Тип матеріалу">
+    <Modal open={open} onClose={handleCancel} title="Тип документа">
       <p className="text-sm text-ink-muted mb-1">
         Завантаження: <span className="font-medium text-ink">{label}</span>
       </p>
       <p className="text-sm text-ink-muted mb-4">
-        Оберіть тип матеріалу перед завантаженням:
+        Оберіть тип документа перед завантаженням:
       </p>
 
       <div className="flex gap-3 mb-6">
@@ -123,7 +123,7 @@ function UploadConfirmDialog({ open, files, linkUrl, onConfirm, onCancel }: Uplo
 
       <div className="mb-4">
         <p className="text-sm text-ink-muted mb-2">
-          Якщо матеріал — це концретне завдання, оберіть тип:
+          Якщо документ — це концретне завдання, оберіть тип:
         </p>
         <div className="grid grid-cols-4 gap-2">
           <button
@@ -421,7 +421,7 @@ export function NodeDetailPanel() {
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {node.authored_documents.length === 0 ? (
           <p className="text-ink-muted text-sm text-center py-8">
-            Матеріали ще не завантажені
+            Документи ще не завантажені
           </p>
         ) : (
           node.authored_documents.map((mat) => {

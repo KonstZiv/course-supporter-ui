@@ -69,7 +69,7 @@ export const CourseRootNode = memo(function CourseRootNode({
         </span>
         <span className="flex items-center gap-1.5">
           <Paperclip size={14} />
-          {data.authored_documents.length} матеріалів
+          {data.authored_documents.length} документів
         </span>
       </div>
 

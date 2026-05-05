@@ -7,7 +7,10 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'https://api.pythoncourse.me',
+        // Default proxy points at local backend for sub-area `ui`
+        // smoke-testing (Phase 1 KD-η.2/η.3). Override per
+        // developer if hitting prod is needed.
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
     },

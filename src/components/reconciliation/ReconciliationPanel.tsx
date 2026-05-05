@@ -24,7 +24,7 @@ interface Props {
 }
 
 const STALE_LABELS: Record<string, string> = {
-  stale_materials: 'Матеріали змінились з моменту останнього аналізу',
+  stale_materials: 'Документи змінились з моменту останнього аналізу',
   stale_edited: 'Структура була відредагована після аналізу',
   stale_both: 'Матеріали та структура змінились після аналізу',
 }

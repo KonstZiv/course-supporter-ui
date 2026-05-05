@@ -70,7 +70,7 @@ export interface NodeListResponse {
   offset: number
 }
 
-// ─── Material ───
+// ─── Document ───
 
 export interface AuthoredDocumentResponse {
   id: string

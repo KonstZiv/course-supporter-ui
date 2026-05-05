@@ -151,7 +151,7 @@ export function DashboardPage() {
                   </span>
                   <span className="flex items-center gap-1">
                     <Paperclip size={12} />
-                    {course.authored_documents_count ?? 0} матеріалів
+                    {course.authored_documents_count ?? 0} документів
                   </span>
                   <LanguageBadge code={course.default_language} />
                 </div>
