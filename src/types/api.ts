@@ -1,7 +1,7 @@
 // ─── Enums ───
 
 export type SourceType = 'video' | 'presentation' | 'text' | 'web'
-export type MaterialState = 'raw' | 'pending' | 'ready' | 'integrity_broken' | 'error'
+export type DocumentState = 'raw' | 'pending' | 'ready' | 'integrity_broken' | 'error'
 export type GenerationMode = 'free' | 'guided'
 export type ValidationState = 'validated' | 'pending_validation' | 'validation_failed'
 export type MaterialRole = 'educational' | 'methodological'
@@ -18,9 +18,9 @@ export interface NodeResponse {
   description: string | null
   default_language: string | null
   order: number
-  node_fingerprint: string | null
+  content_hash: string | null
   children_count: number
-  materials_count: number
+  authored_documents_count: number
   created_at: string
   updated_at: string
 }
@@ -30,15 +30,14 @@ export interface NodeTreeResponse {
   parent_id: string | null
   title: string
   description: string | null
-  default_language: string | null
   order: number
-  node_fingerprint: string | null
+  content_hash: string | null
   children: NodeTreeResponse[]
 }
 
-export interface MaterialEntrySummary {
+export interface AuthoredDocumentSummary {
   id: string
-  node_id: string
+  course_node_id: string
   source_type: SourceType
   material_role: MaterialRole
   task_type: AssignmentType | null
@@ -46,22 +45,22 @@ export interface MaterialEntrySummary {
   filename: string | null
   source_url: string
   language: string | null
-  state: MaterialState
+  state: DocumentState
   content_fingerprint: string | null
   error_message: string | null
   created_at: string
 }
 
-export interface NodeWithMaterials {
+export interface NodeWithDocuments {
   id: string
   parent_id: string | null
   title: string
   description: string | null
   default_language: string | null
   order: number
-  node_fingerprint: string | null
-  materials: MaterialEntrySummary[]
-  children: NodeWithMaterials[]
+  content_hash: string | null
+  authored_documents: AuthoredDocumentSummary[]
+  children: NodeWithDocuments[]
 }
 
 export interface NodeListResponse {
@@ -73,9 +72,9 @@ export interface NodeListResponse {
 
 // ─── Material ───
 
-export interface MaterialEntryResponse {
+export interface AuthoredDocumentResponse {
   id: string
-  node_id: string
+  course_node_id: string
   source_type: SourceType
   material_role: MaterialRole
   task_type: AssignmentType | null
@@ -83,7 +82,7 @@ export interface MaterialEntryResponse {
   filename: string | null
   source_url: string
   language: string | null
-  state: MaterialState
+  state: DocumentState
   content_fingerprint: string | null
   raw_hash: string | null
   raw_size_bytes: number | null
@@ -133,9 +132,9 @@ export interface StructureNode {
 
 export interface SnapshotDetailResponse {
   id: string
-  materialnode_id: string
+  course_node_id: string
   mode: GenerationMode
-  node_fingerprint: string
+  content_hash: string
   created_at: string
   structure: Record<string, unknown>
   structure_tree?: StructureNode[]
@@ -145,7 +144,7 @@ export interface SnapshotDetailResponse {
 
 export interface EditableNodeResponse {
   id: string
-  materialnode_id: string
+  course_node_id: string
   source_snapshot_id: string | null
   source_structurenode_id: string | null
   node_type: string
@@ -177,7 +176,7 @@ export interface EditableNodeResponse {
 }
 
 export interface EditableTreeResponse {
-  materialnode_id: string
+  course_node_id: string
   source_snapshot_id: string | null
   nodes: EditableNodeResponse[]
 }
