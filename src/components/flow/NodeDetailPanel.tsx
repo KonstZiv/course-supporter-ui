@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { useCourseStore } from '../../stores/course'
-import { materialsApi } from '../../api/materials'
+import { documentsApi } from '../../api/documents'
 import { nodesApi } from '../../api/nodes'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Modal } from '../ui/Modal'

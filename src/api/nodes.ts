@@ -2,7 +2,7 @@ import { api } from './client'
 import type {
   NodeResponse,
   NodeListResponse,
-  NodeWithMaterials,
+  NodeWithDocuments,
   NodeTreeResponse,
 } from '../types/api'
 
@@ -35,7 +35,7 @@ export const nodesApi = {
     api.get<NodeTreeResponse[]>(`/api/v1/nodes/${nodeId}/tree`),
 
   getDetail: (nodeId: string) =>
-    api.get<NodeWithMaterials>(`/api/v1/nodes/${nodeId}/detail`),
+    api.get<NodeWithDocuments>(`/api/v1/nodes/${nodeId}/detail`),
 
   update: (nodeId: string, data: NodeUpdateData) =>
     api.patch<NodeResponse>(`/api/v1/nodes/${nodeId}`, data),
