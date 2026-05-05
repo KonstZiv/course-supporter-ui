@@ -1,5 +1,5 @@
 import type { Node, Edge } from '@xyflow/react'
-import type { NodeWithMaterials } from '../types/api'
+import type { NodeWithDocuments } from '../types/api'
 
 import type { Freshness } from '../stores/reconciliation'
 
@@ -8,7 +8,7 @@ export interface FlowNodeData {
   nodeId: string
   title: string
   description: string | null
-  materials: NodeWithMaterials['materials']
+  authored_documents: NodeWithDocuments['authored_documents']
   childrenCount: number
   fingerprint: string | null
   isRoot: boolean
@@ -21,7 +21,7 @@ export interface FlowNodeData {
  * Recursively convert API tree to React Flow nodes and edges.
  */
 export function treeToFlow(
-  node: NodeWithMaterials,
+  node: NodeWithDocuments,
   parentId: string | null = null,
   depth: number = 0,
 ): { nodes: Node<FlowNodeData>[]; edges: Edge[] } {
@@ -36,9 +36,9 @@ export function treeToFlow(
       nodeId: node.id,
       title: node.title,
       description: node.description,
-      materials: node.materials,
+      authored_documents: node.authored_documents,
       childrenCount: node.children.length,
-      fingerprint: node.node_fingerprint,
+      fingerprint: node.content_hash,
       isRoot: depth === 0,
       depth,
     },
