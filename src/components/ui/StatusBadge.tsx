@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
-import type { MaterialState } from '../../types/api'
+import type { DocumentState } from '../../types/api'
 
-const config: Record<MaterialState, { label: string; cls: string }> = {
+const config: Record<DocumentState, { label: string; cls: string }> = {
   raw:              { label: 'Очікує',      cls: 'bg-canvas-dark text-ink-muted' },
   pending:          { label: 'Обробка…',    cls: 'bg-amber-pale text-amber-dark animate-pulse-soft' },
   ready:            { label: 'Готово',       cls: 'bg-forest-pale text-forest' },
@@ -9,7 +9,7 @@ const config: Record<MaterialState, { label: string; cls: string }> = {
   error:            { label: 'Помилка',      cls: 'bg-coral-pale text-coral' },
 }
 
-export function StatusBadge({ state }: { state: MaterialState }) {
+export function StatusBadge({ state }: { state: DocumentState }) {
   const c = config[state] ?? config.raw
   return (
     <span

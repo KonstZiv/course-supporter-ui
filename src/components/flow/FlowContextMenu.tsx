@@ -156,11 +156,11 @@ export function FlowContextMenu({ position, onClose }: Props) {
     // Re-trigger ingestion for all materials in this node
     setBusy(true)
     try {
-      const { materialsApi } = await import('../../api/materials')
-      const materials = await materialsApi.list(position.nodeId)
-      for (const mat of materials) {
-        if (mat.state === 'error' || mat.state === 'ready') {
-          await materialsApi.retry(mat.id)
+      const { documentsApi } = await import('../../api/documents')
+      const documents = await documentsApi.list(position.nodeId)
+      for (const doc of documents) {
+        if (doc.state === 'error' || doc.state === 'ready') {
+          await documentsApi.retry(doc.id)
         }
       }
       await refreshTree()
@@ -200,10 +200,10 @@ export function FlowContextMenu({ position, onClose }: Props) {
     input.onchange = async () => {
       if (!input.files) return
       setBusy(true)
-      const { materialsApi } = await import('../../api/materials')
+      const { documentsApi } = await import('../../api/documents')
       for (const file of Array.from(input.files)) {
         const type = guessSourceType(file.name)
-        await materialsApi.upload(position.nodeId, file, type)
+        await documentsApi.upload(position.nodeId, file, type)
       }
       await refreshTree()
       setBusy(false)

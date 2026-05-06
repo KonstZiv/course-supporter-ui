@@ -1,20 +1,20 @@
 import { api } from './client'
 import type {
   AssignmentType,
-  MaterialEntryResponse,
+  AuthoredDocumentResponse,
   MaterialRole,
 } from '../types/api'
 
-export interface MaterialCreateResponse {
+export interface AuthoredDocumentCreateResponse {
   id: string
-  node_id: string
+  course_node_id: string
   source_type: string
   filename: string | null
   state: string
   job_id: string | null
 }
 
-export const materialsApi = {
+export const documentsApi = {
   upload: (
     nodeId: string,
     file: File,
@@ -29,8 +29,8 @@ export const materialsApi = {
     formData.append('material_role', materialRole)
     if (language) formData.append('language', language)
     if (taskType) formData.append('task_type', taskType)
-    return api.post<MaterialCreateResponse>(
-      `/api/v1/nodes/${nodeId}/materials`,
+    return api.post<AuthoredDocumentCreateResponse>(
+      `/api/v1/nodes/${nodeId}/documents`,
       formData,
     )
   },
@@ -49,24 +49,24 @@ export const materialsApi = {
     formData.append('material_role', materialRole)
     if (language) formData.append('language', language)
     if (taskType) formData.append('task_type', taskType)
-    return api.post<MaterialCreateResponse>(
-      `/api/v1/nodes/${nodeId}/materials`,
+    return api.post<AuthoredDocumentCreateResponse>(
+      `/api/v1/nodes/${nodeId}/documents`,
       formData,
     )
   },
 
   list: (nodeId: string) =>
-    api.get<MaterialEntryResponse[]>(`/api/v1/nodes/${nodeId}/materials`),
+    api.get<AuthoredDocumentResponse[]>(`/api/v1/nodes/${nodeId}/documents`),
 
   get: (entryId: string) =>
-    api.get<MaterialEntryResponse>(`/api/v1/materials/${entryId}`),
+    api.get<AuthoredDocumentResponse>(`/api/v1/documents/${entryId}`),
 
   delete: (entryId: string) =>
-    api.delete<void>(`/api/v1/materials/${entryId}`),
+    api.delete<void>(`/api/v1/documents/${entryId}`),
 
   retry: (entryId: string, force: boolean = false) =>
     api.post<{ job_id: string }>(
-      `/api/v1/materials/${entryId}/retry${force ? '?force=true' : ''}`,
+      `/api/v1/documents/${entryId}/retry${force ? '?force=true' : ''}`,
     ),
 
   update: (
@@ -76,8 +76,8 @@ export const materialsApi = {
       task_type?: AssignmentType | null
     },
   ) =>
-    api.patch<MaterialEntryResponse>(
-      `/api/v1/materials/${entryId}`,
+    api.patch<AuthoredDocumentResponse>(
+      `/api/v1/documents/${entryId}`,
       patch,
     ),
 }

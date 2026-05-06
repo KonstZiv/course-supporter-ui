@@ -1,12 +1,12 @@
 import { create } from 'zustand'
-import type { NodeWithMaterials } from '../types/api'
+import type { NodeWithDocuments } from '../types/api'
 
 interface CourseState {
-  tree: NodeWithMaterials | null
+  tree: NodeWithDocuments | null
   selectedNodeId: string | null
   loading: boolean
   error: string | null
-  setTree: (tree: NodeWithMaterials) => void
+  setTree: (tree: NodeWithDocuments) => void
   setSelectedNodeId: (id: string | null) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void

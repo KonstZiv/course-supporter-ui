@@ -69,14 +69,14 @@ export const CourseRootNode = memo(function CourseRootNode({
         </span>
         <span className="flex items-center gap-1.5">
           <Paperclip size={14} />
-          {data.materials.length} матеріалів
+          {data.authored_documents.length} документів
         </span>
       </div>
 
       {/* Materials pills */}
-      {data.materials.length > 0 && (
+      {data.authored_documents.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-3">
-          {data.materials.slice(0, 4).map((m) => (
+          {data.authored_documents.slice(0, 4).map((m) => (
             <span
               key={m.id}
               className={`
@@ -91,9 +91,9 @@ export const CourseRootNode = memo(function CourseRootNode({
               {m.filename?.slice(0, 18) || m.source_url?.slice(0, 18) || m.source_type}
             </span>
           ))}
-          {data.materials.length > 4 && (
+          {data.authored_documents.length > 4 && (
             <span className="text-[11px] px-2 py-0.5 rounded-full bg-canvas-dark text-ink-muted">
-              +{data.materials.length - 4}
+              +{data.authored_documents.length - 4}
             </span>
           )}
         </div>

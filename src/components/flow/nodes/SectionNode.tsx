@@ -20,9 +20,9 @@ export const SectionNode = memo(function SectionNode({
   data,
   selected,
 }: NodeProps & { data: FlowNodeData }) {
-  const hasError = data.materials.some((m) => m.state === 'error')
-  const hasPending = data.materials.some((m) => m.state === 'pending')
-  const allReady = data.materials.length > 0 && data.materials.every((m) => m.state === 'ready')
+  const hasError = data.authored_documents.some((m) => m.state === 'error')
+  const hasPending = data.authored_documents.some((m) => m.state === 'pending')
+  const allReady = data.authored_documents.length > 0 && data.authored_documents.every((m) => m.state === 'ready')
 
   let accentColor = 'border-l-navy/30'
   if (hasError) accentColor = 'border-l-coral'
@@ -76,9 +76,9 @@ export const SectionNode = memo(function SectionNode({
       </div>
 
       {/* Materials */}
-      {data.materials.length > 0 && (
+      {data.authored_documents.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2">
-          {data.materials.slice(0, 5).map((m) => (
+          {data.authored_documents.slice(0, 5).map((m) => (
             <span
               key={m.id}
               className={`
@@ -95,9 +95,9 @@ export const SectionNode = memo(function SectionNode({
               {m.filename?.slice(0, 14) || m.source_url?.slice(0, 14) || m.source_type}
             </span>
           ))}
-          {data.materials.length > 5 && (
+          {data.authored_documents.length > 5 && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-canvas-dark/60 text-ink-muted">
-              +{data.materials.length - 5}
+              +{data.authored_documents.length - 5}
             </span>
           )}
         </div>

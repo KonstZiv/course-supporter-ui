@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { useCourseStore } from '../../stores/course'
-import { materialsApi } from '../../api/materials'
+import { documentsApi } from '../../api/documents'
 import { nodesApi } from '../../api/nodes'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Modal } from '../ui/Modal'
@@ -21,8 +21,8 @@ import {
 import { useDropzone } from 'react-dropzone'
 import type {
   AssignmentType,
-  NodeWithMaterials,
-  MaterialEntrySummary,
+  NodeWithDocuments,
+  AuthoredDocumentSummary,
   MaterialRole,
 } from '../../types/api'
 
@@ -37,7 +37,7 @@ const iconMap: Record<string, typeof FileText> = {
   FileText, Video, FileImage, Globe, File: FileIcon,
 }
 
-function findNode(tree: NodeWithMaterials, id: string): NodeWithMaterials | null {
+function findNode(tree: NodeWithDocuments, id: string): NodeWithDocuments | null {
   if (tree.id === id) return tree
   for (const child of tree.children) {
     const found = findNode(child, id)
@@ -80,12 +80,12 @@ function UploadConfirmDialog({ open, files, linkUrl, onConfirm, onCancel }: Uplo
       : `${files.length} файлів`
 
   return (
-    <Modal open={open} onClose={handleCancel} title="Тип матеріалу">
+    <Modal open={open} onClose={handleCancel} title="Тип документа">
       <p className="text-sm text-ink-muted mb-1">
         Завантаження: <span className="font-medium text-ink">{label}</span>
       </p>
       <p className="text-sm text-ink-muted mb-4">
-        Оберіть тип матеріалу перед завантаженням:
+        Оберіть тип документа перед завантаженням:
       </p>
 
       <div className="flex gap-3 mb-6">
@@ -123,7 +123,7 @@ function UploadConfirmDialog({ open, files, linkUrl, onConfirm, onCancel }: Uplo
 
       <div className="mb-4">
         <p className="text-sm text-ink-muted mb-2">
-          Якщо матеріал — це концретне завдання, оберіть тип:
+          Якщо документ — це концретне завдання, оберіть тип:
         </p>
         <div className="grid grid-cols-4 gap-2">
           <button
@@ -231,7 +231,7 @@ export function NodeDetailPanel() {
               : ['html', 'htm'].includes(ext)
                 ? 'web'
                 : 'text'
-          await materialsApi.upload(node.id, file, type, role, null, taskType)
+          await documentsApi.upload(node.id, file, type, role, null, taskType)
           setUploadProgress({ done: i + 1, total: filesToUpload.length })
         }
         await refresh()
@@ -242,7 +242,7 @@ export function NodeDetailPanel() {
         setAddingLink(true)
         try {
           const isVideo = /youtu\.?be|vimeo|\.mp4/i.test(linkToUpload)
-          await materialsApi.uploadUrl(
+          await documentsApi.uploadUrl(
             node.id,
             linkToUpload,
             isVideo ? 'video' : 'web',
@@ -278,16 +278,16 @@ export function NodeDetailPanel() {
   })
 
   const handleDelete = useCallback(
-    async (mat: MaterialEntrySummary) => {
+    async (mat: AuthoredDocumentSummary) => {
       if (!confirm(`Видалити «${mat.filename || mat.source_url || mat.source_type}»?`)) return
-      await materialsApi.delete(mat.id)
+      await documentsApi.delete(mat.id)
       await refresh()
     },
     [refresh],
   )
 
   const handleRetry = useCallback(
-    async (mat: MaterialEntrySummary) => {
+    async (mat: AuthoredDocumentSummary) => {
       // `force=true` is required to reprocess a material that already
       // reached `ready` (e.g. after changing the course/material language).
       // For error-state materials, force is harmless and still works.
@@ -301,7 +301,7 @@ export function NodeDetailPanel() {
       ) {
         return
       }
-      await materialsApi.retry(mat.id, force)
+      await documentsApi.retry(mat.id, force)
       await refresh()
     },
     [refresh],
@@ -309,10 +309,10 @@ export function NodeDetailPanel() {
 
   // Toggle material role on existing material (clickable badge)
   const handleToggleRole = useCallback(
-    async (mat: MaterialEntrySummary) => {
+    async (mat: AuthoredDocumentSummary) => {
       const newRole: MaterialRole = mat.material_role === 'educational' ? 'methodological' : 'educational'
       try {
-        await materialsApi.update(mat.id, { material_role: newRole })
+        await documentsApi.update(mat.id, { material_role: newRole })
         await refresh()
       } catch {
         // Silently fail — API might not support this yet
@@ -419,12 +419,12 @@ export function NodeDetailPanel() {
 
       {/* Materials list */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
-        {node.materials.length === 0 ? (
+        {node.authored_documents.length === 0 ? (
           <p className="text-ink-muted text-sm text-center py-8">
-            Матеріали ще не завантажені
+            Документи ще не завантажені
           </p>
         ) : (
-          node.materials.map((mat) => {
+          node.authored_documents.map((mat) => {
             const meta = sourceTypeMeta(mat.source_type)
             const Icon = iconMap[meta.icon] || FileIcon
             const isMethodological = mat.material_role === 'methodological'
