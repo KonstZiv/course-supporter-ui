@@ -17,6 +17,7 @@ import '@xyflow/react/dist/style.css'
 import { useCourseStore } from '../../stores/course'
 import { useReconciliationStore } from '../../stores/reconciliation'
 import { reconciliationApi } from '../../api/reconciliation'
+import { useDocumentStatePolling } from '../../hooks/useDocumentStatePolling'
 import { treeToFlow, type FlowNodeData } from '../../utils/treeToFlow'
 import { applyDagreLayout } from '../../utils/layout'
 import { CourseRootNode } from './nodes/CourseRootNode'
@@ -38,6 +39,9 @@ export function CourseCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<FlowNodeData>>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
   const [menu, setMenu] = useState<MenuPosition | null>(null)
+
+  // Auto-refresh tree while any document is in `pending` state — Anomaly O.
+  useDocumentStatePolling()
 
   // Background poller for active reconciliation jobs
   const pollerRef = useRef<ReturnType<typeof setInterval>>(undefined)

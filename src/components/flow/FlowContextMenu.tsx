@@ -12,6 +12,7 @@ import {
   Info,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 import { nodesApi } from '../../api/nodes'
 import { generationApi } from '../../api/generation'
 import { useCourseStore } from '../../stores/course'
@@ -87,6 +88,7 @@ export function FlowContextMenu({ position, onClose }: Props) {
   const [hoveredInfo, setHoveredInfo] = useState<string | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const refreshTree = useRefreshTree()
+  const navigate = useNavigate()
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -135,12 +137,18 @@ export function FlowContextMenu({ position, onClose }: Props) {
     setBusy(true)
     try {
       await nodesApi.delete(position.nodeId)
-      await refreshTree()
-      onClose()
+      if (position.isRoot) {
+        useCourseStore.getState().reset()
+        onClose()
+        navigate('/')
+      } else {
+        await refreshTree()
+        onClose()
+      }
     } finally {
       setBusy(false)
     }
-  }, [position, refreshTree, onClose])
+  }, [position, refreshTree, onClose, navigate])
 
   const generate = useCallback(async () => {
     setBusy(true)
@@ -280,9 +288,7 @@ export function FlowContextMenu({ position, onClose }: Props) {
       dividerBefore: true,
     },
     { icon: BookOpen, label: 'Опис вузла', action: () => setShowEditable(true) },
-    ...(position.isRoot
-      ? []
-      : [{ icon: Trash2, label: 'Видалити', action: deleteNode, danger: true } as MenuItem]),
+    { icon: Trash2, label: 'Видалити', action: deleteNode, danger: true },
   ]
 
   return (
