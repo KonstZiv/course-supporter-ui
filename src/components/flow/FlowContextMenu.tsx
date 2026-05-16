@@ -204,7 +204,7 @@ export function FlowContextMenu({ position, onClose }: Props) {
     const input = document.createElement('input')
     input.type = 'file'
     input.multiple = true
-    input.accept = '.pdf,.pptx,.mp4,.mp3,.txt,.html,.docx,.md'
+    input.accept = '.pdf,.pptx,.mp4,.webm,.mp3,.wav,.m4a,.ogg,.flac,.txt,.html,.docx,.md'
     input.onchange = async () => {
       if (!input.files) return
       setBusy(true)
@@ -456,7 +456,8 @@ export function FlowContextMenu({ position, onClose }: Props) {
 
 function guessSourceType(filename: string): string {
   const ext = filename.split('.').pop()?.toLowerCase()
-  if (['mp4', 'mp3', 'wav', 'webm', 'ogg'].includes(ext || '')) return 'video'
+  if (['mp3', 'wav', 'm4a', 'ogg', 'flac'].includes(ext || '')) return 'audio'
+  if (['mp4', 'webm'].includes(ext || '')) return 'video'
   if (['pdf', 'pptx', 'ppt'].includes(ext || '')) return 'presentation'
   if (['html', 'htm'].includes(ext || '')) return 'web'
   return 'text'
