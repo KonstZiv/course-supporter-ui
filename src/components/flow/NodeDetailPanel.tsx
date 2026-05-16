@@ -14,6 +14,7 @@ import {
   Video,
   FileImage,
   Globe,
+  AudioLines,
   File as FileIcon,
   Loader2,
   Link2,
@@ -34,7 +35,65 @@ const TASK_TYPE_OPTIONS: { value: AssignmentType; label: string; hint: string }[
 ]
 
 const iconMap: Record<string, typeof FileText> = {
-  FileText, Video, FileImage, Globe, File: FileIcon,
+  FileText, Video, FileImage, Globe, AudioLines, File: FileIcon,
+}
+
+// Phase 2.2 UI sub-area item #2/#3 — audio duration preview + hybrid hard-reject.
+// Backend authoritative reject lands у AudioProcessor.process_raw (PR #420).
+const MAX_AUDIO_DURATION_SEC = 150 * 60
+const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'm4a', 'ogg', 'flac'])
+
+function isAudioFile(file: File): boolean {
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+  return AUDIO_EXTENSIONS.has(ext)
+}
+
+function formatAudioDuration(seconds: number): string {
+  const total = Math.floor(seconds)
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const s = total % 60
+  const pad = (n: number) => n.toString().padStart(2, '0')
+  return h > 0 ? `[${h}:${pad(m)}:${pad(s)}]` : `[${pad(m)}:${pad(s)}]`
+}
+
+// Reads audio file duration via HTMLAudioElement loadedmetadata event.
+// Returns seconds or null when browser cannot determine duration (VBR
+// MP3 / damaged headers → Infinity / NaN / error). Null signals
+// fail-open path — upload proceeds, backend reject у worker per PR #420.
+function readAudioDuration(file: File): Promise<number | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file)
+    const audioEl = document.createElement('audio')
+    audioEl.preload = 'metadata'
+    let settled = false
+    const cleanup = () => {
+      if (settled) return
+      settled = true
+      URL.revokeObjectURL(url)
+      audioEl.removeEventListener('loadedmetadata', onLoad)
+      audioEl.removeEventListener('error', onError)
+      clearTimeout(timer)
+    }
+    const onLoad = () => {
+      const d = audioEl.duration
+      const valid = Number.isFinite(d) && d > 0
+      cleanup()
+      resolve(valid ? d : null)
+    }
+    const onError = () => {
+      cleanup()
+      resolve(null)
+    }
+    // Safety timeout for browsers that fire neither event on bad media.
+    const timer = setTimeout(() => {
+      cleanup()
+      resolve(null)
+    }, 5000)
+    audioEl.addEventListener('loadedmetadata', onLoad)
+    audioEl.addEventListener('error', onError)
+    audioEl.src = url
+  })
 }
 
 function findNode(tree: NodeWithDocuments, id: string): NodeWithDocuments | null {
@@ -50,7 +109,7 @@ function findNode(tree: NodeWithDocuments, id: string): NodeWithDocuments | null
 
 interface UploadConfirmProps {
   open: boolean
-  files: { name: string; sourceType: string }[]
+  files: { name: string; sourceType: string; durationSec?: number | null }[]
   linkUrl?: string
   onConfirm: (role: MaterialRole, taskType: AssignmentType | null) => void
   onCancel: () => void
@@ -73,10 +132,11 @@ function UploadConfirmDialog({ open, files, linkUrl, onConfirm, onCancel }: Uplo
     onCancel()
   }
 
+  const single = files.length === 1 ? files[0]! : null
   const label = linkUrl
     ? linkUrl.slice(0, 50) + (linkUrl.length > 50 ? '…' : '')
-    : files.length === 1
-      ? files[0]!.name
+    : single
+      ? `${single.name}${single.durationSec != null ? ` ${formatAudioDuration(single.durationSec)}` : ''}`
       : `${files.length} файлів`
 
   return (
@@ -185,6 +245,9 @@ export function NodeDetailPanel() {
 
   // Upload confirmation state
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [pendingFileDurations, setPendingFileDurations] = useState<
+    Map<string, number | null>
+  >(new Map())
   const [pendingLink, setPendingLink] = useState<string | null>(null)
   const showConfirm = pendingFiles.length > 0 || pendingLink !== null
 
@@ -196,9 +259,43 @@ export function NodeDetailPanel() {
     setTree(fresh)
   }, [tree, setTree])
 
-  // File drop → show confirmation
-  const onDrop = useCallback((files: File[]) => {
-    if (files.length > 0) setPendingFiles(files)
+  // File drop → audio duration check (Phase 2.2 UI item #2/#3) → confirmation.
+  // Audio files with valid metadata + duration > 150 min are rejected
+  // client-side. Files with Infinity/NaN duration proceed (fail-open;
+  // backend AudioProcessor.process_raw catches via PR #420).
+  const onDrop = useCallback(async (files: File[]) => {
+    if (files.length === 0) return
+
+    const accepted: File[] = []
+    const durations = new Map<string, number | null>()
+    const rejected: string[] = []
+
+    for (const file of files) {
+      if (!isAudioFile(file)) {
+        accepted.push(file)
+        continue
+      }
+      const duration = await readAudioDuration(file)
+      durations.set(file.name, duration)
+      if (duration !== null && duration > MAX_AUDIO_DURATION_SEC) {
+        rejected.push(`«${file.name}» — ${formatAudioDuration(duration)}`)
+        continue
+      }
+      accepted.push(file)
+    }
+
+    if (rejected.length > 0) {
+      alert(
+        'Система зараз обробляє аудіо до 150 хвилин. ' +
+          'Будь ласка, розділіть на коротші частини:\n\n' +
+          rejected.join('\n'),
+      )
+    }
+
+    if (accepted.length > 0) {
+      setPendingFiles(accepted)
+      setPendingFileDurations(durations)
+    }
   }, [])
 
   // Link add → show confirmation
@@ -216,6 +313,7 @@ export function NodeDetailPanel() {
       const filesToUpload = [...pendingFiles]
       const linkToUpload = pendingLink
       setPendingFiles([])
+      setPendingFileDurations(new Map())
       setPendingLink(null)
 
       if (filesToUpload.length > 0) {
@@ -224,13 +322,15 @@ export function NodeDetailPanel() {
         for (let i = 0; i < filesToUpload.length; i++) {
           const file = filesToUpload[i]!
           const ext = file.name.split('.').pop()?.toLowerCase() || ''
-          const type = ['mp4', 'mp3', 'wav', 'webm'].includes(ext)
-            ? 'video'
-            : ['pdf', 'pptx', 'ppt'].includes(ext)
-              ? 'presentation'
-              : ['html', 'htm'].includes(ext)
-                ? 'web'
-                : 'text'
+          const type = ['mp3', 'wav', 'm4a', 'ogg', 'flac'].includes(ext)
+            ? 'audio'
+            : ['mp4', 'webm'].includes(ext)
+              ? 'video'
+              : ['pdf', 'pptx', 'ppt'].includes(ext)
+                ? 'presentation'
+                : ['html', 'htm'].includes(ext)
+                  ? 'web'
+                  : 'text'
           await documentsApi.upload(node.id, file, type, role, null, taskType)
           setUploadProgress({ done: i + 1, total: filesToUpload.length })
         }
@@ -262,6 +362,7 @@ export function NodeDetailPanel() {
 
   const handleCancelUpload = useCallback(() => {
     setPendingFiles([])
+    setPendingFileDurations(new Map())
     setPendingLink(null)
   }, [])
 
@@ -272,7 +373,8 @@ export function NodeDetailPanel() {
     accept: {
       'application/pdf': ['.pdf'],
       'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
-      'video/*': ['.mp4', '.mp3', '.wav', '.webm'],
+      'video/*': ['.mp4', '.webm'],
+      'audio/*': ['.mp3', '.wav', '.m4a', '.ogg', '.flac'],
       'text/*': ['.txt', '.html', '.htm', '.md'],
     },
   })
@@ -377,7 +479,7 @@ export function NodeDetailPanel() {
                 <input
                   type="file"
                   multiple
-                  accept=".pdf,.pptx,.mp4,.mp3,.wav,.webm,.txt,.html,.htm,.md"
+                  accept=".pdf,.pptx,.mp4,.webm,.mp3,.wav,.m4a,.ogg,.flac,.txt,.html,.htm,.md"
                   className="text-sm text-ink-muted file:mr-2 file:py-1 file:px-3 file:rounded-lg
                              file:border-0 file:text-sm file:font-medium file:bg-navy file:text-white
                              file:cursor-pointer cursor-pointer"
@@ -457,6 +559,11 @@ export function NodeDetailPanel() {
                       {isMethodological ? '📋 методичний' : '📚 учбовий'}
                     </button>
                   </div>
+                  {mat.state === 'error' && mat.error_message && (
+                    <p className="text-xs text-coral mt-1 line-clamp-2">
+                      {mat.error_message}
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   {(mat.state === 'error' || mat.state === 'ready') && (
@@ -489,7 +596,11 @@ export function NodeDetailPanel() {
       {/* Upload confirmation dialog */}
       <UploadConfirmDialog
         open={showConfirm}
-        files={pendingFiles.map((f) => ({ name: f.name, sourceType: '' }))}
+        files={pendingFiles.map((f) => ({
+          name: f.name,
+          sourceType: '',
+          durationSec: pendingFileDurations.get(f.name) ?? null,
+        }))}
         linkUrl={pendingLink || undefined}
         onConfirm={handleConfirmUpload}
         onCancel={handleCancelUpload}
