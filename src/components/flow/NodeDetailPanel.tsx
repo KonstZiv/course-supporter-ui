@@ -559,6 +559,11 @@ export function NodeDetailPanel() {
                       {isMethodological ? '📋 методичний' : '📚 учбовий'}
                     </button>
                   </div>
+                  {mat.state === 'error' && mat.error_message && (
+                    <p className="text-xs text-coral mt-1 line-clamp-2">
+                      {mat.error_message}
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   {(mat.state === 'error' || mat.state === 'ready') && (
