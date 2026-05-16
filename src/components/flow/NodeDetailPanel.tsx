@@ -225,13 +225,15 @@ export function NodeDetailPanel() {
         for (let i = 0; i < filesToUpload.length; i++) {
           const file = filesToUpload[i]!
           const ext = file.name.split('.').pop()?.toLowerCase() || ''
-          const type = ['mp4', 'mp3', 'wav', 'webm'].includes(ext)
-            ? 'video'
-            : ['pdf', 'pptx', 'ppt'].includes(ext)
-              ? 'presentation'
-              : ['html', 'htm'].includes(ext)
-                ? 'web'
-                : 'text'
+          const type = ['mp3', 'wav', 'm4a', 'ogg', 'flac'].includes(ext)
+            ? 'audio'
+            : ['mp4', 'webm'].includes(ext)
+              ? 'video'
+              : ['pdf', 'pptx', 'ppt'].includes(ext)
+                ? 'presentation'
+                : ['html', 'htm'].includes(ext)
+                  ? 'web'
+                  : 'text'
           await documentsApi.upload(node.id, file, type, role, null, taskType)
           setUploadProgress({ done: i + 1, total: filesToUpload.length })
         }
@@ -273,7 +275,8 @@ export function NodeDetailPanel() {
     accept: {
       'application/pdf': ['.pdf'],
       'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
-      'video/*': ['.mp4', '.mp3', '.wav', '.webm'],
+      'video/*': ['.mp4', '.webm'],
+      'audio/*': ['.mp3', '.wav', '.m4a', '.ogg', '.flac'],
       'text/*': ['.txt', '.html', '.htm', '.md'],
     },
   })
@@ -378,7 +381,7 @@ export function NodeDetailPanel() {
                 <input
                   type="file"
                   multiple
-                  accept=".pdf,.pptx,.mp4,.mp3,.wav,.webm,.txt,.html,.htm,.md"
+                  accept=".pdf,.pptx,.mp4,.webm,.mp3,.wav,.m4a,.ogg,.flac,.txt,.html,.htm,.md"
                   className="text-sm text-ink-muted file:mr-2 file:py-1 file:px-3 file:rounded-lg
                              file:border-0 file:text-sm file:font-medium file:bg-navy file:text-white
                              file:cursor-pointer cursor-pointer"
