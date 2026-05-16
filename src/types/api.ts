@@ -1,6 +1,6 @@
 // ─── Enums ───
 
-export type SourceType = 'video' | 'presentation' | 'text' | 'web'
+export type SourceType = 'video' | 'presentation' | 'text' | 'web' | 'audio'
 export type DocumentState = 'raw' | 'pending' | 'ready' | 'integrity_broken' | 'error'
 export type GenerationMode = 'free' | 'guided'
 export type ValidationState = 'validated' | 'pending_validation' | 'validation_failed'

@@ -14,6 +14,7 @@ import {
   Video,
   FileImage,
   Globe,
+  AudioLines,
   File as FileIcon,
   Loader2,
   Link2,
@@ -34,7 +35,7 @@ const TASK_TYPE_OPTIONS: { value: AssignmentType; label: string; hint: string }[
 ]
 
 const iconMap: Record<string, typeof FileText> = {
-  FileText, Video, FileImage, Globe, File: FileIcon,
+  FileText, Video, FileImage, Globe, AudioLines, File: FileIcon,
 }
 
 function findNode(tree: NodeWithDocuments, id: string): NodeWithDocuments | null {
