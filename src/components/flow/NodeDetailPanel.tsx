@@ -2,9 +2,11 @@ import { useCallback, useState } from 'react'
 import { useCourseStore } from '../../stores/course'
 import { documentsApi } from '../../api/documents'
 import { nodesApi } from '../../api/nodes'
+import { ApiError } from '../../api/client'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Modal } from '../ui/Modal'
 import { sourceTypeMeta } from '../../utils/sourceTypeIcon'
+import { rejectionDetail } from '../../utils/apiError'
 import {
   X,
   Upload,
@@ -319,23 +321,35 @@ export function NodeDetailPanel() {
       if (filesToUpload.length > 0) {
         setUploading(true)
         setUploadProgress({ done: 0, total: filesToUpload.length })
-        for (let i = 0; i < filesToUpload.length; i++) {
-          const file = filesToUpload[i]!
-          const ext = file.name.split('.').pop()?.toLowerCase() || ''
-          const type = ['mp3', 'wav', 'm4a', 'ogg', 'flac'].includes(ext)
-            ? 'audio'
-            : ['mp4', 'webm'].includes(ext)
-              ? 'video'
-              : ['pdf', 'pptx', 'ppt'].includes(ext)
-                ? 'presentation'
-                : ['html', 'htm'].includes(ext)
-                  ? 'web'
-                  : 'text'
-          await documentsApi.upload(node.id, file, type, role, null, taskType)
-          setUploadProgress({ done: i + 1, total: filesToUpload.length })
+        const rejected: string[] = []
+        try {
+          for (let i = 0; i < filesToUpload.length; i++) {
+            const file = filesToUpload[i]!
+            const ext = file.name.split('.').pop()?.toLowerCase() || ''
+            const type = ['mp3', 'wav', 'm4a', 'ogg', 'flac'].includes(ext)
+              ? 'audio'
+              : ['mp4', 'webm'].includes(ext)
+                ? 'video'
+                : ['pdf', 'pptx', 'ppt'].includes(ext)
+                  ? 'presentation'
+                  : ['html', 'htm'].includes(ext)
+                    ? 'web'
+                    : 'text'
+            try {
+              await documentsApi.upload(node.id, file, type, role, null, taskType)
+            } catch (err) {
+              rejected.push(
+                rejectionDetail(err) ??
+                  `${file.name}: помилка завантаження (${err instanceof ApiError ? err.status : 'unknown'})`,
+              )
+            }
+            setUploadProgress({ done: i + 1, total: filesToUpload.length })
+          }
+        } finally {
+          await refresh()
+          setUploading(false)
         }
-        await refresh()
-        setUploading(false)
+        if (rejected.length) alert(rejected.join('\n'))
       }
 
       if (linkToUpload) {
