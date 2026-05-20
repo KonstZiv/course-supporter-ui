@@ -15,6 +15,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { nodesApi } from '../../api/nodes'
 import { generationApi } from '../../api/generation'
+import { ApiError } from '../../api/client'
+import { rejectionDetail } from '../../utils/apiError'
 import { useCourseStore } from '../../stores/course'
 import { Modal } from '../ui/Modal'
 import { EditableNodeModal } from '../structure/EditableNodeModal'
@@ -204,18 +206,30 @@ export function FlowContextMenu({ position, onClose }: Props) {
     const input = document.createElement('input')
     input.type = 'file'
     input.multiple = true
-    input.accept = '.pdf,.pptx,.mp4,.webm,.mp3,.wav,.m4a,.ogg,.flac,.txt,.html,.docx,.md'
+    input.accept = '.pdf,.pptx,.ppt,.mp4,.webm,.mp3,.wav,.m4a,.ogg,.flac,.txt,.html,.docx,.md'
     input.onchange = async () => {
       if (!input.files) return
       setBusy(true)
       const { documentsApi } = await import('../../api/documents')
-      for (const file of Array.from(input.files)) {
-        const type = guessSourceType(file.name)
-        await documentsApi.upload(position.nodeId, file, type)
+      const rejected: string[] = []
+      try {
+        for (const file of Array.from(input.files)) {
+          const type = guessSourceType(file.name)
+          try {
+            await documentsApi.upload(position.nodeId, file, type)
+          } catch (err) {
+            rejected.push(
+              rejectionDetail(err) ??
+                `${file.name}: помилка завантаження (${err instanceof ApiError ? err.status : 'unknown'})`,
+            )
+          }
+        }
+      } finally {
+        await refreshTree()
+        setBusy(false)
+        onClose()
       }
-      await refreshTree()
-      setBusy(false)
-      onClose()
+      if (rejected.length) alert(rejected.join('\n'))
     }
     input.click()
   }, [position.nodeId, refreshTree, onClose])
