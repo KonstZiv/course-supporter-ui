@@ -373,6 +373,7 @@ export function NodeDetailPanel() {
     accept: {
       'application/pdf': ['.pdf'],
       'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+      'application/vnd.ms-powerpoint': ['.ppt'],
       'video/*': ['.mp4', '.webm'],
       'audio/*': ['.mp3', '.wav', '.m4a', '.ogg', '.flac'],
       'text/*': ['.txt', '.html', '.htm', '.md'],
@@ -479,7 +480,7 @@ export function NodeDetailPanel() {
                 <input
                   type="file"
                   multiple
-                  accept=".pdf,.pptx,.mp4,.webm,.mp3,.wav,.m4a,.ogg,.flac,.txt,.html,.htm,.md"
+                  accept=".pdf,.pptx,.ppt,.mp4,.webm,.mp3,.wav,.m4a,.ogg,.flac,.txt,.html,.htm,.md"
                   className="text-sm text-ink-muted file:mr-2 file:py-1 file:px-3 file:rounded-lg
                              file:border-0 file:text-sm file:font-medium file:bg-navy file:text-white
                              file:cursor-pointer cursor-pointer"

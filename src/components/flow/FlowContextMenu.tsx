@@ -204,7 +204,7 @@ export function FlowContextMenu({ position, onClose }: Props) {
     const input = document.createElement('input')
     input.type = 'file'
     input.multiple = true
-    input.accept = '.pdf,.pptx,.mp4,.webm,.mp3,.wav,.m4a,.ogg,.flac,.txt,.html,.docx,.md'
+    input.accept = '.pdf,.pptx,.ppt,.mp4,.webm,.mp3,.wav,.m4a,.ogg,.flac,.txt,.html,.docx,.md'
     input.onchange = async () => {
       if (!input.files) return
       setBusy(true)
