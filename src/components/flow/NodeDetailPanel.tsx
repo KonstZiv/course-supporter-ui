@@ -2,9 +2,11 @@ import { useCallback, useState } from 'react'
 import { useCourseStore } from '../../stores/course'
 import { documentsApi } from '../../api/documents'
 import { nodesApi } from '../../api/nodes'
+import { ApiError } from '../../api/client'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Modal } from '../ui/Modal'
 import { sourceTypeMeta } from '../../utils/sourceTypeIcon'
+import { rejectionDetail } from '../../utils/apiError'
 import {
   X,
   Upload,
@@ -269,8 +271,18 @@ export function NodeDetailPanel() {
     const accepted: File[] = []
     const durations = new Map<string, number | null>()
     const rejected: string[] = []
+    const oversized: string[] = []
 
     for (const file of files) {
+      const ext = file.name.split('.').pop()?.toLowerCase() || ''
+      // Phase 2.3 Item #3 — client-side SIZE pre-check for presentations.
+      // 50 MB inlined; backend AUTHORED_POLICY.max_presentation_size_bytes is
+      // the source of truth (UI mirrors). FORBIDDEN_TYPE / SLIDE_COUNT_LIMIT
+      // stay server-authoritative via the sync-400 catch path.
+      if (['pdf', 'pptx', 'ppt'].includes(ext) && file.size > 50 * 1024 * 1024) {
+        oversized.push(`${file.name} перевищує ліміт 50 МБ для презентацій`)
+        continue
+      }
       if (!isAudioFile(file)) {
         accepted.push(file)
         continue
@@ -290,6 +302,10 @@ export function NodeDetailPanel() {
           'Будь ласка, розділіть на коротші частини:\n\n' +
           rejected.join('\n'),
       )
+    }
+
+    if (oversized.length > 0) {
+      alert(oversized.join('\n'))
     }
 
     if (accepted.length > 0) {
@@ -319,23 +335,35 @@ export function NodeDetailPanel() {
       if (filesToUpload.length > 0) {
         setUploading(true)
         setUploadProgress({ done: 0, total: filesToUpload.length })
-        for (let i = 0; i < filesToUpload.length; i++) {
-          const file = filesToUpload[i]!
-          const ext = file.name.split('.').pop()?.toLowerCase() || ''
-          const type = ['mp3', 'wav', 'm4a', 'ogg', 'flac'].includes(ext)
-            ? 'audio'
-            : ['mp4', 'webm'].includes(ext)
-              ? 'video'
-              : ['pdf', 'pptx', 'ppt'].includes(ext)
-                ? 'presentation'
-                : ['html', 'htm'].includes(ext)
-                  ? 'web'
-                  : 'text'
-          await documentsApi.upload(node.id, file, type, role, null, taskType)
-          setUploadProgress({ done: i + 1, total: filesToUpload.length })
+        const rejected: string[] = []
+        try {
+          for (let i = 0; i < filesToUpload.length; i++) {
+            const file = filesToUpload[i]!
+            const ext = file.name.split('.').pop()?.toLowerCase() || ''
+            const type = ['mp3', 'wav', 'm4a', 'ogg', 'flac'].includes(ext)
+              ? 'audio'
+              : ['mp4', 'webm'].includes(ext)
+                ? 'video'
+                : ['pdf', 'pptx', 'ppt'].includes(ext)
+                  ? 'presentation'
+                  : ['html', 'htm'].includes(ext)
+                    ? 'web'
+                    : 'text'
+            try {
+              await documentsApi.upload(node.id, file, type, role, null, taskType)
+            } catch (err) {
+              rejected.push(
+                rejectionDetail(err) ??
+                  `${file.name}: помилка завантаження (${err instanceof ApiError ? err.status : 'unknown'})`,
+              )
+            }
+            setUploadProgress({ done: i + 1, total: filesToUpload.length })
+          }
+        } finally {
+          await refresh()
+          setUploading(false)
         }
-        await refresh()
-        setUploading(false)
+        if (rejected.length) alert(rejected.join('\n'))
       }
 
       if (linkToUpload) {
@@ -373,6 +401,7 @@ export function NodeDetailPanel() {
     accept: {
       'application/pdf': ['.pdf'],
       'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
+      'application/vnd.ms-powerpoint': ['.ppt'],
       'video/*': ['.mp4', '.webm'],
       'audio/*': ['.mp3', '.wav', '.m4a', '.ogg', '.flac'],
       'text/*': ['.txt', '.html', '.htm', '.md'],
@@ -479,7 +508,7 @@ export function NodeDetailPanel() {
                 <input
                   type="file"
                   multiple
-                  accept=".pdf,.pptx,.mp4,.webm,.mp3,.wav,.m4a,.ogg,.flac,.txt,.html,.htm,.md"
+                  accept=".pdf,.pptx,.ppt,.mp4,.webm,.mp3,.wav,.m4a,.ogg,.flac,.txt,.html,.htm,.md"
                   className="text-sm text-ink-muted file:mr-2 file:py-1 file:px-3 file:rounded-lg
                              file:border-0 file:text-sm file:font-medium file:bg-navy file:text-white
                              file:cursor-pointer cursor-pointer"
