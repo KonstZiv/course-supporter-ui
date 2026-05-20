@@ -271,8 +271,18 @@ export function NodeDetailPanel() {
     const accepted: File[] = []
     const durations = new Map<string, number | null>()
     const rejected: string[] = []
+    const oversized: string[] = []
 
     for (const file of files) {
+      const ext = file.name.split('.').pop()?.toLowerCase() || ''
+      // Phase 2.3 Item #3 — client-side SIZE pre-check for presentations.
+      // 50 MB inlined; backend AUTHORED_POLICY.max_presentation_size_bytes is
+      // the source of truth (UI mirrors). FORBIDDEN_TYPE / SLIDE_COUNT_LIMIT
+      // stay server-authoritative via the sync-400 catch path.
+      if (['pdf', 'pptx', 'ppt'].includes(ext) && file.size > 50 * 1024 * 1024) {
+        oversized.push(`${file.name} перевищує ліміт 50 МБ для презентацій`)
+        continue
+      }
       if (!isAudioFile(file)) {
         accepted.push(file)
         continue
@@ -292,6 +302,10 @@ export function NodeDetailPanel() {
           'Будь ласка, розділіть на коротші частини:\n\n' +
           rejected.join('\n'),
       )
+    }
+
+    if (oversized.length > 0) {
+      alert(oversized.join('\n'))
     }
 
     if (accepted.length > 0) {
