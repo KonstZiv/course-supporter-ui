@@ -17,7 +17,7 @@ import { nodesApi } from '../../api/nodes'
 import { generationApi } from '../../api/generation'
 import { ApiError } from '../../api/client'
 import { rejectionDetail } from '../../utils/apiError'
-import { sourceTypeForExtension } from '../../utils/uploadRouting'
+import { sourceTypeForExtension, UPLOAD_ACCEPT_ATTR } from '../../utils/uploadRouting'
 import { useCourseStore } from '../../stores/course'
 import { Modal } from '../ui/Modal'
 import { EditableNodeModal } from '../structure/EditableNodeModal'
@@ -207,7 +207,7 @@ export function FlowContextMenu({ position, onClose }: Props) {
     const input = document.createElement('input')
     input.type = 'file'
     input.multiple = true
-    input.accept = '.pdf,.pptx,.ppt,.mp4,.webm,.mp3,.wav,.m4a,.ogg,.flac,.txt,.html,.docx,.md'
+    input.accept = UPLOAD_ACCEPT_ATTR
     input.onchange = async () => {
       if (!input.files) return
       setBusy(true)
