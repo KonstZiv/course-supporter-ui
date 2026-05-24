@@ -8,6 +8,12 @@ import { Modal } from '../ui/Modal'
 import { sourceTypeMeta } from '../../utils/sourceTypeIcon'
 import { rejectionDetail } from '../../utils/apiError'
 import {
+  sourceTypeForExtension,
+  isVideoUrl,
+  UPLOAD_DROPZONE_ACCEPT,
+  UPLOAD_ACCEPT_ATTR,
+} from '../../utils/uploadRouting'
+import {
   X,
   Upload,
   Trash2,
@@ -340,15 +346,7 @@ export function NodeDetailPanel() {
           for (let i = 0; i < filesToUpload.length; i++) {
             const file = filesToUpload[i]!
             const ext = file.name.split('.').pop()?.toLowerCase() || ''
-            const type = ['mp3', 'wav', 'm4a', 'ogg', 'flac'].includes(ext)
-              ? 'audio'
-              : ['mp4', 'webm'].includes(ext)
-                ? 'video'
-                : ['pdf', 'pptx', 'ppt'].includes(ext)
-                  ? 'presentation'
-                  : ['html', 'htm'].includes(ext)
-                    ? 'web'
-                    : 'text'
+            const type = sourceTypeForExtension(ext)
             try {
               await documentsApi.upload(node.id, file, type, role, null, taskType)
             } catch (err) {
@@ -369,7 +367,7 @@ export function NodeDetailPanel() {
       if (linkToUpload) {
         setAddingLink(true)
         try {
-          const isVideo = /youtu\.?be|vimeo|\.mp4/i.test(linkToUpload)
+          const isVideo = isVideoUrl(linkToUpload)
           await documentsApi.uploadUrl(
             node.id,
             linkToUpload,
@@ -398,14 +396,7 @@ export function NodeDetailPanel() {
     onDrop,
     noClick: true,
     noKeyboard: true,
-    accept: {
-      'application/pdf': ['.pdf'],
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation': ['.pptx'],
-      'application/vnd.ms-powerpoint': ['.ppt'],
-      'video/*': ['.mp4', '.webm'],
-      'audio/*': ['.mp3', '.wav', '.m4a', '.ogg', '.flac'],
-      'text/*': ['.txt', '.html', '.htm', '.md'],
-    },
+    accept: UPLOAD_DROPZONE_ACCEPT,
   })
 
   const handleDelete = useCallback(
@@ -508,7 +499,7 @@ export function NodeDetailPanel() {
                 <input
                   type="file"
                   multiple
-                  accept=".pdf,.pptx,.ppt,.mp4,.webm,.mp3,.wav,.m4a,.ogg,.flac,.txt,.html,.htm,.md"
+                  accept={UPLOAD_ACCEPT_ATTR}
                   className="text-sm text-ink-muted file:mr-2 file:py-1 file:px-3 file:rounded-lg
                              file:border-0 file:text-sm file:font-medium file:bg-navy file:text-white
                              file:cursor-pointer cursor-pointer"
