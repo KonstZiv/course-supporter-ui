@@ -1,20 +1,7 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { FolderOpen, Paperclip, Loader2 } from 'lucide-react'
+import { FolderOpen, Paperclip } from 'lucide-react'
 import type { FlowNodeData } from '../../../utils/treeToFlow'
-
-function ReconciliationDot({ freshness, polling }: { freshness?: string | null; polling?: boolean }) {
-  if (polling) {
-    return <Loader2 size={12} className="animate-spin text-navy shrink-0" />
-  }
-  if (freshness === 'fresh') {
-    return <span className="w-2 h-2 rounded-full bg-forest shrink-0" title="Узгодження актуальне" />
-  }
-  if (freshness?.startsWith('stale')) {
-    return <span className="w-2 h-2 rounded-full bg-amber shrink-0" title="Узгодження застаріло" />
-  }
-  return null
-}
 
 export const SectionNode = memo(function SectionNode({
   data,
@@ -42,16 +29,6 @@ export const SectionNode = memo(function SectionNode({
     >
       <Handle type="target" position={Position.Top} className="!bg-navy/30 !w-2 !h-2 !border-2 !border-white" />
 
-      {/* Reconciliation polling overlay */}
-      {data.reconciliationPolling && (
-        <div className="absolute inset-0 bg-white/70 rounded-xl flex items-center justify-center z-10 backdrop-blur-[1px]">
-          <div className="flex items-center gap-2 text-xs text-navy">
-            <Loader2 size={16} className="animate-spin" />
-            <span>Іде узгодження...</span>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-start gap-2.5 mb-2">
         <div className={`
@@ -65,7 +42,6 @@ export const SectionNode = memo(function SectionNode({
             <h4 className="font-medium text-sm text-ink leading-snug truncate">
               {data.title}
             </h4>
-            <ReconciliationDot freshness={data.reconciliationFreshness} polling={data.reconciliationPolling} />
           </div>
           {data.description && (
             <p className="text-ink-muted text-xs mt-0.5 line-clamp-1">

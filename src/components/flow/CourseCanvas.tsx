@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   ReactFlow,
   Background,
@@ -15,8 +15,6 @@ import {
 import '@xyflow/react/dist/style.css'
 
 import { useCourseStore } from '../../stores/course'
-import { useReconciliationStore } from '../../stores/reconciliation'
-import { reconciliationApi } from '../../api/reconciliation'
 import { useDocumentStatePolling } from '../../hooks/useDocumentStatePolling'
 import { treeToFlow, type FlowNodeData } from '../../utils/treeToFlow'
 import { applyDagreLayout } from '../../utils/layout'
@@ -32,9 +30,6 @@ const nodeTypes: NodeTypes = {
 export function CourseCanvas() {
   const tree = useCourseStore((s) => s.tree)
   const setSelectedNodeId = useCourseStore((s) => s.setSelectedNodeId)
-  const reconNodes = useReconciliationStore((s) => s.nodes)
-  const setNodeStatus = useReconciliationStore((s) => s.setNodeStatus)
-  const getPollingNodeIds = useReconciliationStore((s) => s.getPollingNodeIds)
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<FlowNodeData>>([])
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
@@ -43,55 +38,14 @@ export function CourseCanvas() {
   // Auto-refresh tree while any document is in `pending` state — Anomaly O.
   useDocumentStatePolling()
 
-  // Background poller for active reconciliation jobs
-  const pollerRef = useRef<ReturnType<typeof setInterval>>(undefined)
-
-  useEffect(() => {
-    pollerRef.current = setInterval(async () => {
-      const ids = getPollingNodeIds()
-      for (const nodeId of ids) {
-        try {
-          const status = await reconciliationApi.getStatus(nodeId)
-          setNodeStatus(nodeId, {
-            jobId: status.job_id,
-            jobStatus: status.job_status as 'queued' | 'active' | 'complete' | 'failed' | null,
-            preview: status.preview,
-            freshness: status.freshness,
-          })
-        } catch {
-          // Ignore polling errors silently
-        }
-      }
-    }, 4000)
-
-    return () => {
-      if (pollerRef.current) clearInterval(pollerRef.current)
-    }
-  }, [getPollingNodeIds, setNodeStatus])
-
-  // Convert tree to flow layout + merge reconciliation state
+  // Convert tree to flow layout.
   useEffect(() => {
     if (!tree) return
     const { nodes: raw, edges: rawEdges } = treeToFlow(tree)
-
-    // Merge reconciliation overlay data into flow nodes
-    const merged = raw.map((n) => {
-      const rs = reconNodes[n.data.nodeId]
-      if (!rs) return n
-      return {
-        ...n,
-        data: {
-          ...n.data,
-          reconciliationFreshness: rs.freshness,
-          reconciliationPolling: rs.jobStatus === 'queued' || rs.jobStatus === 'active',
-        },
-      }
-    })
-
-    const { nodes: laid, edges: laidEdges } = applyDagreLayout(merged, rawEdges)
+    const { nodes: laid, edges: laidEdges } = applyDagreLayout(raw, rawEdges)
     setNodes(laid as Node<FlowNodeData>[])
     setEdges(laidEdges)
-  }, [tree, reconNodes, setNodes, setEdges])
+  }, [tree, setNodes, setEdges])
 
   const onNodeClick: NodeMouseHandler<Node<FlowNodeData>> = useCallback(
     (_event, node) => {
