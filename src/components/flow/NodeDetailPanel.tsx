@@ -7,6 +7,7 @@ import { StatusBadge } from '../ui/StatusBadge'
 import { Modal } from '../ui/Modal'
 import { sourceTypeMeta } from '../../utils/sourceTypeIcon'
 import { rejectionDetail } from '../../utils/apiError'
+import { sourceTypeForExtension, isVideoUrl } from '../../utils/uploadRouting'
 import {
   X,
   Upload,
@@ -340,15 +341,7 @@ export function NodeDetailPanel() {
           for (let i = 0; i < filesToUpload.length; i++) {
             const file = filesToUpload[i]!
             const ext = file.name.split('.').pop()?.toLowerCase() || ''
-            const type = ['mp3', 'wav', 'm4a', 'ogg', 'flac'].includes(ext)
-              ? 'audio'
-              : ['mp4', 'webm'].includes(ext)
-                ? 'video'
-                : ['pdf', 'pptx', 'ppt'].includes(ext)
-                  ? 'presentation'
-                  : ['html', 'htm'].includes(ext)
-                    ? 'web'
-                    : 'text'
+            const type = sourceTypeForExtension(ext)
             try {
               await documentsApi.upload(node.id, file, type, role, null, taskType)
             } catch (err) {
@@ -369,7 +362,7 @@ export function NodeDetailPanel() {
       if (linkToUpload) {
         setAddingLink(true)
         try {
-          const isVideo = /youtu\.?be|vimeo|\.mp4/i.test(linkToUpload)
+          const isVideo = isVideoUrl(linkToUpload)
           await documentsApi.uploadUrl(
             node.id,
             linkToUpload,

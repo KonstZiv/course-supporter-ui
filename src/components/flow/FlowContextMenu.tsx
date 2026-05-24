@@ -17,6 +17,7 @@ import { nodesApi } from '../../api/nodes'
 import { generationApi } from '../../api/generation'
 import { ApiError } from '../../api/client'
 import { rejectionDetail } from '../../utils/apiError'
+import { sourceTypeForExtension } from '../../utils/uploadRouting'
 import { useCourseStore } from '../../stores/course'
 import { Modal } from '../ui/Modal'
 import { EditableNodeModal } from '../structure/EditableNodeModal'
@@ -214,7 +215,8 @@ export function FlowContextMenu({ position, onClose }: Props) {
       const rejected: string[] = []
       try {
         for (const file of Array.from(input.files)) {
-          const type = guessSourceType(file.name)
+          const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+          const type = sourceTypeForExtension(ext)
           try {
             await documentsApi.upload(position.nodeId, file, type)
           } catch (err) {
@@ -466,15 +468,6 @@ export function FlowContextMenu({ position, onClose }: Props) {
       />
     </>
   )
-}
-
-function guessSourceType(filename: string): string {
-  const ext = filename.split('.').pop()?.toLowerCase()
-  if (['mp3', 'wav', 'm4a', 'ogg', 'flac'].includes(ext || '')) return 'audio'
-  if (['mp4', 'webm'].includes(ext || '')) return 'video'
-  if (['pdf', 'pptx', 'ppt'].includes(ext || '')) return 'presentation'
-  if (['html', 'htm'].includes(ext || '')) return 'web'
-  return 'text'
 }
 
 /** Hook: reload tree for the current root course node. */
