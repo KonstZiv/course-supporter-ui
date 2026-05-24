@@ -4,24 +4,17 @@ import {
   Pencil,
   Trash2,
   Upload,
-  Sparkles,
-  BookOpen,
-  Scale,
-  GraduationCap,
   Zap,
   Info,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { nodesApi } from '../../api/nodes'
-import { generationApi } from '../../api/generation'
 import { ApiError } from '../../api/client'
 import { rejectionDetail } from '../../utils/apiError'
 import { sourceTypeForExtension, UPLOAD_ACCEPT_ATTR } from '../../utils/uploadRouting'
 import { useCourseStore } from '../../stores/course'
 import { Modal } from '../ui/Modal'
-import { EditableNodeModal } from '../structure/EditableNodeModal'
-import { ReconciliationPanel } from '../reconciliation/ReconciliationPanel'
 
 export interface MenuPosition {
   x: number
@@ -49,41 +42,12 @@ const PIPELINE_INFO: Record<string, { title: string; description: string }> = {
       'Обидва шари генеруються автоматично при завантаженні матеріалу. ' +
       'Цей пункт дозволяє примусово перезапустити обробку.',
   },
-  generate: {
-    title: 'Структура курсу',
-    description:
-      'На основі Шару 2 (outlines всіх матеріалів) AI-архітектор створює ієрархічну структуру курсу: ' +
-      'Модулі → Уроки → Концепти → Вправи.\n\n' +
-      'Два проходи: знизу вгору (від листя до кореня) та зверху вниз (узгодження). ' +
-      'Результат — editable дерево яке автор може правити вручну.',
-  },
-  reconcile: {
-    title: 'Узгодження структури',
-    description:
-      'Перевірка консистентності згенерованої структури: термінологічні розбіжності, ' +
-      'прогалини в покритті матеріалу, проблеми з порядком тем.\n\n' +
-      'Показує список знайдених проблем. Автор обирає які виправлення прийняти.',
-  },
-  methodist: {
-    title: 'Шар 3: Методичні матеріали',
-    description:
-      'Агент "Методист" аналізує структуру курсу і Шар 2 даних та створює для кожного вузла:\n\n' +
-      '• Детальні цілі навчання\n' +
-      '• Ключові концепти з визначеннями та зв\'язками\n' +
-      '• Типові помилки студентів\n' +
-      '• Рекомендовані завдання (тести, задачі, проєкти)\n' +
-      '• Виявлені прогалини та протиріччя\n' +
-      '• Рекомендації з покращення курсу\n\n' +
-      'Два проходи: знизу вгору (деталізація) та зверху вниз (консистентність).',
-  },
 }
 
 export function FlowContextMenu({ position, onClose }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [showRename, setShowRename] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
-  const [showEditable, setShowEditable] = useState(false)
-  const [showReconciliation, setShowReconciliation] = useState(false)
   const [showPipelineInfo, setShowPipelineInfo] = useState<string | null>(null)
   const [newTitle, setNewTitle] = useState('')
   const [renameTitle, setRenameTitle] = useState(position.nodeTitle)
@@ -95,12 +59,12 @@ export function FlowContextMenu({ position, onClose }: Props) {
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (showAdd || showRename || showEditable || showReconciliation || showPipelineInfo) return
+      if (showAdd || showRename || showPipelineInfo) return
       if (ref.current && !ref.current.contains(e.target as HTMLElement)) onClose()
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [onClose, showAdd, showRename, showEditable, showReconciliation, showPipelineInfo])
+  }, [onClose, showAdd, showRename, showPipelineInfo])
 
   // Cleanup hover timer
   useEffect(() => {
@@ -153,16 +117,6 @@ export function FlowContextMenu({ position, onClose }: Props) {
     }
   }, [position, refreshTree, onClose, navigate])
 
-  const generate = useCallback(async () => {
-    setBusy(true)
-    try {
-      await generationApi.generate(position.nodeId, 'free')
-      onClose()
-    } finally {
-      setBusy(false)
-    }
-  }, [position.nodeId, onClose])
-
   const processMaterials = useCallback(async () => {
     // Re-trigger ingestion for all materials in this node
     setBusy(true)
@@ -180,28 +134,6 @@ export function FlowContextMenu({ position, onClose }: Props) {
       setBusy(false)
     }
   }, [position.nodeId, refreshTree, onClose])
-
-  const triggerMethodist = useCallback(async () => {
-    setBusy(true)
-    try {
-      const { methodistApi } = await import('../../api/methodist')
-      const plan = await methodistApi.trigger(position.nodeId)
-      alert(
-        `Методист запущено: ${plan.estimated_llm_calls} завдань в черзі.\n` +
-        `Знизу вгору: ${plan.bottom_up_jobs.length}, зверху вниз: ${plan.top_down_jobs.length}`,
-      )
-      onClose()
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err)
-      if (msg.includes('422') || msg.includes('editable')) {
-        alert('Спочатку згенеруйте структуру курсу.')
-      } else {
-        alert(`Помилка: ${msg}`)
-      }
-    } finally {
-      setBusy(false)
-    }
-  }, [position.nodeId, onClose])
 
   const triggerUpload = useCallback(() => {
     const input = document.createElement('input')
@@ -272,30 +204,6 @@ export function FlowContextMenu({ position, onClose }: Props) {
       pipelineKey: 'process',
       dividerBefore: true,
     },
-    {
-      icon: Sparkles,
-      label: 'Згенерувати структуру',
-      subtitle: 'Архітектор',
-      action: generate,
-      accent: true,
-      pipelineKey: 'generate',
-    },
-    {
-      icon: Scale,
-      label: 'Узгодити структуру',
-      subtitle: 'Консистентність',
-      action: () => setShowReconciliation(true),
-      accent: true,
-      pipelineKey: 'reconcile',
-    },
-    {
-      icon: GraduationCap,
-      label: 'Згенерувати методичні',
-      subtitle: 'Шар 3 · Методист',
-      action: triggerMethodist,
-      accent: true,
-      pipelineKey: 'methodist',
-    },
     // ── Edit actions ──
     {
       icon: Pencil,
@@ -303,7 +211,6 @@ export function FlowContextMenu({ position, onClose }: Props) {
       action: () => setShowRename(true),
       dividerBefore: true,
     },
-    { icon: BookOpen, label: 'Опис вузла', action: () => setShowEditable(true) },
     { icon: Trash2, label: 'Видалити', action: deleteNode, danger: true },
   ]
 
@@ -450,22 +357,6 @@ export function FlowContextMenu({ position, onClose }: Props) {
           </button>
         </div>
       </Modal>
-
-      {/* Editable structure modal */}
-      <EditableNodeModal
-        nodeId={position.nodeId}
-        nodeTitle={position.nodeTitle}
-        open={showEditable}
-        onClose={() => setShowEditable(false)}
-      />
-
-      {/* Reconciliation panel */}
-      <ReconciliationPanel
-        nodeId={position.nodeId}
-        nodeTitle={position.nodeTitle}
-        open={showReconciliation}
-        onClose={() => setShowReconciliation(false)}
-      />
     </>
   )
 }

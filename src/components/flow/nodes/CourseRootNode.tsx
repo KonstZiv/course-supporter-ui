@@ -1,20 +1,7 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { BookOpen, Layers, Paperclip, Loader2 } from 'lucide-react'
+import { BookOpen, Layers, Paperclip } from 'lucide-react'
 import type { FlowNodeData } from '../../../utils/treeToFlow'
-
-function ReconciliationIndicator({ freshness, polling }: { freshness?: string | null; polling?: boolean }) {
-  if (polling) {
-    return <Loader2 size={14} className="animate-spin text-amber shrink-0" />
-  }
-  if (freshness === 'fresh') {
-    return <span className="w-2 h-2 rounded-full bg-forest shrink-0" title="Узгодження актуальне" />
-  }
-  if (freshness?.startsWith('stale')) {
-    return <span className="w-2 h-2 rounded-full bg-amber shrink-0" title="Узгодження застаріло" />
-  }
-  return null
-}
 
 export const CourseRootNode = memo(function CourseRootNode({
   data,
@@ -31,16 +18,6 @@ export const CourseRootNode = memo(function CourseRootNode({
           : 'shadow-card hover:shadow-card-lg'}
       `}
     >
-      {/* Reconciliation polling overlay */}
-      {data.reconciliationPolling && (
-        <div className="absolute inset-0 bg-white/70 rounded-2xl flex items-center justify-center z-10 backdrop-blur-[1px]">
-          <div className="flex items-center gap-2 text-xs text-navy">
-            <Loader2 size={16} className="animate-spin" />
-            <span>Іде узгодження...</span>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex items-start gap-3 mb-3">
         <div className="w-10 h-10 rounded-xl bg-navy/8 flex items-center justify-center shrink-0">
@@ -51,7 +28,6 @@ export const CourseRootNode = memo(function CourseRootNode({
             <h3 className="font-display text-lg text-ink leading-snug truncate">
               {data.title}
             </h3>
-            <ReconciliationIndicator freshness={data.reconciliationFreshness} polling={data.reconciliationPolling} />
           </div>
           {data.description && (
             <p className="text-ink-muted text-sm mt-0.5 line-clamp-2">
