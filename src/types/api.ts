@@ -6,6 +6,22 @@ export type MaterialRole = 'educational' | 'methodological'
 export type AssignmentType = 'test' | 'short_task' | 'task' | 'project'
 export type JobStatus = 'queued' | 'active' | 'complete' | 'failed'
 
+// ─── Course languages (Task 2.4.13) ───
+// Whitelist + display metadata served by GET /api/v1/config/languages.
+// Codes are canonical ISO 639-3; name_native is best-effort (iso639 SIL
+// table does not always carry it — UI falls back to name_en).
+
+export interface LanguageEntry {
+  code: string
+  name_en: string
+  name_native: string | null
+}
+
+export interface AllowedLanguagesResponse {
+  items: LanguageEntry[]
+  total: number
+}
+
 // ─── Node ───
 
 export interface NodeResponse {
@@ -13,6 +29,9 @@ export interface NodeResponse {
   tenant_id: string
   parent_id: string | null
   title: string
+  // ``default_language`` is null on child nodes but guaranteed non-null on
+  // root nodes (parent_id === null) by the backend's
+  // ``course_nodes_root_language_required`` CHECK constraint (Task 2.4.13).
   description: string | null
   default_language: string | null
   order: number
@@ -21,6 +40,23 @@ export interface NodeResponse {
   authored_documents_count: number
   created_at: string
   updated_at: string
+}
+
+// Root nodes require ``default_language`` (Task 2.4.13). Stored canonical
+// ISO 639-3; the API accepts any standard form (639-1 / 639-3 / English
+// name) and normalizes server-side.
+export interface RootNodeCreateData {
+  title: string
+  description?: string | null
+  default_language: string
+}
+
+// Children remain optional — language is dead-data on the child; runtime
+// inheritance reads only the root. Field kept for forward-compat.
+export interface ChildNodeCreateData {
+  title: string
+  description?: string | null
+  default_language?: string | null
 }
 
 export interface NodeTreeResponse {
