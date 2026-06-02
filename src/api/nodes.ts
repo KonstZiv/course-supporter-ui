@@ -1,17 +1,17 @@
 import { api } from './client'
 import type {
+  ChildNodeCreateData,
   NodeResponse,
   NodeListResponse,
   NodeWithDocuments,
   NodeTreeResponse,
+  RootNodeCreateData,
 } from '../types/api'
 
-export interface NodeCreateData {
-  title: string
-  description?: string
-  default_language?: string | null
-}
-
+// Root vs child create payloads diverge on ``default_language`` (Task
+// 2.4.13: required at root, optional on children). ``NodeUpdateData``
+// stays merged — the backend's null-on-root rejection is route-side
+// (HTTP 422), not part of the schema split.
 export interface NodeUpdateData {
   title?: string
   description?: string | null
@@ -22,10 +22,10 @@ export const nodesApi = {
   listRoots: (limit = 50, offset = 0) =>
     api.get<NodeListResponse>(`/api/v1/nodes?limit=${limit}&offset=${offset}`),
 
-  createRoot: (data: NodeCreateData) =>
+  createRoot: (data: RootNodeCreateData) =>
     api.post<NodeResponse>('/api/v1/nodes', data),
 
-  createChild: (parentId: string, data: NodeCreateData) =>
+  createChild: (parentId: string, data: ChildNodeCreateData) =>
     api.post<NodeResponse>(`/api/v1/nodes/${parentId}/children`, data),
 
   getNode: (nodeId: string) =>

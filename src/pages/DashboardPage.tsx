@@ -21,7 +21,9 @@ export function DashboardPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [newDesc, setNewDesc] = useState('')
-  const [newLang, setNewLang] = useState<string | null>(null)
+  // Empty string (not null) — Task 2.4.13 makes course language required;
+  // null reads as "auto-detect" elsewhere in the codebase.
+  const [newLang, setNewLang] = useState<string>('')
   const [creating, setCreating] = useState(false)
   const navigate = useNavigate()
 
@@ -38,7 +40,7 @@ export function DashboardPage() {
   useEffect(() => { load() }, [load])
 
   const create = async () => {
-    if (!newTitle.trim()) return
+    if (!newTitle.trim() || !newLang) return
     setCreating(true)
     try {
       const course = await nodesApi.createRoot({
@@ -49,7 +51,7 @@ export function DashboardPage() {
       setShowCreate(false)
       setNewTitle('')
       setNewDesc('')
-      setNewLang(null)
+      setNewLang('')
       navigate(`/course/${course.id}`)
     } finally {
       setCreating(false)
@@ -189,19 +191,23 @@ export function DashboardPage() {
           </div>
           <LanguageSelect
             label="Мова курсу"
-            value={newLang}
-            onChange={setNewLang}
-            autoLabel="Автовизначення з матеріалів"
+            value={newLang || null}
+            onChange={(code) => setNewLang(code ?? '')}
+            required
           />
           <p className="text-xs text-ink-muted -mt-2">
-            Використовується за замовчуванням для всіх матеріалів курсу (STT,
-            генерація). Можна залишити авто.
+            Використовується для всіх матеріалів курсу (STT, генерація
+            метаданих). Обов'язкове поле.
           </p>
           <div className="flex justify-end gap-2 pt-2">
             <button className="btn-secondary" onClick={() => setShowCreate(false)}>
               Скасувати
             </button>
-            <button className="btn-primary" onClick={create} disabled={creating || !newTitle.trim()}>
+            <button
+              className="btn-primary"
+              onClick={create}
+              disabled={creating || !newTitle.trim() || !newLang}
+            >
               {creating ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
               Створити
             </button>
