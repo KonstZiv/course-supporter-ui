@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState, type DragEvent } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { nodesApi } from '../api/nodes'
-import { summaryApi, isUncoveredStaleNodes } from '../api/node-summary'
+import { summaryApi, uncoveredStaleDetail } from '../api/node-summary'
 import { ApiError } from '../api/client'
 import { useCourseStore } from '../stores/course'
 import { useJobPolling } from '../hooks/useJobPolling'
@@ -47,15 +47,15 @@ export function CoursePage() {
         const job = await summaryApi.generate(nodeId, force)
         setSlot({ kind: 'run', jobId: job.id, job, nodeTitle })
       } catch (err) {
-        // Narrow by the EXACT reason — ``not_yet_generated`` (sibling routes)
-        // must NOT land here (Інваріант 4).
-        if (
-          err instanceof ApiError &&
-          err.status === 422 &&
-          isUncoveredStaleNodes(err.body)
-        ) {
-          setSlot({ kind: 'rejection', detail: err.body, nodeId, nodeTitle })
-          return
+        // Unwrap the FastAPI ``{detail: ...}`` envelope, then narrow by the
+        // EXACT reason — ``not_yet_generated`` (sibling routes) must NOT land
+        // here (Інваріант 4).
+        if (err instanceof ApiError && err.status === 422) {
+          const detail = uncoveredStaleDetail(err.body)
+          if (detail) {
+            setSlot({ kind: 'rejection', detail, nodeId, nodeTitle })
+            return
+          }
         }
         throw err
       }

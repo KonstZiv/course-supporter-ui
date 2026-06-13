@@ -5,7 +5,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const { postMock } = vi.hoisted(() => ({ postMock: vi.fn() }))
 vi.mock('./client', () => ({ api: { post: postMock } }))
 
-import { summaryApi, isUncoveredStaleNodes } from './node-summary'
+import {
+  summaryApi,
+  isUncoveredStaleNodes,
+  uncoveredStaleDetail,
+} from './node-summary'
 
 describe('summaryApi.generate', () => {
   beforeEach(() => postMock.mockReset())
@@ -49,5 +53,49 @@ describe('isUncoveredStaleNodes', () => {
     expect(isUncoveredStaleNodes('uncovered_stale_nodes')).toBe(false)
     expect(isUncoveredStaleNodes({})).toBe(false)
     expect(isUncoveredStaleNodes({ reason: 42 })).toBe(false)
+  })
+})
+
+// Regression (live-§2 fix, c5): these assert against the REAL wire body —
+// FastAPI wraps the detail under a top-level ``detail`` key, which is what
+// ``ApiError.body`` carries. The earlier guard tests fed the inner object and
+// missed the envelope.
+describe('uncoveredStaleDetail (unwraps the FastAPI envelope)', () => {
+  it('extracts the inner detail from the wrapped body', () => {
+    const body = {
+      detail: {
+        reason: 'uncovered_stale_nodes',
+        uncovered_stale_node_ids: ['node-a', 'node-b'],
+        hint: 'h',
+      },
+    }
+    const detail = uncoveredStaleDetail(body)
+    expect(detail).not.toBeNull()
+    expect(detail?.uncovered_stale_node_ids).toEqual(['node-a', 'node-b'])
+  })
+
+  it('returns null for the wrapped not_yet_generated sibling reason', () => {
+    expect(
+      uncoveredStaleDetail({ detail: { reason: 'not_yet_generated' } }),
+    ).toBeNull()
+  })
+
+  it('returns null for an unwrapped (envelope-less) body — guards the bug', () => {
+    // The exact shape the buggy c4 code assumed: reason at top level, no
+    // ``detail`` wrapper. Must NOT match.
+    expect(
+      uncoveredStaleDetail({
+        reason: 'uncovered_stale_nodes',
+        uncovered_stale_node_ids: [],
+        hint: 'h',
+      }),
+    ).toBeNull()
+  })
+
+  it('returns null for null / non-object / empty', () => {
+    expect(uncoveredStaleDetail(null)).toBeNull()
+    expect(uncoveredStaleDetail('x')).toBeNull()
+    expect(uncoveredStaleDetail({})).toBeNull()
+    expect(uncoveredStaleDetail({ detail: null })).toBeNull()
   })
 })
