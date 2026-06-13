@@ -1,6 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  cleanup,
   fireEvent,
   render,
   screen,
@@ -95,13 +94,6 @@ function getSubmitButton(s: typeof screen): HTMLElement {
 describe('DashboardPage — required course language (Task 2.4.13)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-  })
-
-  // RTL does not auto-cleanup with vitest globals=false (see test-setup.ts).
-  // Without this, mounted DOM leaks across tests and produces "found
-  // multiple elements" failures.
-  afterEach(() => {
-    cleanup()
   })
 
   it('keeps "Створити" disabled until both title and language are provided', async () => {
