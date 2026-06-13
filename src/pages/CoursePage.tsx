@@ -1,11 +1,30 @@
 import { useEffect, useCallback, useState, type DragEvent } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { nodesApi } from '../api/nodes'
+import { summaryApi, uncoveredStaleDetail } from '../api/node-summary'
+import { ApiError } from '../api/client'
 import { useCourseStore } from '../stores/course'
+import { useJobPolling } from '../hooks/useJobPolling'
 import { CourseCanvas } from '../components/flow/CourseCanvas'
 import { NodeDetailPanel } from '../components/flow/NodeDetailPanel'
+import { RunStatePanel } from '../components/flow/RunStatePanel'
+import { RejectionNotice } from '../components/flow/RejectionNotice'
 import { ArrowLeft, Loader2, AlertTriangle, Pencil, Check, X } from 'lucide-react'
 import { LanguageSelect, LanguageBadge } from '../components/ui/LanguageSelect'
+import type { JobResponse, UncoveredStaleNodesDetail } from '../types/api'
+
+// One bottom-right slot, mutually exclusive: a polled run, OR a 422 rejection
+// (returned before any job exists). Local to the page — never Zustand
+// (Інваріант 1). Does not survive node navigation / reload by design
+// (DD-3.2.5a-A).
+type GenerationSlot =
+  | { kind: 'run'; jobId: string; job: JobResponse; nodeTitle: string }
+  | {
+      kind: 'rejection'
+      detail: UncoveredStaleNodesDetail
+      nodeId: string
+      nodeTitle: string
+    }
 
 export function CoursePage() {
   const { nodeId } = useParams<{ nodeId: string }>()
@@ -18,6 +37,44 @@ export function CoursePage() {
   const [editingLang, setEditingLang] = useState(false)
   const [draftLang, setDraftLang] = useState<string | null>(null)
   const [savingLang, setSavingLang] = useState(false)
+
+  // Generation run-state slot (Task 3.2.5a).
+  const [slot, setSlot] = useState<GenerationSlot | null>(null)
+
+  const runGeneration = useCallback(
+    async (nodeId: string, nodeTitle: string, force: boolean) => {
+      try {
+        const job = await summaryApi.generate(nodeId, force)
+        setSlot({ kind: 'run', jobId: job.id, job, nodeTitle })
+      } catch (err) {
+        // Unwrap the FastAPI ``{detail: ...}`` envelope, then narrow by the
+        // EXACT reason — ``not_yet_generated`` (sibling routes) must NOT land
+        // here (Інваріант 4).
+        if (err instanceof ApiError && err.status === 422) {
+          const detail = uncoveredStaleDetail(err.body)
+          if (detail) {
+            setSlot({ kind: 'rejection', detail, nodeId, nodeTitle })
+            return
+          }
+        }
+        throw err
+      }
+    },
+    [],
+  )
+
+  const handleGenerate = useCallback(
+    (nodeId: string, nodeTitle: string) => {
+      void runGeneration(nodeId, nodeTitle, false)
+    },
+    [runGeneration],
+  )
+
+  // Poll only when the slot holds an active run. Hook is called
+  // unconditionally with derived args (no conditional hooks).
+  const runJobId = slot?.kind === 'run' ? slot.jobId : null
+  const runInitialJob = slot?.kind === 'run' ? slot.job : null
+  const polledJob = useJobPolling(runJobId, runInitialJob)
 
   const startEditLang = () => {
     setDraftLang(tree?.default_language ?? null)
@@ -162,10 +219,29 @@ export function CoursePage() {
       {/* Canvas + detail panel */}
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1">
-          <CourseCanvas />
+          <CourseCanvas onGenerate={handleGenerate} />
         </div>
         {selectedNodeId && <NodeDetailPanel />}
       </div>
+
+      {/* Generation run-state slot (bottom-right, mutually exclusive) */}
+      {slot?.kind === 'run' && polledJob && (
+        <RunStatePanel
+          job={polledJob}
+          nodeTitle={slot.nodeTitle}
+          onDismiss={() => setSlot(null)}
+        />
+      )}
+      {slot?.kind === 'rejection' && (
+        <RejectionNotice
+          detail={slot.detail}
+          nodeTitle={slot.nodeTitle}
+          onRetryForce={() =>
+            void runGeneration(slot.nodeId, slot.nodeTitle, true)
+          }
+          onDismiss={() => setSlot(null)}
+        />
+      )}
     </div>
   )
 }

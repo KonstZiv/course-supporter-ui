@@ -27,7 +27,13 @@ const nodeTypes: NodeTypes = {
   section: SectionNode,
 }
 
-export function CourseCanvas() {
+interface CourseCanvasProps {
+  // Forwarded to FlowContextMenu's «Згенерувати опис» item; lifts the
+  // generation trigger to CoursePage (Інваріант 1 — job_id is local state).
+  onGenerate: (nodeId: string, nodeTitle: string) => void
+}
+
+export function CourseCanvas({ onGenerate }: CourseCanvasProps) {
   const tree = useCourseStore((s) => s.tree)
   const setSelectedNodeId = useCourseStore((s) => s.setSelectedNodeId)
 
@@ -107,7 +113,11 @@ export function CourseCanvas() {
       </ReactFlow>
 
       {menu && (
-        <FlowContextMenu position={menu} onClose={() => setMenu(null)} />
+        <FlowContextMenu
+          position={menu}
+          onClose={() => setMenu(null)}
+          onGenerate={onGenerate}
+        />
       )}
     </div>
   )

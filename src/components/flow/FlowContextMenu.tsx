@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   FolderPlus,
   Pencil,
+  Sparkles,
   Trash2,
   Upload,
   Zap,
@@ -27,6 +28,10 @@ export interface MenuPosition {
 interface Props {
   position: MenuPosition
   onClose: () => void
+  // Lifts the generation trigger to the page (job_id / 422 live in
+  // CoursePage local state — Інваріант 1). Same channel as the other menu
+  // actions: a sibling item in ``items`` that fires on click + closes.
+  onGenerate: (nodeId: string, nodeTitle: string) => void
 }
 
 /* ── Pipeline step descriptions ── */
@@ -42,9 +47,18 @@ const PIPELINE_INFO: Record<string, { title: string; description: string }> = {
       'Обидва шари генеруються автоматично при завантаженні матеріалу. ' +
       'Цей пункт дозволяє примусово перезапустити обробку.',
   },
+  generate: {
+    title: 'Шар 3: Опис вузла (NodeSummary)',
+    description:
+      'Двопрохідна генерація методичного опису піддерева цього вузла. ' +
+      'Прохід 1 (знизу-вгору) — узагальнення дочірніх вузлів; ' +
+      'прохід 2 (згори-вниз) — охоплюючий контекст позиції кожного вузла.\n\n' +
+      'Запускає фоновий прогін; прогрес і результат видно у картці стану ' +
+      'праворуч унизу. Вже свіжі вузли пропускаються (мемоізація за хешем).',
+  },
 }
 
-export function FlowContextMenu({ position, onClose }: Props) {
+export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [showRename, setShowRename] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
@@ -135,6 +149,16 @@ export function FlowContextMenu({ position, onClose }: Props) {
     }
   }, [position.nodeId, refreshTree, onClose])
 
+  // Trigger NodeSummary generation. Same channel as ``processMaterials`` — a
+  // local handler fired from the menu item — but the produced job_id / 422
+  // must outlive this ephemeral menu, so it is lifted to the page via
+  // ``onGenerate`` (the POST + 422 handling + run-state slot live there, so
+  // the rejection's "retry with force" can re-fire after the menu is gone).
+  const handleGenerate = useCallback(() => {
+    onGenerate(position.nodeId, position.nodeTitle)
+    onClose()
+  }, [onGenerate, position.nodeId, position.nodeTitle, onClose])
+
   const triggerUpload = useCallback(() => {
     const input = document.createElement('input')
     input.type = 'file'
@@ -203,6 +227,14 @@ export function FlowContextMenu({ position, onClose }: Props) {
       accent: true,
       pipelineKey: 'process',
       dividerBefore: true,
+    },
+    {
+      icon: Sparkles,
+      label: 'Згенерувати опис',
+      subtitle: 'Шар 3',
+      action: handleGenerate,
+      accent: true,
+      pipelineKey: 'generate',
     },
     // ── Edit actions ──
     {
