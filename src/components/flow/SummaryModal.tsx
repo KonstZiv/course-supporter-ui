@@ -99,6 +99,51 @@ function buildChangedKeys(
   return out
 }
 
+// Fields the diff highlights (c5) — the author-meaningful content fields the
+// previous_snapshot captured: the 10 editable + enclosing_context + concepts.
+// Concepts are diffed as a READ-ONLY signal ("regeneration rewrote them"),
+// never an editability hint (Ratified #9). raw_observations (not in the
+// snapshot) and metrics / timestamps (not author-meaningful) are excluded.
+const DIFFED_KEYS = [
+  'title',
+  'description',
+  'learning_objectives',
+  'knowledge',
+  'skills',
+  'success_criteria',
+  'assessment_approach',
+  'teaching_approach',
+  'key_activities',
+  'common_mistakes',
+  'enclosing_context',
+  'main_concepts',
+  'secondary_concepts',
+] as const
+
+/**
+ * Field-level diff of the current Final against the prior snapshot (c5).
+ *
+ * Returns the set of changed field keys. Both sides go through the SAME
+ * ``JSON.stringify`` so the comparison is symmetric. ``previous_snapshot`` is
+ * a loose, possibly-older-schema dict (read defensively): a key missing from
+ * it serializes to ``undefined`` and differs from the present value → flagged
+ * "changed" (honest — the field did not exist before). A present-but-null
+ * stays ``"null"`` on both sides when unchanged, so it is NOT confused with a
+ * missing key. Field-level only — no per-item array diff (Ratified #6).
+ */
+function changedFieldSet(
+  final: NodeSummaryFinal,
+  snapshot: Record<string, unknown> | null,
+): Set<string> {
+  const set = new Set<string>()
+  if (!snapshot) return set
+  const f = final as unknown as Record<string, unknown>
+  for (const key of DIFFED_KEYS) {
+    if (JSON.stringify(f[key]) !== JSON.stringify(snapshot[key])) set.add(key)
+  }
+  return set
+}
+
 /**
  * Wide review/edit modal for a NodeSummaryFinal.
  *
@@ -118,6 +163,11 @@ export function SummaryModal({ nodeId, onClose, onChanged }: Props) {
   const [draft, setDraft] = useState<EditableDraft | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+
+  // Diff overlay (c5) — overview-only; reset on entering edit so it never
+  // survives into the edit mode (a diff against the snapshot is meaningless
+  // on unsaved changes).
+  const [showDiff, setShowDiff] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -168,6 +218,7 @@ export function SummaryModal({ nodeId, onClose, onChanged }: Props) {
     if (!view) return
     setDraft(pickEditable(view.final))
     setSaveError(null)
+    setShowDiff(false)
     setEditing(true)
   }, [view])
 
@@ -211,6 +262,8 @@ export function SummaryModal({ nodeId, onClose, onChanged }: Props) {
         <Overview
           view={view}
           acting={acting}
+          showDiff={showDiff}
+          onToggleDiff={() => setShowDiff((d) => !d)}
           onEdit={enterEdit}
           onApprove={() => runAction(summaryApi.approve)}
           onAcceptRaw={() => runAction(summaryApi.acceptRaw)}
@@ -237,17 +290,27 @@ export function SummaryModal({ nodeId, onClose, onChanged }: Props) {
 function Overview({
   view,
   acting,
+  showDiff,
+  onToggleDiff,
   onEdit,
   onApprove,
   onAcceptRaw,
 }: {
   view: NodeSummaryEditView
   acting: boolean
+  showDiff: boolean
+  onToggleDiff: () => void
   onEdit: () => void
   onApprove: () => void
   onAcceptRaw: () => void
 }) {
   const f = view.final
+  const hasSnapshot = view.previous_snapshot !== null
+  const changed =
+    showDiff && hasSnapshot
+      ? changedFieldSet(f, view.previous_snapshot)
+      : new Set<string>()
+  const ch = (key: string) => changed.has(key)
   return (
     <div className="space-y-5 text-sm">
       <div className="flex items-center justify-between gap-4">
@@ -286,18 +349,62 @@ function Overview({
         </div>
       </div>
 
-      <TextField label="Заголовок" value={f.title} />
-      <TextField label="Опис" value={f.description} />
-      <ListField label="Навчальні цілі" items={f.learning_objectives} />
-      <PairField label="Знання (буде знати)" items={f.knowledge} />
-      <PairField label="Навички (буде вміти)" items={f.skills} />
-      <ListField label="Критерії успіху" items={f.success_criteria} />
-      <TextField label="Підхід до оцінювання" value={f.assessment_approach} />
-      <TextField label="Підхід до викладання" value={f.teaching_approach} />
-      <ListField label="Ключові активності" items={f.key_activities} />
-      <ListField label="Типові помилки" items={f.common_mistakes} />
+      {/* Diff toggle — only when a prior snapshot exists (Ratified #6) */}
+      {hasSnapshot && (
+        <button
+          className={`btn-secondary btn-sm ${showDiff ? 'ring-2 ring-amber/40' : ''}`}
+          onClick={onToggleDiff}
+        >
+          {showDiff
+            ? 'Сховати порівняння'
+            : 'Порівняти з попередньою версією'}
+        </button>
+      )}
 
-      <ReadOnlyContext view={view} />
+      <TextField label="Заголовок" value={f.title} changed={ch('title')} />
+      <TextField label="Опис" value={f.description} changed={ch('description')} />
+      <ListField
+        label="Навчальні цілі"
+        items={f.learning_objectives}
+        changed={ch('learning_objectives')}
+      />
+      <PairField
+        label="Знання (буде знати)"
+        items={f.knowledge}
+        changed={ch('knowledge')}
+      />
+      <PairField
+        label="Навички (буде вміти)"
+        items={f.skills}
+        changed={ch('skills')}
+      />
+      <ListField
+        label="Критерії успіху"
+        items={f.success_criteria}
+        changed={ch('success_criteria')}
+      />
+      <TextField
+        label="Підхід до оцінювання"
+        value={f.assessment_approach}
+        changed={ch('assessment_approach')}
+      />
+      <TextField
+        label="Підхід до викладання"
+        value={f.teaching_approach}
+        changed={ch('teaching_approach')}
+      />
+      <ListField
+        label="Ключові активності"
+        items={f.key_activities}
+        changed={ch('key_activities')}
+      />
+      <ListField
+        label="Типові помилки"
+        items={f.common_mistakes}
+        changed={ch('common_mistakes')}
+      />
+
+      <ReadOnlyContext view={view} changed={ch} />
     </div>
   )
 }
@@ -412,13 +519,34 @@ function EditForm({
 
 /* ── Shared read-only context (concepts / enclosing / metrics / observations) ── */
 
-function ReadOnlyContext({ view }: { view: NodeSummaryEditView }) {
+function ReadOnlyContext({
+  view,
+  changed,
+}: {
+  view: NodeSummaryEditView
+  // Diff predicate (overview only); absent in edit mode → no highlight.
+  changed?: (key: string) => boolean
+}) {
   const f = view.final
+  const ch = (key: string) => (changed ? changed(key) : false)
   return (
     <>
-      <ChipField label="Основні концепти" items={f.main_concepts} />
-      <ChipField label="Другорядні концепти" items={f.secondary_concepts} />
-      <TextField label="Охоплюючий контекст" value={f.enclosing_context} />
+      <ChipField
+        label="Основні концепти"
+        items={f.main_concepts}
+        changed={ch('main_concepts')}
+      />
+      <ChipField
+        label="Другорядні концепти"
+        items={f.secondary_concepts}
+        changed={ch('secondary_concepts')}
+      />
+      <TextField
+        label="Охоплюючий контекст"
+        value={f.enclosing_context}
+        changed={ch('enclosing_context')}
+      />
+      {/* raw_observations is not in the snapshot — never diffed */}
       <ListField label="Спостереження методиста" items={view.raw_observations} />
       <div className="text-xs text-ink-muted border-t border-canvas-dark/30 pt-3">
         Документів: {f.own_documents_count} (з піддеревом{' '}
@@ -431,18 +559,43 @@ function ReadOnlyContext({ view }: { view: NodeSummaryEditView }) {
 
 /* ── Read-only field renderers ── */
 
-function FieldShell({ label, children }: { label: string; children: React.ReactNode }) {
+function FieldShell({
+  label,
+  changed,
+  children,
+}: {
+  label: string
+  changed?: boolean
+  children: React.ReactNode
+}) {
+  // Diff highlight is a READ-ONLY visual marker — same read-only field, a
+  // tinted frame + a "змінено" chip. It implies no editability (Ratified #9).
   return (
-    <div>
-      <p className="text-[11px] uppercase tracking-wide text-ink-muted mb-1">{label}</p>
+    <div className={changed ? 'bg-amber-pale/40 rounded-lg px-2 py-1.5 -mx-2' : ''}>
+      <p className="text-[11px] uppercase tracking-wide text-ink-muted mb-1 flex items-center gap-1.5">
+        {label}
+        {changed && (
+          <span className="text-[9px] px-1.5 py-px rounded-full bg-amber/15 text-amber-dark normal-case tracking-normal">
+            змінено
+          </span>
+        )}
+      </p>
       {children}
     </div>
   )
 }
 
-function TextField({ label, value }: { label: string; value: string | null }) {
+function TextField({
+  label,
+  value,
+  changed,
+}: {
+  label: string
+  value: string | null
+  changed?: boolean
+}) {
   return (
-    <FieldShell label={label}>
+    <FieldShell label={label} changed={changed}>
       {value ? (
         <p className="text-ink whitespace-pre-wrap">{value}</p>
       ) : (
@@ -452,9 +605,17 @@ function TextField({ label, value }: { label: string; value: string | null }) {
   )
 }
 
-function ListField({ label, items }: { label: string; items: string[] }) {
+function ListField({
+  label,
+  items,
+  changed,
+}: {
+  label: string
+  items: string[]
+  changed?: boolean
+}) {
   return (
-    <FieldShell label={label}>
+    <FieldShell label={label} changed={changed}>
       {items.length > 0 ? (
         <ul className="list-disc list-inside text-ink space-y-0.5">
           {items.map((item, i) => (
@@ -468,9 +629,17 @@ function ListField({ label, items }: { label: string; items: string[] }) {
   )
 }
 
-function PairField({ label, items }: { label: string; items: LearningOutcomeItem[] }) {
+function PairField({
+  label,
+  items,
+  changed,
+}: {
+  label: string
+  items: LearningOutcomeItem[]
+  changed?: boolean
+}) {
   return (
-    <FieldShell label={label}>
+    <FieldShell label={label} changed={changed}>
       {items.length > 0 ? (
         <ul className="space-y-1">
           {items.map((item, i) => (
@@ -489,9 +658,17 @@ function PairField({ label, items }: { label: string; items: LearningOutcomeItem
   )
 }
 
-function ChipField({ label, items }: { label: string; items: string[] }) {
+function ChipField({
+  label,
+  items,
+  changed,
+}: {
+  label: string
+  items: string[]
+  changed?: boolean
+}) {
   return (
-    <FieldShell label={label}>
+    <FieldShell label={label} changed={changed}>
       {items.length > 0 ? (
         <div className="flex flex-wrap gap-1">
           {items.map((item, i) => (

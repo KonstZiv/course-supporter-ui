@@ -191,6 +191,44 @@ describe('SummaryModal — overview mode (Task 3.2.5b c3)', () => {
     expect(await screen.findByText('Оновлений заголовок')).toBeInTheDocument()
   })
 
+  it('hides the diff toggle when there is no previous snapshot', async () => {
+    editViewMock.mockResolvedValue(makeView()) // previous_snapshot: null
+    render(<SummaryModal nodeId="node-1" onClose={vi.fn()} onChanged={vi.fn()} />)
+    await screen.findByText('Вступ до Python')
+    expect(
+      screen.queryByText('Порівняти з попередньою версією'),
+    ).not.toBeInTheDocument()
+  })
+
+  it('highlights only the changed field on diff (field-level)', async () => {
+    const snapshot = {
+      ...makeFinal(),
+      title: 'Старий заголовок',
+    } as unknown as Record<string, unknown>
+    editViewMock.mockResolvedValue(makeView({ previous_snapshot: snapshot }))
+    render(<SummaryModal nodeId="node-1" onClose={vi.fn()} onChanged={vi.fn()} />)
+
+    fireEvent.click(await screen.findByText('Порівняти з попередньою версією'))
+    // Only the title differs → exactly one "змінено" marker.
+    expect(screen.getAllByText('змінено')).toHaveLength(1)
+
+    fireEvent.click(screen.getByText('Сховати порівняння'))
+    expect(screen.queryByText('змінено')).not.toBeInTheDocument()
+  })
+
+  it('treats a key missing from an older snapshot as changed', async () => {
+    const final = makeFinal({ enclosing_context: 'присутнє зараз' })
+    const snapshot = { ...final } as Record<string, unknown>
+    delete snapshot.enclosing_context // older Final schema lacked the field
+    editViewMock.mockResolvedValue(
+      makeView({ final, previous_snapshot: snapshot }),
+    )
+    render(<SummaryModal nodeId="node-1" onClose={vi.fn()} onChanged={vi.fn()} />)
+
+    fireEvent.click(await screen.findByText('Порівняти з попередньою версією'))
+    expect(screen.getAllByText('змінено')).toHaveLength(1)
+  })
+
   it('shows a human PATCH 422 message, not silence', async () => {
     editViewMock.mockResolvedValue(makeView())
     patchMock.mockRejectedValue(
