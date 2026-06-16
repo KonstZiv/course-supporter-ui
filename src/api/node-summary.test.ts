@@ -2,13 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock the fetch wrapper to break the transitive auth-store import and to
 // assert the call shape (project convention — no msw).
-const { postMock } = vi.hoisted(() => ({ postMock: vi.fn() }))
-vi.mock('./client', () => ({ api: { post: postMock } }))
+const { postMock, getMock } = vi.hoisted(() => ({
+  postMock: vi.fn(),
+  getMock: vi.fn(),
+}))
+vi.mock('./client', () => ({ api: { post: postMock, get: getMock } }))
 
 import {
   summaryApi,
   isUncoveredStaleNodes,
   uncoveredStaleDetail,
+  notYetGeneratedDetail,
 } from './node-summary'
 
 describe('summaryApi.generate', () => {
@@ -30,6 +34,66 @@ describe('summaryApi.generate', () => {
       '/api/v1/nodes/node-7/summary/generate',
       { force: true },
     )
+  })
+})
+
+describe('summaryApi review/edit endpoints (3.2.5b c3)', () => {
+  beforeEach(() => {
+    postMock.mockReset()
+    getMock.mockReset()
+  })
+
+  it('GETs the edit-view endpoint', () => {
+    getMock.mockResolvedValue({})
+    summaryApi.editView('node-9')
+    expect(getMock).toHaveBeenCalledWith(
+      '/api/v1/node-summaries/node-9/edit-view',
+    )
+  })
+
+  it('POSTs the approve endpoint with no body', () => {
+    postMock.mockResolvedValue({})
+    summaryApi.approve('node-9')
+    expect(postMock).toHaveBeenCalledWith(
+      '/api/v1/node-summaries/node-9/final/approve',
+    )
+  })
+
+  it('POSTs the accept-raw endpoint with no body', () => {
+    postMock.mockResolvedValue({})
+    summaryApi.acceptRaw('node-9')
+    expect(postMock).toHaveBeenCalledWith(
+      '/api/v1/node-summaries/node-9/final/accept-raw',
+    )
+  })
+})
+
+describe('notYetGeneratedDetail (unwraps the FastAPI envelope)', () => {
+  it('extracts the wrapped not_yet_generated reason', () => {
+    expect(
+      notYetGeneratedDetail({ detail: { reason: 'not_yet_generated' } }),
+    ).toEqual({ reason: 'not_yet_generated' })
+  })
+
+  it('returns null for the generic string 404 detail', () => {
+    expect(notYetGeneratedDetail({ detail: 'Node not found' })).toBeNull()
+  })
+
+  it('returns null for the sibling uncovered_stale reason', () => {
+    expect(
+      notYetGeneratedDetail({ detail: { reason: 'uncovered_stale_nodes' } }),
+    ).toBeNull()
+  })
+
+  it('returns null for an unwrapped (envelope-less) body', () => {
+    expect(notYetGeneratedDetail({ reason: 'not_yet_generated' })).toBeNull()
+  })
+
+  it('returns null for null / non-object / empty', () => {
+    expect(notYetGeneratedDetail(null)).toBeNull()
+    expect(notYetGeneratedDetail('x')).toBeNull()
+    expect(notYetGeneratedDetail({})).toBeNull()
+    expect(notYetGeneratedDetail({ detail: null })).toBeNull()
   })
 })
 

@@ -9,6 +9,7 @@ import { CourseCanvas } from '../components/flow/CourseCanvas'
 import { NodeDetailPanel } from '../components/flow/NodeDetailPanel'
 import { RunStatePanel } from '../components/flow/RunStatePanel'
 import { RejectionNotice } from '../components/flow/RejectionNotice'
+import { SummaryModal } from '../components/flow/SummaryModal'
 import { ArrowLeft, Loader2, AlertTriangle, Pencil, Check, X } from 'lucide-react'
 import { LanguageSelect, LanguageBadge } from '../components/ui/LanguageSelect'
 import type { JobResponse, UncoveredStaleNodesDetail } from '../types/api'
@@ -41,10 +42,17 @@ export function CoursePage() {
   // Generation run-state slot (Task 3.2.5a).
   const [slot, setSlot] = useState<GenerationSlot | null>(null)
 
-  // Final review/edit modal open-state (Task 3.2.5b c2). The affordance in
-  // NodeDetailPanel sets the node id; the wide modal that consumes it lands
-  // in c3 (which expands this to read the value and render the modal).
-  const [, setSummaryNodeId] = useState<string | null>(null)
+  // Final review/edit modal open-state (Task 3.2.5b). The affordance in
+  // NodeDetailPanel sets the node id; the wide SummaryModal (c3) consumes it.
+  const [summaryNodeId, setSummaryNodeId] = useState<string | null>(null)
+
+  // Refetch the tree so summary badges reflect a just-approved / accepted
+  // Final (the badge state lives on the /detail feed).
+  const refreshTree = useCallback(async () => {
+    if (!tree) return
+    const fresh = await nodesApi.getDetail(tree.id)
+    setTree(fresh)
+  }, [tree, setTree])
 
   const runGeneration = useCallback(
     async (nodeId: string, nodeTitle: string, force: boolean) => {
@@ -245,6 +253,15 @@ export function CoursePage() {
             void runGeneration(slot.nodeId, slot.nodeTitle, true)
           }
           onDismiss={() => setSlot(null)}
+        />
+      )}
+
+      {/* Final review/edit modal (Task 3.2.5b c3) */}
+      {summaryNodeId && (
+        <SummaryModal
+          nodeId={summaryNodeId}
+          onClose={() => setSummaryNodeId(null)}
+          onChanged={refreshTree}
         />
       )}
     </div>
