@@ -3,6 +3,7 @@ import type {
   JobResponse,
   NodeSummaryEditView,
   NodeSummaryFinal,
+  NodeSummaryFinalUpdate,
   NotYetGeneratedDetail,
   UncoveredStaleNodesDetail,
 } from '../types/api'
@@ -36,6 +37,15 @@ export const summaryApi = {
   acceptRaw: (nodeId: string) =>
     api.post<NodeSummaryFinal>(
       `/api/v1/node-summaries/${nodeId}/final/accept-raw`,
+    ),
+
+  // PATCH .../final — partial edit of the editable family ONLY (server
+  // ``extra='forbid'``). Send only changed keys (Ratified #5). 200 → the
+  // updated Final; 422 on a non-editable key / empty body.
+  patchFinal: (nodeId: string, body: NodeSummaryFinalUpdate) =>
+    api.patch<NodeSummaryFinal>(
+      `/api/v1/node-summaries/${nodeId}/final`,
+      body,
     ),
 }
 

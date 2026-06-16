@@ -18,19 +18,20 @@ const { ApiError } = vi.hoisted(() => {
 })
 vi.mock('../../api/client', () => ({ ApiError }))
 
-const { editViewMock, approveMock, acceptRawMock, notYetMock } = vi.hoisted(
-  () => ({
+const { editViewMock, approveMock, acceptRawMock, patchMock, notYetMock } =
+  vi.hoisted(() => ({
     editViewMock: vi.fn(),
     approveMock: vi.fn(),
     acceptRawMock: vi.fn(),
+    patchMock: vi.fn(),
     notYetMock: vi.fn(),
-  }),
-)
+  }))
 vi.mock('../../api/node-summary', () => ({
   summaryApi: {
     editView: editViewMock,
     approve: approveMock,
     acceptRaw: acceptRawMock,
+    patchFinal: patchMock,
   },
   notYetGeneratedDetail: notYetMock,
 }))
@@ -83,6 +84,7 @@ describe('SummaryModal — overview mode (Task 3.2.5b c3)', () => {
     editViewMock.mockReset()
     approveMock.mockReset()
     acceptRawMock.mockReset()
+    patchMock.mockReset()
     notYetMock.mockReset()
   })
 
@@ -147,6 +149,64 @@ describe('SummaryModal — overview mode (Task 3.2.5b c3)', () => {
 
     expect(
       await screen.findByText('Опис недоступний — вузол не знайдено.'),
+    ).toBeInTheDocument()
+  })
+
+  it('enters edit mode with the title prefilled as a value', async () => {
+    editViewMock.mockResolvedValue(makeView())
+    render(<SummaryModal nodeId="node-1" onClose={vi.fn()} onChanged={vi.fn()} />)
+    fireEvent.click(await screen.findByText('Редагувати'))
+    // value-prefill (Ratified #4), not placeholder.
+    expect(screen.getByDisplayValue('Вступ до Python')).toBeInTheDocument()
+  })
+
+  it('disables Save until something changes', async () => {
+    editViewMock.mockResolvedValue(makeView())
+    render(<SummaryModal nodeId="node-1" onClose={vi.fn()} onChanged={vi.fn()} />)
+    fireEvent.click(await screen.findByText('Редагувати'))
+    expect(screen.getByText('Зберегти').closest('button')).toBeDisabled()
+  })
+
+  it('Save sends a PATCH with ONLY the changed key (Ratified #5)', async () => {
+    const onChanged = vi.fn()
+    editViewMock.mockResolvedValue(makeView())
+    patchMock.mockResolvedValue(makeFinal({ title: 'Оновлений заголовок' }))
+    render(
+      <SummaryModal nodeId="node-1" onClose={vi.fn()} onChanged={onChanged} />,
+    )
+    fireEvent.click(await screen.findByText('Редагувати'))
+
+    fireEvent.change(screen.getByDisplayValue('Вступ до Python'), {
+      target: { value: 'Оновлений заголовок' },
+    })
+    fireEvent.click(screen.getByText('Зберегти'))
+
+    await waitFor(() =>
+      expect(patchMock).toHaveBeenCalledWith('node-1', {
+        title: 'Оновлений заголовок',
+      }),
+    )
+    // Back to overview with the updated Final; tree refreshed.
+    expect(onChanged).toHaveBeenCalledOnce()
+    expect(await screen.findByText('Оновлений заголовок')).toBeInTheDocument()
+  })
+
+  it('shows a human PATCH 422 message, not silence', async () => {
+    editViewMock.mockResolvedValue(makeView())
+    patchMock.mockRejectedValue(
+      new ApiError(422, 'x', {
+        detail: 'No editable fields supplied in PATCH body.',
+      }),
+    )
+    render(<SummaryModal nodeId="node-1" onClose={vi.fn()} onChanged={vi.fn()} />)
+    fireEvent.click(await screen.findByText('Редагувати'))
+    fireEvent.change(screen.getByDisplayValue('Вступ до Python'), {
+      target: { value: 'Змінено' },
+    })
+    fireEvent.click(screen.getByText('Зберегти'))
+
+    expect(
+      await screen.findByText('No editable fields supplied in PATCH body.'),
     ).toBeInTheDocument()
   })
 })

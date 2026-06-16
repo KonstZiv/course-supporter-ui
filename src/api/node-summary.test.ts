@@ -2,11 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock the fetch wrapper to break the transitive auth-store import and to
 // assert the call shape (project convention — no msw).
-const { postMock, getMock } = vi.hoisted(() => ({
+const { postMock, getMock, patchMock } = vi.hoisted(() => ({
   postMock: vi.fn(),
   getMock: vi.fn(),
+  patchMock: vi.fn(),
 }))
-vi.mock('./client', () => ({ api: { post: postMock, get: getMock } }))
+vi.mock('./client', () => ({
+  api: { post: postMock, get: getMock, patch: patchMock },
+}))
 
 import {
   summaryApi,
@@ -41,6 +44,7 @@ describe('summaryApi review/edit endpoints (3.2.5b c3)', () => {
   beforeEach(() => {
     postMock.mockReset()
     getMock.mockReset()
+    patchMock.mockReset()
   })
 
   it('GETs the edit-view endpoint', () => {
@@ -64,6 +68,15 @@ describe('summaryApi review/edit endpoints (3.2.5b c3)', () => {
     summaryApi.acceptRaw('node-9')
     expect(postMock).toHaveBeenCalledWith(
       '/api/v1/node-summaries/node-9/final/accept-raw',
+    )
+  })
+
+  it('PATCHes the final endpoint with the partial body', () => {
+    patchMock.mockResolvedValue({})
+    summaryApi.patchFinal('node-9', { title: 'New' })
+    expect(patchMock).toHaveBeenCalledWith(
+      '/api/v1/node-summaries/node-9/final',
+      { title: 'New' },
     )
   })
 })
