@@ -12,6 +12,7 @@ import { RejectionNotice } from '../components/flow/RejectionNotice'
 import { SummaryModal } from '../components/flow/SummaryModal'
 import { ArrowLeft, Loader2, AlertTriangle, Pencil, Check, X } from 'lucide-react'
 import { LanguageSelect, LanguageBadge } from '../components/ui/LanguageSelect'
+import { findNode } from '../utils/tree'
 import type { JobResponse, UncoveredStaleNodesDetail } from '../types/api'
 
 // One bottom-right slot, mutually exclusive: a polled run, OR a 422 rejection
@@ -247,8 +248,12 @@ export function CoursePage() {
       )}
       {slot?.kind === 'rejection' && (
         <RejectionNotice
-          detail={slot.detail}
+          staleNodes={slot.detail.uncovered_stale_node_ids.map((id) => ({
+            id,
+            title: (tree && findNode(tree, id)?.title) || id.slice(0, 8),
+          }))}
           nodeTitle={slot.nodeTitle}
+          onNavigate={(id) => useCourseStore.getState().setSelectedNodeId(id)}
           onRetryForce={() =>
             void runGeneration(slot.nodeId, slot.nodeTitle, true)
           }

@@ -28,9 +28,9 @@ import {
   Link2,
 } from 'lucide-react'
 import { useDropzone } from 'react-dropzone'
+import { findNode } from '../../utils/tree'
 import type {
   AssignmentType,
-  NodeWithDocuments,
   AuthoredDocumentSummary,
   MaterialRole,
 } from '../../types/api'
@@ -102,15 +102,6 @@ function readAudioDuration(file: File): Promise<number | null> {
     audioEl.addEventListener('error', onError)
     audioEl.src = url
   })
-}
-
-function findNode(tree: NodeWithDocuments, id: string): NodeWithDocuments | null {
-  if (tree.id === id) return tree
-  for (const child of tree.children) {
-    const found = findNode(child, id)
-    if (found) return found
-  }
-  return null
 }
 
 /* ── Upload confirmation dialog ── */
