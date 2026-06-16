@@ -87,6 +87,11 @@ export interface AuthoredDocumentSummary {
   created_at: string
 }
 
+// Methodist summary badge state surfaced per-node on the tree-feed
+// (Task 3.2.5b commit-1): ``none`` (no summary), ``draft`` (generated, not
+// yet approved), ``approved`` (author-approved).
+export type SummaryStatus = 'none' | 'draft' | 'approved'
+
 export interface NodeWithDocuments {
   id: string
   parent_id: string | null
@@ -95,6 +100,15 @@ export interface NodeWithDocuments {
   default_language: string | null
   order: number
   content_hash: string | null
+  // Backend-computed badge state (Task 3.2.5b). Always present on the wire
+  // (defaulted server-side); orthogonal to ``materials_changed``.
+  summary_status: SummaryStatus
+  // Axis-1 staleness ONLY: the node's materials changed after the summary
+  // was generated (Raw.source_content_hash != CourseNode.content_hash). NOT
+  // the generate-route's two-axis ``uncovered_stale`` — the label is
+  // "materials changed", not "needs regeneration". Independent of
+  // ``summary_status`` (an approved node can still be materials_changed).
+  materials_changed: boolean
   authored_documents: AuthoredDocumentSummary[]
   children: NodeWithDocuments[]
 }
@@ -251,6 +265,98 @@ export interface NotYetGeneratedDetail {
 export type SummaryErrorDetail =
   | UncoveredStaleNodesDetail
   | NotYetGeneratedDetail
+
+// ─── NodeSummaryFinal review/edit contract (P6 GET / edit-view / PATCH) ───
+//
+// Task 3.2.5b. Success-contract shapes mirror the backend OpenAPI snapshot
+// from main (c05b11b). Error-envelope forms are NOT taken from the snapshot
+// (app.openapi() serializes them opaquely — generic object / HTTPValidationError);
+// they are the runtime forms confirmed by live curl this session (consumed in
+// c3/c4, never read via ``body.reason`` directly — KD-D 3.2.5a):
+//   * PATCH 422 has TWO forms: pydantic extra-forbid array
+//     ``{detail: [{loc, msg, type}]}`` (non-editable key) AND manual string
+//     ``{detail: "No editable fields supplied in PATCH body."}`` (empty body).
+//   * P6 GET 404 differs by ``detail`` form: generic string
+//     ``{detail: "Node not found"}`` vs object ``{detail: {reason: "not_yet_generated"}}``.
+
+// Object-array item for ``knowledge`` / ``skills``. The snapshot types these
+// loosely as ``Record<string, string>`` (open additionalProperties), but the
+// ratified surface + the c4 pair-editor (which owns the write shape the UI
+// produces) fix them as {name, description}; tightened deliberately. Distinct
+// from ``previous_snapshot`` below, which the UI only reads and so stays loose.
+export interface LearningOutcomeItem {
+  name: string
+  description: string
+}
+
+// GET /api/v1/nodes/{node_id}/summary (P6, 200 branch); also edit-view.final
+// and the 200 body of PATCH / approve / accept-raw.
+export interface NodeSummaryFinal {
+  id: string
+  course_node_id: string
+  // Editable family (10) — KD11 §1043-1054.
+  title: string | null
+  description: string | null
+  learning_objectives: string[]
+  knowledge: LearningOutcomeItem[]
+  skills: LearningOutcomeItem[]
+  success_criteria: string[]
+  assessment_approach: string | null
+  teaching_approach: string | null
+  key_activities: string[]
+  common_mistakes: string[]
+  // Read-only — copied from Raw (KD11). Rendered verbatim, never edited,
+  // never transformed (concept = bilingual search key, §4).
+  main_concepts: string[]
+  secondary_concepts: string[]
+  enclosing_context: string | null
+  // Forward-compat empty-leaf author flow (no UI flow sets these in 3.2.5b).
+  is_manual: boolean
+  manual_description: string | null
+  // Size metrics (read-only).
+  own_documents_count: number
+  own_chars_count: number
+  cumulative_documents_count: number
+  cumulative_chars_count: number
+  // Hash + approval pair. approved_at and enclosing_context_updated_at are
+  // TWO independent timestamps — never assume the whole Final was approved
+  // at one moment (KD11 §1069).
+  content_hash: string | null
+  approved_at: string | null
+  enclosing_context_updated_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+// GET /api/v1/node-summaries/{node_id}/edit-view (200).
+export interface NodeSummaryEditView {
+  final: NodeSummaryFinal
+  // API alias for NodeSummaryRaw.methodist_observations — shown before approve.
+  raw_observations: string[]
+  // Snapshot of the prior Final captured at the last automatic overwrite;
+  // ``null`` when no overwrite has occurred yet. Backend emits it as an
+  // untyped dict (a possibly-older schema's Final), so it is INTENTIONALLY a
+  // loose map — never typed as NodeSummaryFinal (false confidence). The diff
+  // (c5) reads it defensively.
+  previous_snapshot: Record<string, unknown> | null
+}
+
+// PATCH /api/v1/node-summaries/{node_id}/final — editable family only
+// (server ``extra='forbid'``). All keys optional; Save sends ONLY changed
+// keys (partial PATCH). The UI never sends non-editable keys (concepts /
+// enclosing_context / hash / timestamps / is_manual).
+export interface NodeSummaryFinalUpdate {
+  title?: string | null
+  description?: string | null
+  learning_objectives?: string[] | null
+  knowledge?: LearningOutcomeItem[] | null
+  skills?: LearningOutcomeItem[] | null
+  success_criteria?: string[] | null
+  assessment_approach?: string | null
+  teaching_approach?: string | null
+  key_activities?: string[] | null
+  common_mistakes?: string[] | null
+}
 
 // ─── Cost (vision §3 KD5, post-0.7 contract) ───
 //
