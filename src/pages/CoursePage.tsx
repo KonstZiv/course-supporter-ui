@@ -44,8 +44,12 @@ export function CoursePage() {
   const [slot, setSlot] = useState<GenerationSlot | null>(null)
 
   // Final review/edit modal open-state (Task 3.2.5b). The affordance in
-  // NodeDetailPanel sets the node id; the wide SummaryModal (c3) consumes it.
-  const [summaryNodeId, setSummaryNodeId] = useState<string | null>(null)
+  // NodeDetailPanel lifts the node id + title; the wide SummaryModal consumes
+  // both (title for its header — the node name, not the Final's draft title).
+  const [summaryNode, setSummaryNode] = useState<{
+    id: string
+    title: string
+  } | null>(null)
 
   // Refetch the tree so summary badges reflect a just-approved / accepted
   // Final (the badge state lives on the /detail feed).
@@ -235,7 +239,11 @@ export function CoursePage() {
         <div className="flex-1">
           <CourseCanvas onGenerate={handleGenerate} />
         </div>
-        {selectedNodeId && <NodeDetailPanel onOpenSummary={setSummaryNodeId} />}
+        {selectedNodeId && (
+          <NodeDetailPanel
+            onOpenSummary={(id, title) => setSummaryNode({ id, title })}
+          />
+        )}
       </div>
 
       {/* Generation run-state slot (bottom-right, mutually exclusive) */}
@@ -262,10 +270,11 @@ export function CoursePage() {
       )}
 
       {/* Final review/edit modal (Task 3.2.5b c3) */}
-      {summaryNodeId && (
+      {summaryNode && (
         <SummaryModal
-          nodeId={summaryNodeId}
-          onClose={() => setSummaryNodeId(null)}
+          nodeId={summaryNode.id}
+          nodeTitle={summaryNode.title}
+          onClose={() => setSummaryNode(null)}
           onChanged={refreshTree}
         />
       )}

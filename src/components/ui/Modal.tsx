@@ -38,7 +38,7 @@ export function Modal({ open, onClose, title, children, wide }: ModalProps) {
           {/* Panel */}
           <motion.div
             ref={ref}
-            className={`relative bg-white rounded-2xl shadow-card-lg w-full z-10 flex flex-col ${wide ? 'w-[80vw] max-h-[85vh]' : 'max-w-md'}`}
+            className={`relative bg-white rounded-2xl shadow-card-lg z-10 flex flex-col ${wide ? 'w-[80vw] max-h-[85vh]' : 'w-full max-w-md'}`}
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}

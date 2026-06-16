@@ -55,11 +55,13 @@ describe('NodeDetailPanel — summary affordance (Task 3.2.5b c2)', () => {
     expect(screen.getByText(LABEL)).toBeInTheDocument()
   })
 
-  it('lifts the node id to onOpenSummary on click', () => {
+  it('lifts the node id + title to onOpenSummary on click', () => {
     const onOpen = vi.fn()
-    seed(makeNode({ id: 'node-xyz', summary_status: 'approved' }))
+    seed(
+      makeNode({ id: 'node-xyz', title: 'Вузол XYZ', summary_status: 'approved' }),
+    )
     render(<NodeDetailPanel onOpenSummary={onOpen} />)
     fireEvent.click(screen.getByText(LABEL))
-    expect(onOpen).toHaveBeenCalledExactlyOnceWith('node-xyz')
+    expect(onOpen).toHaveBeenCalledExactlyOnceWith('node-xyz', 'Вузол XYZ')
   })
 })

@@ -90,9 +90,11 @@ describe('SummaryModal — overview mode (Task 3.2.5b c3)', () => {
 
   it('renders the read-only overview with verbatim concepts + observations', async () => {
     editViewMock.mockResolvedValue(makeView())
-    render(<SummaryModal nodeId="node-1" onClose={vi.fn()} onChanged={vi.fn()} />)
+    render(<SummaryModal nodeId="node-1" nodeTitle="Тест-вузол" onClose={vi.fn()} onChanged={vi.fn()} />)
 
     expect(await screen.findByText('Вступ до Python')).toBeInTheDocument()
+    // Header identifies the node by its CourseNode title (not the Final's).
+    expect(screen.getByText('Опис вузла — Тест-вузол')).toBeInTheDocument()
     // Concepts rendered verbatim — both forms of the bilingual key as stored.
     expect(screen.getByText('variable')).toBeInTheDocument()
     expect(screen.getByText('змінна')).toBeInTheDocument()
@@ -103,7 +105,7 @@ describe('SummaryModal — overview mode (Task 3.2.5b c3)', () => {
     const onChanged = vi.fn()
     editViewMock.mockResolvedValue(makeView())
     approveMock.mockResolvedValue(makeFinal({ approved_at: '2026-06-16T01:00:00Z' }))
-    render(<SummaryModal nodeId="node-1" onClose={vi.fn()} onChanged={onChanged} />)
+    render(<SummaryModal nodeId="node-1" nodeTitle="Тест-вузол" onClose={vi.fn()} onChanged={onChanged} />)
 
     await screen.findByText('Вступ до Python')
     expect(screen.getByText('Чернетка — не затверджено')).toBeInTheDocument()
@@ -119,7 +121,7 @@ describe('SummaryModal — overview mode (Task 3.2.5b c3)', () => {
     const onChanged = vi.fn()
     editViewMock.mockResolvedValue(makeView())
     acceptRawMock.mockResolvedValue(makeFinal({ approved_at: '2026-06-16T01:00:00Z' }))
-    render(<SummaryModal nodeId="node-1" onClose={vi.fn()} onChanged={onChanged} />)
+    render(<SummaryModal nodeId="node-1" nodeTitle="Тест-вузол" onClose={vi.fn()} onChanged={onChanged} />)
 
     await screen.findByText('Вступ до Python')
     fireEvent.click(screen.getByText('Прийняти згенероване'))
@@ -133,7 +135,7 @@ describe('SummaryModal — overview mode (Task 3.2.5b c3)', () => {
       new ApiError(404, 'x', { detail: { reason: 'not_yet_generated' } }),
     )
     notYetMock.mockReturnValue({ reason: 'not_yet_generated' })
-    render(<SummaryModal nodeId="node-1" onClose={vi.fn()} onChanged={vi.fn()} />)
+    render(<SummaryModal nodeId="node-1" nodeTitle="Тест-вузол" onClose={vi.fn()} onChanged={vi.fn()} />)
 
     expect(
       await screen.findByText('Опис ще не згенеровано для цього вузла.'),
@@ -145,7 +147,7 @@ describe('SummaryModal — overview mode (Task 3.2.5b c3)', () => {
       new ApiError(404, 'x', { detail: 'Node not found' }),
     )
     notYetMock.mockReturnValue(null)
-    render(<SummaryModal nodeId="node-1" onClose={vi.fn()} onChanged={vi.fn()} />)
+    render(<SummaryModal nodeId="node-1" nodeTitle="Тест-вузол" onClose={vi.fn()} onChanged={vi.fn()} />)
 
     expect(
       await screen.findByText('Опис недоступний — вузол не знайдено.'),
@@ -154,7 +156,7 @@ describe('SummaryModal — overview mode (Task 3.2.5b c3)', () => {
 
   it('enters edit mode with the title prefilled as a value', async () => {
     editViewMock.mockResolvedValue(makeView())
-    render(<SummaryModal nodeId="node-1" onClose={vi.fn()} onChanged={vi.fn()} />)
+    render(<SummaryModal nodeId="node-1" nodeTitle="Тест-вузол" onClose={vi.fn()} onChanged={vi.fn()} />)
     fireEvent.click(await screen.findByText('Редагувати'))
     // value-prefill (Ratified #4), not placeholder.
     expect(screen.getByDisplayValue('Вступ до Python')).toBeInTheDocument()
@@ -162,7 +164,7 @@ describe('SummaryModal — overview mode (Task 3.2.5b c3)', () => {
 
   it('disables Save until something changes', async () => {
     editViewMock.mockResolvedValue(makeView())
-    render(<SummaryModal nodeId="node-1" onClose={vi.fn()} onChanged={vi.fn()} />)
+    render(<SummaryModal nodeId="node-1" nodeTitle="Тест-вузол" onClose={vi.fn()} onChanged={vi.fn()} />)
     fireEvent.click(await screen.findByText('Редагувати'))
     expect(screen.getByText('Зберегти').closest('button')).toBeDisabled()
   })
@@ -172,7 +174,7 @@ describe('SummaryModal — overview mode (Task 3.2.5b c3)', () => {
     editViewMock.mockResolvedValue(makeView())
     patchMock.mockResolvedValue(makeFinal({ title: 'Оновлений заголовок' }))
     render(
-      <SummaryModal nodeId="node-1" onClose={vi.fn()} onChanged={onChanged} />,
+      <SummaryModal nodeId="node-1" nodeTitle="Тест-вузол" onClose={vi.fn()} onChanged={onChanged} />,
     )
     fireEvent.click(await screen.findByText('Редагувати'))
 
@@ -193,7 +195,7 @@ describe('SummaryModal — overview mode (Task 3.2.5b c3)', () => {
 
   it('hides the diff toggle when there is no previous snapshot', async () => {
     editViewMock.mockResolvedValue(makeView()) // previous_snapshot: null
-    render(<SummaryModal nodeId="node-1" onClose={vi.fn()} onChanged={vi.fn()} />)
+    render(<SummaryModal nodeId="node-1" nodeTitle="Тест-вузол" onClose={vi.fn()} onChanged={vi.fn()} />)
     await screen.findByText('Вступ до Python')
     expect(
       screen.queryByText('Порівняти з попередньою версією'),
@@ -206,7 +208,7 @@ describe('SummaryModal — overview mode (Task 3.2.5b c3)', () => {
       title: 'Старий заголовок',
     } as unknown as Record<string, unknown>
     editViewMock.mockResolvedValue(makeView({ previous_snapshot: snapshot }))
-    render(<SummaryModal nodeId="node-1" onClose={vi.fn()} onChanged={vi.fn()} />)
+    render(<SummaryModal nodeId="node-1" nodeTitle="Тест-вузол" onClose={vi.fn()} onChanged={vi.fn()} />)
 
     fireEvent.click(await screen.findByText('Порівняти з попередньою версією'))
     // Only the title differs → exactly one "змінено" marker.
@@ -223,7 +225,7 @@ describe('SummaryModal — overview mode (Task 3.2.5b c3)', () => {
     editViewMock.mockResolvedValue(
       makeView({ final, previous_snapshot: snapshot }),
     )
-    render(<SummaryModal nodeId="node-1" onClose={vi.fn()} onChanged={vi.fn()} />)
+    render(<SummaryModal nodeId="node-1" nodeTitle="Тест-вузол" onClose={vi.fn()} onChanged={vi.fn()} />)
 
     fireEvent.click(await screen.findByText('Порівняти з попередньою версією'))
     expect(screen.getAllByText('змінено')).toHaveLength(1)
@@ -236,7 +238,7 @@ describe('SummaryModal — overview mode (Task 3.2.5b c3)', () => {
         detail: 'No editable fields supplied in PATCH body.',
       }),
     )
-    render(<SummaryModal nodeId="node-1" onClose={vi.fn()} onChanged={vi.fn()} />)
+    render(<SummaryModal nodeId="node-1" nodeTitle="Тест-вузол" onClose={vi.fn()} onChanged={vi.fn()} />)
     fireEvent.click(await screen.findByText('Редагувати'))
     fireEvent.change(screen.getByDisplayValue('Вступ до Python'), {
       target: { value: 'Змінено' },
