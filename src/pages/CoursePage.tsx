@@ -9,8 +9,10 @@ import { CourseCanvas } from '../components/flow/CourseCanvas'
 import { NodeDetailPanel } from '../components/flow/NodeDetailPanel'
 import { RunStatePanel } from '../components/flow/RunStatePanel'
 import { RejectionNotice } from '../components/flow/RejectionNotice'
+import { SummaryModal } from '../components/flow/SummaryModal'
 import { ArrowLeft, Loader2, AlertTriangle, Pencil, Check, X } from 'lucide-react'
 import { LanguageSelect, LanguageBadge } from '../components/ui/LanguageSelect'
+import { findNode } from '../utils/tree'
 import type { JobResponse, UncoveredStaleNodesDetail } from '../types/api'
 
 // One bottom-right slot, mutually exclusive: a polled run, OR a 422 rejection
@@ -40,6 +42,18 @@ export function CoursePage() {
 
   // Generation run-state slot (Task 3.2.5a).
   const [slot, setSlot] = useState<GenerationSlot | null>(null)
+
+  // Final review/edit modal open-state (Task 3.2.5b). The affordance in
+  // NodeDetailPanel sets the node id; the wide SummaryModal (c3) consumes it.
+  const [summaryNodeId, setSummaryNodeId] = useState<string | null>(null)
+
+  // Refetch the tree so summary badges reflect a just-approved / accepted
+  // Final (the badge state lives on the /detail feed).
+  const refreshTree = useCallback(async () => {
+    if (!tree) return
+    const fresh = await nodesApi.getDetail(tree.id)
+    setTree(fresh)
+  }, [tree, setTree])
 
   const runGeneration = useCallback(
     async (nodeId: string, nodeTitle: string, force: boolean) => {
@@ -221,7 +235,7 @@ export function CoursePage() {
         <div className="flex-1">
           <CourseCanvas onGenerate={handleGenerate} />
         </div>
-        {selectedNodeId && <NodeDetailPanel />}
+        {selectedNodeId && <NodeDetailPanel onOpenSummary={setSummaryNodeId} />}
       </div>
 
       {/* Generation run-state slot (bottom-right, mutually exclusive) */}
@@ -234,12 +248,25 @@ export function CoursePage() {
       )}
       {slot?.kind === 'rejection' && (
         <RejectionNotice
-          detail={slot.detail}
+          staleNodes={slot.detail.uncovered_stale_node_ids.map((id) => ({
+            id,
+            title: (tree && findNode(tree, id)?.title) || id.slice(0, 8),
+          }))}
           nodeTitle={slot.nodeTitle}
+          onNavigate={(id) => useCourseStore.getState().setSelectedNodeId(id)}
           onRetryForce={() =>
             void runGeneration(slot.nodeId, slot.nodeTitle, true)
           }
           onDismiss={() => setSlot(null)}
+        />
+      )}
+
+      {/* Final review/edit modal (Task 3.2.5b c3) */}
+      {summaryNodeId && (
+        <SummaryModal
+          nodeId={summaryNodeId}
+          onClose={() => setSummaryNodeId(null)}
+          onChanged={refreshTree}
         />
       )}
     </div>

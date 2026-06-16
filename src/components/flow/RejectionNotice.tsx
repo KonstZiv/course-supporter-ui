@@ -1,33 +1,46 @@
-import { AlertTriangle, X } from 'lucide-react'
-import type { UncoveredStaleNodesDetail } from '../../types/api'
+import { AlertTriangle, X, MapPin } from 'lucide-react'
+
+export interface StaleNodeRef {
+  id: string
+  // Resolved human title (CoursePage falls back to a truncated id when the
+  // node cannot be found in the tree).
+  title: string
+}
 
 interface Props {
-  detail: UncoveredStaleNodesDetail
+  // Stale CourseNodes outside the vertex subtree, resolved to titles by the
+  // page (RejectionNotice stays presentational — Ratified #2 / SummaryBadge
+  // discipline).
+  staleNodes: StaleNodeRef[]
   /** Human node title from the trigger; falls back to a dash. */
   nodeTitle: string | null
+  /** Navigate to (select + highlight) a stale node on the canvas. */
+  onNavigate: (nodeId: string) => void
   onRetryForce: () => void
   onDismiss: () => void
 }
 
 /**
- * 422 rejection notice for a generation trigger (Task 3.2.5a c4). Occupies
- * the same bottom-right slot as ``RunStatePanel`` (mutually exclusive — the
- * 422 returns before any job exists, so it cannot live in a job-keyed card).
+ * 422 rejection notice for a generation trigger (Task 3.2.5a c4, enriched in
+ * 3.2.5b c6). Occupies the same bottom-right slot as ``RunStatePanel``
+ * (mutually exclusive — the 422 returns before any job exists).
  *
- * Simplified per ratify #2: shows the human reason + the uncovered stale
- * node ids + a "retry with force" action. No vertex navigation / canvas
- * highlight — that richer resolution UX is 3.2.5b. Amber, not coral: this is
- * an expected gate, not a failure.
+ * Enriched vertex-resolution UX (Ratified #6): the stale nodes are listed by
+ * TITLE and each is clickable to navigate (select + highlight) the offending
+ * node on the canvas, instead of bare truncated ids. The "retry with force"
+ * action is preserved (generate anyway, leaving the stale nodes behind). A
+ * higher-vertex re-generate is deferred (DD — see POST-MR-NOTES). Amber, not
+ * coral: this is an expected gate, not a failure.
  */
 export function RejectionNotice({
-  detail,
+  staleNodes,
   nodeTitle,
+  onNavigate,
   onRetryForce,
   onDismiss,
 }: Props) {
   const runLabel = nodeTitle?.trim() || '—'
-  const ids = detail.uncovered_stale_node_ids
-  const count = ids.length
+  const count = staleNodes.length
 
   return (
     <div
@@ -62,21 +75,31 @@ export function RejectionNotice({
         <div className="flex gap-2 items-start text-xs text-ink">
           <AlertTriangle size={13} className="text-amber shrink-0 mt-0.5" />
           <span>
-            Поза піддеревом є застарілі вузли ({count}). Згенерувати все одно
-            з примусовим прогоном?
+            Поза піддеревом є застарілі вузли ({count}). Перейдіть до них, щоб
+            переглянути, або згенеруйте все одно з примусовим прогоном.
           </span>
         </div>
 
         {count > 0 && (
-          <ul className="text-[10px] text-ink-muted font-mono space-y-0.5 max-h-20 overflow-y-auto">
-            {ids.map((id) => (
-              <li key={id}>{id.slice(0, 8)}</li>
+          <ul className="space-y-0.5 max-h-32 overflow-y-auto">
+            {staleNodes.map((node) => (
+              <li key={node.id}>
+                <button
+                  className="w-full flex items-center gap-1.5 text-left text-xs text-navy
+                             px-2 py-1 rounded-lg hover:bg-navy-pale transition-colors"
+                  onClick={() => onNavigate(node.id)}
+                  title="Перейти до вузла"
+                >
+                  <MapPin size={12} className="shrink-0" />
+                  <span className="truncate">{node.title}</span>
+                </button>
+              </li>
             ))}
           </ul>
         )}
 
         <button className="btn-primary btn-sm w-full" onClick={onRetryForce}>
-          Повторити з force
+          Згенерувати з force
         </button>
       </div>
     </div>

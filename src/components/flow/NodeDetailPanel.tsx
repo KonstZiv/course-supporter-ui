@@ -28,9 +28,9 @@ import {
   Link2,
 } from 'lucide-react'
 import { useDropzone } from 'react-dropzone'
+import { findNode } from '../../utils/tree'
 import type {
   AssignmentType,
-  NodeWithDocuments,
   AuthoredDocumentSummary,
   MaterialRole,
 } from '../../types/api'
@@ -102,15 +102,6 @@ function readAudioDuration(file: File): Promise<number | null> {
     audioEl.addEventListener('error', onError)
     audioEl.src = url
   })
-}
-
-function findNode(tree: NodeWithDocuments, id: string): NodeWithDocuments | null {
-  if (tree.id === id) return tree
-  for (const child of tree.children) {
-    const found = findNode(child, id)
-    if (found) return found
-  }
-  return null
 }
 
 /* ── Upload confirmation dialog ── */
@@ -241,7 +232,14 @@ function UploadConfirmDialog({ open, files, linkUrl, onConfirm, onCancel }: Uplo
 
 /* ── Main panel ── */
 
-export function NodeDetailPanel() {
+interface NodeDetailPanelProps {
+  // Lifts the "open the Final review/edit modal" signal to the page, where
+  // the wide modal mounts (Ratified #1 / #2). The modal itself lands in c3 —
+  // this commit only surfaces the affordance and drives the open-state.
+  onOpenSummary?: (nodeId: string) => void
+}
+
+export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
   const tree = useCourseStore((s) => s.tree)
   const selectedNodeId = useCourseStore((s) => s.selectedNodeId)
   const setSelectedNodeId = useCourseStore((s) => s.setSelectedNodeId)
@@ -462,6 +460,20 @@ export function NodeDetailPanel() {
           <X size={16} className="text-ink-muted" />
         </button>
       </div>
+
+      {/* Summary review/edit affordance — visible only when a summary
+          exists (Ratified #2). Opening the modal lands in c3. */}
+      {node.summary_status !== 'none' && (
+        <div className="p-4 border-b border-canvas-dark/30">
+          <button
+            className="btn-primary btn-sm w-full justify-center"
+            onClick={() => onOpenSummary?.(node.id)}
+          >
+            <FileText size={14} />
+            Переглянути/редагувати опис
+          </button>
+        </div>
+      )}
 
       {/* Upload zone */}
       <div className="p-4 border-b border-canvas-dark/30">

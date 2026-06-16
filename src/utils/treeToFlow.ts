@@ -9,6 +9,8 @@ export interface FlowNodeData {
   authored_documents: NodeWithDocuments['authored_documents']
   childrenCount: number
   fingerprint: string | null
+  summary_status: NodeWithDocuments['summary_status']
+  materials_changed: boolean
   isRoot: boolean
   depth: number
 }
@@ -35,6 +37,8 @@ export function treeToFlow(
       authored_documents: node.authored_documents,
       childrenCount: node.children.length,
       fingerprint: node.content_hash,
+      summary_status: node.summary_status,
+      materials_changed: node.materials_changed,
       isRoot: depth === 0,
       depth,
     },

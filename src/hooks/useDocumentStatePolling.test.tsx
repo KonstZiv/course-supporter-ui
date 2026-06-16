@@ -43,6 +43,8 @@ function makeNode(overrides: Partial<NodeWithDocuments> = {}): NodeWithDocuments
     default_language: null,
     order: 0,
     content_hash: null,
+    summary_status: 'none',
+    materials_changed: false,
     authored_documents: [],
     children: [],
     ...overrides,
