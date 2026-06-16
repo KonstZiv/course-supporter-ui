@@ -2,6 +2,7 @@ import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { FolderOpen, Paperclip } from 'lucide-react'
 import type { FlowNodeData } from '../../../utils/treeToFlow'
+import { SummaryBadge } from '../SummaryBadge'
 
 export const SectionNode = memo(function SectionNode({
   data,
@@ -47,6 +48,14 @@ export const SectionNode = memo(function SectionNode({
             <p className="text-ink-muted text-xs mt-0.5 line-clamp-1">
               {data.description}
             </p>
+          )}
+          {data.summary_status !== 'none' && (
+            <div className="mt-1">
+              <SummaryBadge
+                status={data.summary_status}
+                materialsChanged={data.materials_changed}
+              />
+            </div>
           )}
         </div>
       </div>

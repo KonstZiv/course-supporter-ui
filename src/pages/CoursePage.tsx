@@ -41,6 +41,11 @@ export function CoursePage() {
   // Generation run-state slot (Task 3.2.5a).
   const [slot, setSlot] = useState<GenerationSlot | null>(null)
 
+  // Final review/edit modal open-state (Task 3.2.5b c2). The affordance in
+  // NodeDetailPanel sets the node id; the wide modal that consumes it lands
+  // in c3 (which expands this to read the value and render the modal).
+  const [, setSummaryNodeId] = useState<string | null>(null)
+
   const runGeneration = useCallback(
     async (nodeId: string, nodeTitle: string, force: boolean) => {
       try {
@@ -221,7 +226,7 @@ export function CoursePage() {
         <div className="flex-1">
           <CourseCanvas onGenerate={handleGenerate} />
         </div>
-        {selectedNodeId && <NodeDetailPanel />}
+        {selectedNodeId && <NodeDetailPanel onOpenSummary={setSummaryNodeId} />}
       </div>
 
       {/* Generation run-state slot (bottom-right, mutually exclusive) */}
