@@ -236,7 +236,10 @@ interface NodeDetailPanelProps {
   // Lifts the "open the Final review/edit modal" signal to the page, where
   // the wide modal mounts (Ratified #1 / #2). The modal itself lands in c3 —
   // this commit only surfaces the affordance and drives the open-state.
-  onOpenSummary?: (nodeId: string) => void
+  // Carries the CourseNode title (NodeWithDocuments.title) so the modal
+  // header can identify the node — NOT the Final's methodist title (often
+  // empty/draft); the edit-view payload does not carry the node title.
+  onOpenSummary?: (nodeId: string, nodeTitle: string) => void
 }
 
 export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
@@ -467,7 +470,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
         <div className="p-4 border-b border-canvas-dark/30">
           <button
             className="btn-primary btn-sm w-full justify-center"
-            onClick={() => onOpenSummary?.(node.id)}
+            onClick={() => onOpenSummary?.(node.id, node.title)}
           >
             <FileText size={14} />
             Переглянути/редагувати опис

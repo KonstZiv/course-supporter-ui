@@ -13,6 +13,9 @@ import type {
 
 interface Props {
   nodeId: string
+  // CourseNode title (from the tree), shown in the modal header to identify
+  // the node — NOT the Final's methodist title.
+  nodeTitle: string
   onClose: () => void
   // Refresh the tree badge after approve / accept-raw / save (the badge's
   // materials_changed axis derives from a hash that an edit can move, so the
@@ -153,7 +156,7 @@ function changedFieldSet(
  * (no blind refetch), and returns to overview. Concepts / enclosing_context /
  * metrics / approval stay read-only in both modes (Ratified #9 / Інваріант #3).
  */
-export function SummaryModal({ nodeId, onClose, onChanged }: Props) {
+export function SummaryModal({ nodeId, nodeTitle, onClose, onChanged }: Props) {
   const [view, setView] = useState<NodeSummaryEditView | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -251,7 +254,7 @@ export function SummaryModal({ nodeId, onClose, onChanged }: Props) {
     Object.keys(buildChangedKeys(draft, pickEditable(view.final))).length > 0
 
   return (
-    <Modal open onClose={onClose} title="Опис вузла" wide>
+    <Modal open onClose={onClose} title={`Опис вузла — ${nodeTitle}`} wide>
       {loading && (
         <div className="flex items-center justify-center py-12">
           <Loader2 size={28} className="animate-spin text-navy" />
