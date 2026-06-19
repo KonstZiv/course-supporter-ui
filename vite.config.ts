@@ -10,9 +10,20 @@ export default defineConfig({
         // Default proxy points at local backend for sub-area `ui`
         // smoke-testing (Phase 1 KD-η.2/η.3). Override per
         // developer if hitting prod is needed.
-        target: 'http://localhost:8000',
+        target: 'https://api.pythoncourse.me',
         changeOrigin: true,
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom', 'zustand'],
+          flow: ['@xyflow/react', '@dagrejs/dagre'],
+          ui: ['framer-motion', 'lucide-react', 'react-markdown', 'react-dropzone']
+        }
+      }
+    }
+  }
 })

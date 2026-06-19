@@ -15,6 +15,7 @@ import { ApiError } from '../../api/client'
 import { rejectionDetail } from '../../utils/apiError'
 import { sourceTypeForExtension, UPLOAD_ACCEPT_ATTR } from '../../utils/uploadRouting'
 import { useCourseStore } from '../../stores/course'
+import { documentsApi } from '../../api/documents'
 import { Modal } from '../ui/Modal'
 
 export interface MenuPosition {
@@ -135,7 +136,6 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
     // Re-trigger ingestion for all materials in this node
     setBusy(true)
     try {
-      const { documentsApi } = await import('../../api/documents')
       const documents = await documentsApi.list(position.nodeId)
       for (const doc of documents) {
         if (doc.state === 'error' || doc.state === 'ready') {
@@ -167,7 +167,6 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
     input.onchange = async () => {
       if (!input.files) return
       setBusy(true)
-      const { documentsApi } = await import('../../api/documents')
       const rejected: string[] = []
       try {
         for (const file of Array.from(input.files)) {
@@ -399,7 +398,6 @@ function useRefreshTree() {
   const setTree = useCourseStore((s) => s.setTree)
   return useCallback(async () => {
     if (!tree) return
-    const { nodesApi } = await import('../../api/nodes')
     const fresh = await nodesApi.getDetail(tree.id)
     setTree(fresh)
   }, [tree, setTree])
