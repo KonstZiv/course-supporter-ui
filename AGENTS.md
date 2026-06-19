@@ -1,6 +1,6 @@
-# course-supporter-ui (frontend) — Claude Code context
+# course-supporter-ui (frontend) — Codex context
 
-Before working in this repo, read `../CLAUDE.md` (workspace-level). The three non-negotiable rules apply here too.
+Before working in this repo, read `../AGENTS.md` (workspace-level). The three non-negotiable rules apply here too.
 
 ## What this project is — target state
 
@@ -33,23 +33,15 @@ npm run lint           # eslint
 
 ### API contract is the integration point
 
-Every backend sub-stage that changes API surface triggers a matching UI sub-stage. The contract is **not** maintained as a hand-written file in the repository. The canonical source is the OpenAPI specification that FastAPI generates from the backend `app` object; the running server exposes it at `/openapi.json`.
+Every backend sub-stage that changes API surface triggers a matching UI sub-stage. The contract flow:
 
-When a UI task consumes a changed API, generate a one-off snapshot from the **current backend `main`** (not from a deployed `/openapi.json` — staging lags behind manual deploys):
+1. Backend sub-stage completes → new/changed endpoints documented in `../refactoring-vision/api-contracts/<phase>.openapi.yaml`.
+2. UI sub-stage reads that contract.
+3. UI updates `src/types/api.ts` (**schema types**) and the corresponding `src/api/*.ts` module (endpoint calls).
+4. Components that consume those types adapt.
+5. Integration tests run against the updated contract.
 
-```bash
-uv run python -c "import json,sys; from course_supporter.api.app import app; sys.stdout.write(json.dumps(app.openapi(), ensure_ascii=False, indent=2))" > /tmp/cs-openapi-snapshot.json
-```
-
-Workflow:
-
-1. Before touching `src/types/api.ts` or `src/api/*.ts`, generate the snapshot (command above). The snapshot is always fresh against the `main` the UI is working against.
-2. Update `src/types/api.ts` (schema types) and the corresponding `src/api/*.ts` module (endpoint calls) **by hand**, diffing against the snapshot. There is no auto-generation step — a deliberate choice; tooling for codegen is a separate future consideration.
-3. Components that consume those types adapt.
-4. Integration tests run against the updated contract (the backend test suite, not the snapshot).
-5. **Delete the snapshot after the type sync is done** (`rm /tmp/cs-openapi-snapshot.json`). Never commit it. Versioning a snapshot would reintroduce exactly the drift problem this workflow eliminates — the source of truth is backend code.
-
-**Do not change types in `src/types/api.ts` speculatively** without a fresh snapshot to diff against. Backend drift into UI is a frequent cause of bugs.
+**Do not change types in `src/types/api.ts` speculatively** without an updated api-contract file. Backend drift into UI is a frequent cause of bugs.
 
 ### Legacy UI that will be removed in Phase 5
 
@@ -77,7 +69,7 @@ The following are **scheduled for deletion** as part of Phase 5 cleanup. Do not 
 
 ### Types file is the single source of type truth
 
-`src/types/api.ts` is the canonical place for all response/request types. Keep it aligned with the backend's Pydantic schemas — generate a fresh OpenAPI snapshot from backend `main` and diff against it (see "API contract is the integration point" above for the command).
+`src/types/api.ts` is the canonical place for all response/request types. Keep it aligned with the backend's Pydantic schemas. Use the api-contract file as intermediary.
 
 When a field is removed in the backend (e.g., `node_fingerprint` → `content_hash`, or prerequisites/difficulty/estimated_duration from EditableNode), remove it here too. Do not keep orphaned fields marked as optional "for compatibility".
 
@@ -92,7 +84,7 @@ Before changing anything:
 
 1. Which Phase / sub-stage .UI are you implementing?
 2. What does vision §5 say about it? (Quote the UI-etap row.)
-3. Is the backend sub-stage complete? If yes — generate the OpenAPI snapshot from backend code and diff against it (see "API contract is the integration point").
+3. Is the backend sub-stage complete? If yes — where is the api-contract file? Read it first.
 4. What files will you touch?
 5. What is explicitly out of scope?
 6. Acceptance: which manual scenario proves it works?
