@@ -5,11 +5,30 @@ import react from '@vitejs/plugin-react'
 // is a SECOND Vite input (portal.html) and its routes are /<tenant-id>/...
 // where the tenant is a UUID (ratify Q3). In `npm run dev` a request whose
 // first path segment is a UUID is a portal deep-link → serve portal.html, so
-// the portal boots at clean URLs, mirroring its own-origin SPA fallback in
-// production. Author routes (/, /login, /course, /cost — never a UUID first
-// segment) fall through to Vite's default index.html. Build is untouched
-// (apply: 'serve'); module/asset requests are absolute (/src, /@vite, /node_
-// modules), never under a UUID segment, so they are not rewritten.
+// the portal boots at clean URLs. Author routes (/, /login, /course, /cost —
+// never a UUID first segment) fall through to Vite's default index.html. Build
+// is untouched (apply: 'serve'); module/asset requests are absolute (/src,
+// /@vite, /node_modules), never under a UUID segment, so they are not rewritten.
+//
+// Allowlist-by-UUID is intentional, and so is its one limitation — vision-side
+// ratified at T4b c1 live-acceptance gesture (g):
+//   (i)   We match the portal by a UUID first segment (allowlist), not by the
+//         author's route set.
+//   (ii)  Prod-equivalence comes from Q1=A: the portal deploys to its OWN
+//         origin with its own SPA fallback, so in prod EVERY path (including
+//         /not-a-uuid/home) serves the portal SPA → InvalidPortalLink.
+//   (iii) Dev limitation: a DIRECT non-UUID-tenant URL (e.g. /not-a-uuid/home)
+//         does NOT reach the portal in this shared dev server — it falls to the
+//         author app. The portal's invalid-tenant handling (InvalidPortalLink +
+//         zero backend fetch) is exercised in dev only via the catch-all
+//         (/<uuid>/<unknown> → InvalidPortalLink) and the unit tests
+//         (PortalLoginPage / PortalProtectedRoute). Not a surface defect — a
+//         dev-harness artifact of one shared origin.
+//   (iv)  A denylist (rewrite everything that ISN'T an author route) was
+//         rejected: it would couple this portal dev-config to the author route
+//         table — the same author-route coupling/collision class rejected in Q1
+//         (A over B). The allowlist flaw self-isolates: it encodes nothing about
+//         the author app, does not drift when author routes change, never ships.
 function portalDevRouting(): Plugin {
   const UUID_RE =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
