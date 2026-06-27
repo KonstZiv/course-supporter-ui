@@ -62,3 +62,23 @@ jobs:
 
       - name: Vitest
         run: npm run test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Gates the multi-entry build (author index.html + portal portal.html,
+      # Phase 6 / T4b). tsc -b alone does not run `vite build`, so a broken
+      # entry would otherwise merge green and silently break the deploy.
+      - name: Build
+        run: npm run build
