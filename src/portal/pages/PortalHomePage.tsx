@@ -1,36 +1,37 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { BookOpen, LogOut } from 'lucide-react'
+import { BookOpen, LogOut, ChevronRight, Loader2 } from 'lucide-react'
 import { usePortalSession } from '../stores/session'
 import { portalApi, PortalApiError } from '../api/portalClient'
-import type { PortalMe } from '../types'
+import type { PortalCourseListItem } from '../types'
 
-// Minimal protected landing (Phase 6 / T4b, c1): proves a bearer token grants
-// access by calling GET /portal/me. Course/material listing is c2.
+// Portal landing (Phase 6 / T4b, c2): the student's enrolled courses
+// (GET /portal/courses). The greeting name comes from the session store
+// (set at login) — no /me round-trip needed (ratify Q5). Click a course →
+// its material tree.
 export function PortalHomePage() {
   const { tenantId } = useParams()
-  const storedName = usePortalSession((s) => s.displayName)
+  const displayName = usePortalSession((s) => s.displayName)
   const clear = usePortalSession((s) => s.clear)
   const navigate = useNavigate()
 
-  const [me, setMe] = useState<PortalMe | null>(null)
+  const [courses, setCourses] = useState<PortalCourseListItem[] | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
     portalApi
-      .me()
-      .then(setMe)
+      .courses()
+      .then(setCourses)
       .catch((err) => {
         // 401 is handled inside the client (clear + redirect); anything else
         // is a soft error on this page.
         if (!(err instanceof PortalApiError && err.status === 401)) {
-          setError('Не вдалося завантажити профіль.')
+          setError('Не вдалося завантажити курси.')
         }
       })
   }, [])
 
-  // display_name is optional on the wire (ratify Q5) — never render undefined.
-  const name = me?.display_name ?? storedName ?? 'Студент'
+  const name = displayName ?? 'Студент'
 
   const handleLogout = () => {
     clear()
@@ -56,9 +57,7 @@ export function PortalHomePage() {
 
       <main className="max-w-4xl mx-auto px-6 py-12">
         <h1 className="page-title">Вітаємо, {name}!</h1>
-        <p className="page-subtitle">
-          {me ? `Ви увійшли як ${me.login}.` : 'Завантаження профілю…'}
-        </p>
+        <p className="page-subtitle">Ваші курси</p>
 
         {error && (
           <div className="mt-6 p-3 rounded-xl bg-coral-pale text-coral text-sm max-w-md">
@@ -66,9 +65,35 @@ export function PortalHomePage() {
           </div>
         )}
 
-        <div className="mt-10 card p-8 text-ink-muted">
-          Список ваших курсів зʼявиться тут.
-        </div>
+        {courses === null && !error && (
+          <div className="mt-10 flex items-center gap-2 text-ink-muted">
+            <Loader2 size={18} className="animate-spin" />
+            Завантаження…
+          </div>
+        )}
+
+        {courses !== null && courses.length === 0 && (
+          <div className="mt-10 card p-8 text-ink-muted">
+            Вас поки не зараховано на жоден курс.
+          </div>
+        )}
+
+        {courses !== null && courses.length > 0 && (
+          <ul className="mt-10 space-y-3">
+            {courses.map((course) => (
+              <li key={course.id}>
+                <button
+                  onClick={() => navigate(`/${tenantId}/courses/${course.id}`)}
+                  className="card w-full p-5 flex items-center justify-between text-left
+                             hover:border-navy/30 transition-colors"
+                >
+                  <span className="font-display text-lg text-ink">{course.title}</span>
+                  <ChevronRight size={20} className="text-ink-muted shrink-0" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </main>
     </div>
   )

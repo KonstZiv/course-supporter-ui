@@ -26,3 +26,60 @@ export interface PortalMe {
   login: string
   display_name: string | null
 }
+
+// --- c2: materials-listing (T4a) + media descriptor (T3) ---
+// Mirror the backend Portal* schemas verbatim. ``source_type`` crosses the
+// wire as a free ``str``; we narrow to the documented union for the render
+// matrix, but the material render is a TOTAL function with a default branch
+// (corrective 1) so an unexpected value never yields an empty panel.
+
+export interface PortalCourseListItem {
+  id: string
+  title: string
+}
+
+export interface PortalVerdict {
+  passed: boolean
+  correctness: string
+}
+
+export interface PortalAttemptResult {
+  score: number | null
+  verdict: PortalVerdict | null
+}
+
+export type PortalSubmissionStatus = 'none' | 'pending' | 'reviewed'
+
+export interface PortalSubmissionOverlay {
+  submission_status: PortalSubmissionStatus
+  last: PortalAttemptResult | null
+  best: PortalAttemptResult | null
+}
+
+export type PortalMaterialKind = 'material' | 'task'
+export type PortalSourceType = 'video' | 'presentation' | 'text' | 'web' | 'audio'
+
+export interface PortalMaterialItem {
+  id: string
+  kind: PortalMaterialKind
+  label: string
+  source_type: PortalSourceType
+  order: number
+  overlay: PortalSubmissionOverlay | null
+}
+
+export interface PortalMaterialTreeNode {
+  id: string
+  title: string
+  order: number
+  documents: PortalMaterialItem[]
+  children: PortalMaterialTreeNode[]
+}
+
+export type PortalMediaKind = 'external' | 'file' | 'slides'
+
+export interface PortalMediaResponse {
+  kind: PortalMediaKind
+  url: string | null
+  slide_urls: string[] | null
+}
