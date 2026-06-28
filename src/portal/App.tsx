@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { PortalLoginPage } from './pages/PortalLoginPage'
 import { PortalHomePage } from './pages/PortalHomePage'
+import { PortalCoursePage } from './pages/PortalCoursePage'
 import { PortalProtectedRoute } from './components/PortalProtectedRoute'
 import { InvalidPortalLink } from './components/InvalidPortalLink'
 
@@ -22,6 +23,14 @@ export function PortalApp() {
         element={
           <PortalProtectedRoute>
             <PortalHomePage />
+          </PortalProtectedRoute>
+        }
+      />
+      <Route
+        path="/:tenantId/courses/:rootId"
+        element={
+          <PortalProtectedRoute>
+            <PortalCoursePage />
           </PortalProtectedRoute>
         }
       />

@@ -1,5 +1,12 @@
 import { usePortalSession } from '../stores/session'
-import type { PortalLoginRequest, PortalLoginResponse, PortalMe } from '../types'
+import type {
+  PortalCourseListItem,
+  PortalLoginRequest,
+  PortalLoginResponse,
+  PortalMaterialTreeNode,
+  PortalMe,
+  PortalMediaResponse,
+} from '../types'
 
 // Bearer session client for the student portal (Phase 6 / T4b). A sibling to
 // the author app's ``api/client.ts`` — NOT a reuse: ``request()`` is hard-
@@ -80,4 +87,12 @@ async function authGet<T>(path: string): Promise<T> {
 
 export const portalApi = {
   me: () => authGet<PortalMe>('/api/v1/portal/me'),
+  // c2 read-path. All inherit authGet's bearer + 401-clear-redirect contract.
+  courses: () => authGet<PortalCourseListItem[]>('/api/v1/portal/courses'),
+  courseMaterials: (rootId: string) =>
+    authGet<PortalMaterialTreeNode>(
+      `/api/v1/portal/courses/${rootId}/materials`,
+    ),
+  material: (materialId: string) =>
+    authGet<PortalMediaResponse>(`/api/v1/portal/materials/${materialId}`),
 }
