@@ -83,3 +83,14 @@ export interface PortalMediaResponse {
   url: string | null
   slide_urls: string[] | null
 }
+
+// --- c3a: submission act (POST /portal/tasks/{id}/submissions) ---
+// Response is minimal (status 202): the submission id + lifecycle status, plus
+// a duplicate flag — true when an identical file for this task was already
+// submitted and terminal (no new attempt was created).
+
+export interface PortalSubmitResponse {
+  submission_id: string
+  status: string
+  duplicate: boolean
+}
