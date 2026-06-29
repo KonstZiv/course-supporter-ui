@@ -48,7 +48,12 @@ export interface PortalAttemptResult {
   verdict: PortalVerdict | null
 }
 
-export type PortalSubmissionStatus = 'none' | 'pending' | 'reviewed'
+// Coarse overlay bucket (T4a + DD-6-D de-collapse): the tree badge value. NOT
+// the per-attempt raw lifecycle status (that crosses the wire as a free string
+// on the read-path list/detail — 9 milestones, bucketed FE-side by
+// ``statusBucket``). ``error`` = a terminal error (rejected/mismatch/failed),
+// distinct from a reviewed-but-not-passed verdict.
+export type PortalSubmissionStatus = 'none' | 'pending' | 'reviewed' | 'error'
 
 export interface PortalSubmissionOverlay {
   submission_status: PortalSubmissionStatus
@@ -93,4 +98,26 @@ export interface PortalSubmitResponse {
   submission_id: string
   status: string
   duplicate: boolean
+}
+
+// --- c3b: read-path (own attempts list + review detail) ---
+// Mirror the backend curated slice verbatim. ``status`` crosses the wire as the
+// RAW lifecycle milestone (received / safety_ok / sanity_ok / reviewing /
+// completed / delivered / rejected / mismatch / failed) — bucketed FE-side via
+// ``statusBucket``. The internal trace (review_result beyond verdict /
+// safety_result / sanity_result / error_message) is NEVER in the contract.
+
+export interface PortalSubmissionListItem {
+  id: string
+  status: string
+  score: number | null
+  verdict: PortalVerdict | null
+  created_at: string
+  original_filename: string | null
+}
+
+// Detail adds the rendered review markdown (null until reviewed). Same curated
+// slice otherwise — still no internal trace.
+export interface PortalSubmissionDetail extends PortalSubmissionListItem {
+  review_markdown: string | null
 }
