@@ -27,14 +27,15 @@ export function statusBucket(status: string): StatusBucket {
 }
 
 // Curated, student-facing "why" for the terminal-error statuses (NOT the
-// backend error_message). The action hint is folded into the phrase; the
-// re-submit affordance is the submission form already on the panel.
+// backend error_message). VERBATIM the ratified DD-6-D-FE wording — no action
+// text folded in; the re-submit affordance is the submission form already on
+// the panel.
 const ERROR_PHRASES: Record<string, string> = {
-  rejected: 'Рішення не пройшло перевірку безпеки. Можна надіслати нову спробу.',
+  rejected: 'Рішення не пройшло перевірку безпеки',
   mismatch:
-    'Надіслане не схоже на рішення цього завдання. Перевірте, що подаєте ' +
-    'правильний файл, і спробуйте ще раз.',
-  failed: 'Не вдалося обробити подачу. Спробуйте надіслати ще раз.',
+    'Надіслане не схоже на рішення цього завдання. ' +
+    'Перевірте, що подаєте правильний файл',
+  failed: 'Не вдалося обробити подачу. Спробуйте надіслати ще раз',
 }
 
 export function errorPhrase(status: string): string {

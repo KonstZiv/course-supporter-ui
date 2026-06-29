@@ -25,10 +25,16 @@ describe('statusBucket', () => {
 })
 
 describe('errorPhrase', () => {
-  it('gives a distinct curated phrase per error terminal', () => {
-    expect(errorPhrase('rejected')).toContain('безпеки')
-    expect(errorPhrase('mismatch')).toContain('не схоже')
-    expect(errorPhrase('failed')).toContain('Не вдалося обробити')
+  // Locks the VERBATIM ratified DD-6-D-FE wording (no action text folded in).
+  it('renders each error terminal phrase verbatim per ratification', () => {
+    expect(errorPhrase('rejected')).toBe('Рішення не пройшло перевірку безпеки')
+    expect(errorPhrase('mismatch')).toBe(
+      'Надіслане не схоже на рішення цього завдання. ' +
+        'Перевірте, що подаєте правильний файл',
+    )
+    expect(errorPhrase('failed')).toBe(
+      'Не вдалося обробити подачу. Спробуйте надіслати ще раз',
+    )
   })
 
   it('never echoes a backend error_message — phrases are static and curated', () => {
