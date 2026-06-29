@@ -3,6 +3,7 @@ import { X, Loader2 } from 'lucide-react'
 import { portalApi, PortalApiError } from '../api/portalClient'
 import type { PortalMaterialItem, PortalMediaResponse } from '../types'
 import { PortalMaterialView } from './PortalMaterialView'
+import { PortalSubmitForm } from './PortalSubmitForm'
 
 // Material viewer panel (Phase 6 / T4b, c2, ratify Q2 — a panel, NOT a route).
 // Fetches the media descriptor for the selected tree item and renders it
@@ -11,12 +12,17 @@ import { PortalMaterialView } from './PortalMaterialView'
 // panel. 401 is NOT caught: it is centralised in portalClient (clear +
 // redirect). The presigned URL is fetched fresh on each open (300-min TTL);
 // re-opening re-fetches a fresh URL — seamless mid-session refresh is DD-6-B.
+//
+// c3a: for a task item the brief is followed by the submission form; on a
+// successful submit ``onSubmitted`` re-fetches the tree so the overlay flips.
 export function PortalMaterialPanel({
   item,
   onClose,
+  onSubmitted,
 }: {
   item: PortalMaterialItem
   onClose: () => void
+  onSubmitted: () => void
 }) {
   const [media, setMedia] = useState<PortalMediaResponse | null>(null)
   const [error, setError] = useState('')
@@ -78,6 +84,12 @@ export function PortalMaterialPanel({
             </div>
           )}
           {media && <PortalMaterialView media={media} item={item} />}
+
+          {item.kind === 'task' && (
+            <div className="mt-6 pt-5 border-t border-canvas-dark/40">
+              <PortalSubmitForm taskId={item.id} onSubmitted={onSubmitted} />
+            </div>
+          )}
         </div>
       </div>
     </div>

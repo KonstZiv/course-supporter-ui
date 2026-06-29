@@ -6,6 +6,7 @@ import type {
   PortalMaterialTreeNode,
   PortalMe,
   PortalMediaResponse,
+  PortalSubmitResponse,
 } from '../types'
 
 // Bearer session client for the student portal (Phase 6 / T4b). A sibling to
@@ -85,8 +86,40 @@ async function authGet<T>(path: string): Promise<T> {
   return res.json() as Promise<T>
 }
 
+// Authenticated multipart POST (c3a). Sends FormData WITHOUT a Content-Type
+// header so the browser sets the multipart boundary (mirrors the author client).
+// Same bearer + 401-clear-redirect contract as authGet; non-401 errors (422
+// validation, 409 readiness, network) throw a PortalApiError the caller renders
+// inline.
+async function authPost<T>(path: string, body: FormData): Promise<T> {
+  const { token, tenantId } = usePortalSession.getState()
+  if (!token) {
+    redirectToLogin(tenantId)
+    throw new PortalApiError(401, 'No portal session')
+  }
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body,
+  })
+  if (res.status === 401) {
+    usePortalSession.getState().clear()
+    redirectToLogin(tenantId)
+    throw new PortalApiError(401, 'Portal session expired')
+  }
+  if (!res.ok) {
+    throw await parseError(res)
+  }
+  return res.json() as Promise<T>
+}
+
 export const portalApi = {
   me: () => authGet<PortalMe>('/api/v1/portal/me'),
+  submitTask: (taskId: string, body: FormData) =>
+    authPost<PortalSubmitResponse>(
+      `/api/v1/portal/tasks/${taskId}/submissions`,
+      body,
+    ),
   // c2 read-path. All inherit authGet's bearer + 401-clear-redirect contract.
   courses: () => authGet<PortalCourseListItem[]>('/api/v1/portal/courses'),
   courseMaterials: (rootId: string) =>

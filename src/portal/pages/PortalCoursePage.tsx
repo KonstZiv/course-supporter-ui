@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { portalApi, PortalApiError } from '../api/portalClient'
@@ -18,27 +18,25 @@ export function PortalCoursePage() {
   const [error, setError] = useState<'notfound' | 'soft' | null>(null)
   const [selected, setSelected] = useState<PortalMaterialItem | null>(null)
 
-  useEffect(() => {
+  // Re-fetchable: the overlay is server-computed, so after a submit we re-load
+  // the tree (no optimistic local flip — that would drift). Does NOT blank the
+  // tree, so a post-submit re-fetch updates the badge in place without a flash.
+  const loadTree = useCallback(async () => {
     if (!rootId) return
-    let active = true
-    setTree(null)
-    setError(null)
-    portalApi
-      .courseMaterials(rootId)
-      .then((t) => {
-        if (active) setTree(t)
-      })
-      .catch((err) => {
-        if (!active) return
-        if (err instanceof PortalApiError && err.status === 401) return // centralised
-        setError(
-          err instanceof PortalApiError && err.status === 404 ? 'notfound' : 'soft',
-        )
-      })
-    return () => {
-      active = false
+    try {
+      setTree(await portalApi.courseMaterials(rootId))
+      setError(null)
+    } catch (err) {
+      if (err instanceof PortalApiError && err.status === 401) return // centralised
+      setError(err instanceof PortalApiError && err.status === 404 ? 'notfound' : 'soft')
     }
   }, [rootId])
+
+  useEffect(() => {
+    setTree(null)
+    setError(null)
+    void loadTree()
+  }, [loadTree])
 
   const goHome = () => navigate(`/${tenantId}/home`)
 
@@ -79,7 +77,11 @@ export function PortalCoursePage() {
       </main>
 
       {selected && (
-        <PortalMaterialPanel item={selected} onClose={() => setSelected(null)} />
+        <PortalMaterialPanel
+          item={selected}
+          onClose={() => setSelected(null)}
+          onSubmitted={loadTree}
+        />
       )}
     </div>
   )
