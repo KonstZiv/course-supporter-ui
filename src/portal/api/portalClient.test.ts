@@ -55,3 +55,72 @@ describe('portalApi.submitTask (authPost)', () => {
     )
   })
 })
+
+describe('portalApi read-path (c3b: submissions / submission)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    usePortalSession.getState().setSession({
+      token: 'jwt',
+      tenantId: 't',
+      studentId: 's',
+      displayName: null,
+    })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('GETs the own-attempts list with the bearer', async () => {
+    const rows = [
+      { id: 'a', status: 'completed', score: 85, verdict: null, created_at: 'x', original_filename: 'f.py' },
+    ]
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(rows),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const res = await portalApi.submissions('task-7')
+    expect(res).toEqual(rows)
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/api/v1/portal/tasks/task-7/submissions')
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer jwt')
+  })
+
+  it('GETs one submission detail with the bearer', async () => {
+    const detail = {
+      id: 'sub-1',
+      status: 'completed',
+      score: 90,
+      verdict: { passed: true, correctness: 'correct' },
+      review_markdown: '# Review',
+      created_at: 'x',
+      original_filename: 'f.py',
+    }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(detail),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const res = await portalApi.submission('sub-1')
+    expect(res).toEqual(detail)
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/api/v1/portal/submissions/sub-1')
+  })
+
+  it('inherits the 401-clear-redirect contract (throws, clears session)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: () => Promise.resolve(null),
+      }),
+    )
+    await expect(portalApi.submissions('t')).rejects.toBeInstanceOf(PortalApiError)
+    expect(usePortalSession.getState().token).toBeNull()
+  })
+})

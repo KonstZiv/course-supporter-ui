@@ -4,6 +4,7 @@ import { portalApi, PortalApiError } from '../api/portalClient'
 import type { PortalMaterialItem, PortalMediaResponse } from '../types'
 import { PortalMaterialView } from './PortalMaterialView'
 import { PortalSubmitForm } from './PortalSubmitForm'
+import { PortalSubmissionsList } from './PortalSubmissionsList'
 
 // Material viewer panel (Phase 6 / T4b, c2, ratify Q2 — a panel, NOT a route).
 // Fetches the media descriptor for the selected tree item and renders it
@@ -26,6 +27,15 @@ export function PortalMaterialPanel({
 }) {
   const [media, setMedia] = useState<PortalMediaResponse | null>(null)
   const [error, setError] = useState('')
+  // c3b: a successful submit (c3a calls onSubmitted only on success, never on a
+  // duplicate — corrective 1) bumps this so the attempts list re-fetches the new
+  // row alongside the tree overlay (Q7).
+  const [attemptsReload, setAttemptsReload] = useState(0)
+
+  const handleSubmitted = () => {
+    setAttemptsReload((n) => n + 1)
+    onSubmitted()
+  }
 
   useEffect(() => {
     let active = true
@@ -86,8 +96,9 @@ export function PortalMaterialPanel({
           {media && <PortalMaterialView media={media} item={item} />}
 
           {item.kind === 'task' && (
-            <div className="mt-6 pt-5 border-t border-canvas-dark/40">
-              <PortalSubmitForm taskId={item.id} onSubmitted={onSubmitted} />
+            <div className="mt-6 pt-5 border-t border-canvas-dark/40 space-y-8">
+              <PortalSubmitForm taskId={item.id} onSubmitted={handleSubmitted} />
+              <PortalSubmissionsList taskId={item.id} reloadKey={attemptsReload} />
             </div>
           )}
         </div>

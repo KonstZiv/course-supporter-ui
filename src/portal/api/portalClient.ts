@@ -6,6 +6,8 @@ import type {
   PortalMaterialTreeNode,
   PortalMe,
   PortalMediaResponse,
+  PortalSubmissionDetail,
+  PortalSubmissionListItem,
   PortalSubmitResponse,
 } from '../types'
 
@@ -128,4 +130,13 @@ export const portalApi = {
     ),
   material: (materialId: string) =>
     authGet<PortalMediaResponse>(`/api/v1/portal/materials/${materialId}`),
+  // c3b read-path. Own attempts on a task + one attempt's curated detail.
+  submissions: (taskId: string) =>
+    authGet<PortalSubmissionListItem[]>(
+      `/api/v1/portal/tasks/${taskId}/submissions`,
+    ),
+  submission: (submissionId: string) =>
+    authGet<PortalSubmissionDetail>(
+      `/api/v1/portal/submissions/${submissionId}`,
+    ),
 }

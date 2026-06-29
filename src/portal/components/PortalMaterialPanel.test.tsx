@@ -8,12 +8,18 @@ vi.mock('../api/portalClient', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/portalClient')>()
   return {
     ...actual,
-    portalApi: { ...actual.portalApi, material: vi.fn(), submitTask: vi.fn() },
+    portalApi: {
+      ...actual.portalApi,
+      material: vi.fn(),
+      submitTask: vi.fn(),
+      submissions: vi.fn(),
+    },
   }
 })
 
 const mockedMaterial = vi.mocked(portalApi.material)
 const mockedSubmit = vi.mocked(portalApi.submitTask)
+const mockedSubmissions = vi.mocked(portalApi.submissions)
 
 const TASK: PortalMaterialItem = {
   id: 't1',
@@ -36,6 +42,7 @@ describe('PortalMaterialPanel (c3a submit wiring)', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockedMaterial.mockResolvedValue(EXTERNAL)
+    mockedSubmissions.mockResolvedValue([])
   })
 
   it('renders the submit form for a task item', async () => {
@@ -71,5 +78,36 @@ describe('PortalMaterialPanel (c3a submit wiring)', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: /надіслати/i }))
     await waitFor(() => expect(onSubmitted).toHaveBeenCalled())
+  })
+
+  it('shows the "Мої спроби" section for a task, not for a material (c3b)', async () => {
+    const { rerender } = render(
+      <PortalMaterialPanel item={TASK} onClose={vi.fn()} onSubmitted={vi.fn()} />,
+    )
+    await waitFor(() => expect(screen.getByText('Мої спроби')).toBeInTheDocument())
+
+    rerender(
+      <PortalMaterialPanel item={MATERIAL} onClose={vi.fn()} onSubmitted={vi.fn()} />,
+    )
+    await waitFor(() =>
+      expect(screen.getByText('Відкрити / Завантажити')).toBeInTheDocument(),
+    )
+    expect(screen.queryByText('Мої спроби')).not.toBeInTheDocument()
+  })
+
+  it('re-fetches the attempts list after a successful submit (Q7)', async () => {
+    mockedSubmit.mockResolvedValue({
+      submission_id: 's',
+      status: 'received',
+      duplicate: false,
+    })
+    render(<PortalMaterialPanel item={TASK} onClose={vi.fn()} onSubmitted={vi.fn()} />)
+    await waitFor(() => expect(mockedSubmissions).toHaveBeenCalledTimes(1)) // initial
+    fireEvent.change(screen.getByLabelText('Файл рішення'), {
+      target: { files: [new File(['print()'], 'a.py')] },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /надіслати/i }))
+    // reloadKey bump → the list effect re-runs → a second submissions() call.
+    await waitFor(() => expect(mockedSubmissions).toHaveBeenCalledTimes(2))
   })
 })
