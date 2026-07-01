@@ -449,3 +449,62 @@ export interface HomeworkTaskCostResponse {
   to: string
   by_student: HomeworkByStudentEntry[]
 }
+
+// --- Phase 6 T5: tenant-admin student management (author app) ---
+// Mirrors the backend 7-route contract (5 write T1 + 2 read T5-BE). Diffed
+// against the OpenAPI snapshot from backend main. Course roots for the bind
+// picker reuse the existing NodeResponse / NodeListResponse (nodesApi).
+
+export interface StudentRosterItem {
+  student_id: string
+  external_id: string
+  // login / is_active are null for integration-mode students that never got
+  // a portal credential (LEFT join). is_active mirrors the revoke state
+  // (DD-6-A): null = no credential, true = active, false = access revoked.
+  login: string | null
+  display_name: string | null
+  is_active: boolean | null
+  enrollment_count: number
+}
+
+export interface StudentRosterResponse {
+  items: StudentRosterItem[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface StudentEnrollmentItem {
+  course_node_id: string
+  enrolled_at: string
+}
+
+export interface StudentEnrollmentsResponse {
+  student_id: string
+  items: StudentEnrollmentItem[]
+}
+
+export type ProvisionMode = 'generate' | 'manual' | 'existing'
+
+export interface ProvisionStudentRequest {
+  mode: ProvisionMode
+  // Cross-field (validated client-side before POST, mirrors the backend
+  // model_validator): manual → external_id required; existing → student_id
+  // required; generate → external_id omitted.
+  external_id?: string | null
+  student_id?: string | null
+  login: string
+  password: string
+  display_name?: string | null
+}
+
+export interface ProvisionStudentResponse {
+  student_id: string
+  external_id: string
+  login: string
+}
+
+export interface EnrollmentRequest {
+  student_id: string
+  course_node_id: string
+}
