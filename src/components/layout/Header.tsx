@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../stores/auth'
-import { BookOpen, DollarSign, LayoutDashboard, LogOut } from 'lucide-react'
+import { BookOpen, DollarSign, LayoutDashboard, LogOut, Receipt } from 'lucide-react'
 import { clsx } from 'clsx'
 
 export function Header() {
@@ -8,6 +8,7 @@ export function Header() {
   const location = useLocation()
   const isHome = location.pathname === '/'
   const isCost = location.pathname === '/cost'
+  const isHomeworkCost = location.pathname === '/cost/homework'
 
   return (
     <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-canvas-dark/40">
@@ -48,6 +49,18 @@ export function Header() {
           >
             <DollarSign size={16} />
             Витрати
+          </Link>
+          <Link
+            to="/cost/homework"
+            className={clsx(
+              'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors',
+              isHomeworkCost
+                ? 'bg-navy-pale text-navy'
+                : 'text-ink-light hover:bg-canvas-dark hover:text-ink',
+            )}
+          >
+            <Receipt size={16} />
+            Витрати ДЗ
           </Link>
           <button
             onClick={logout}

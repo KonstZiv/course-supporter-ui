@@ -391,3 +391,61 @@ export interface CostSummaryResponse {
   by_course: ByCourseEntry[]
   by_provider: ByProviderEntry[]
 }
+
+// ─── Homework cost-attribution (Phase 6, 6.HC — DD-6-I Variant A) ───
+//
+// A cross-section separate from /cost/summary. Homework Jobs carry
+// course_node_id=NULL, so their cost lands in summary's
+// `unattributed_cost_usd` bucket and is attributed here instead. Drilled
+// on demand as a 3-level tree, each level a request keyed by the parent:
+//   L1 /cost/homework → L2 .../course/{id} → L3 .../task/{id}.
+// The task total (L4) is a row in the L2 response — there is no standalone
+// task-aggregate endpoint.
+//
+// A NEW type set, NOT an extension of `CostSummaryResponse`: the L1 shape
+// has no `unattributed_cost_usd` / `by_provider`, and the breakdowns add
+// `is_deleted` (soft-deleted task, shown not hidden) / `task_label`
+// (backend-composed) / `student_display` (backend-composed fallback —
+// display_name → login → external_id; the FE renders it verbatim).
+// Shapes verified against the backend `main` OpenAPI snapshot at the
+// 6.HC-UI pre-flight.
+
+export interface HomeworkByCourseEntry {
+  course_node_id: string
+  course_title: string
+  cost_usd: number
+}
+
+export interface HomeworkByTaskEntry {
+  authored_document_id: string
+  task_label: string
+  is_deleted: boolean
+  cost_usd: number
+}
+
+export interface HomeworkByStudentEntry {
+  student_id: string
+  student_display: string
+  cost_usd: number
+}
+
+export interface HomeworkCostResponse {
+  from: string
+  to: string
+  total_usd: number
+  by_course: HomeworkByCourseEntry[]
+}
+
+export interface HomeworkCourseCostResponse {
+  course_node_id: string
+  from: string
+  to: string
+  by_task: HomeworkByTaskEntry[]
+}
+
+export interface HomeworkTaskCostResponse {
+  authored_document_id: string
+  from: string
+  to: string
+  by_student: HomeworkByStudentEntry[]
+}
