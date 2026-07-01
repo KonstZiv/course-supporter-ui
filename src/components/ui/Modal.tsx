@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 
@@ -21,7 +22,11 @@ export function Modal({ open, onClose, title, children, wide }: ModalProps) {
     return () => document.removeEventListener('keydown', handleEsc)
   }, [open, onClose])
 
-  return (
+  // Portal to <body>: the overlay is position:fixed, and rendering it inline
+  // would inject a <div> wherever the caller sits — invalid DOM nesting when a
+  // caller is inside a <table> (e.g. a row action). The portal keeps modals
+  // valid regardless of where they are invoked.
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -61,6 +66,7 @@ export function Modal({ open, onClose, title, children, wide }: ModalProps) {
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   )
 }
