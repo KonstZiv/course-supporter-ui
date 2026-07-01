@@ -5,6 +5,7 @@ import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { CoursePage } from './pages/CoursePage'
 import { CostPage } from './pages/CostPage'
+import { HomeworkCostPage } from './pages/HomeworkCostPage'
 import { AppLayout } from './components/layout/AppLayout'
 import { getLanguages } from './utils/languages'
 
@@ -40,6 +41,7 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         <Route path="course/:nodeId" element={<CoursePage />} />
         <Route path="cost" element={<CostPage />} />
+        <Route path="cost/homework" element={<HomeworkCostPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
