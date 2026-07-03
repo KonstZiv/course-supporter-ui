@@ -49,6 +49,23 @@ describe('studentErrorMessage', () => {
     ).toMatch(/зарахування не знайдено/i)
   })
 
+  it('maps reset 422 (weak) and 404 (no credential vs unknown)', () => {
+    expect(
+      studentErrorMessage('reset', new ApiError(422, 'x', { detail: 'weak' })),
+    ).toMatch(/пароль/i)
+    expect(
+      studentErrorMessage(
+        'reset',
+        new ApiError(404, 'x', {
+          detail: 'Student has no portal credential.',
+        }),
+      ),
+    ).toMatch(/немає доступу до порталу/i)
+    expect(
+      studentErrorMessage('reset', new ApiError(404, 'x', null)),
+    ).toMatch(/студента не знайдено/i)
+  })
+
   it('falls back for a non-ApiError', () => {
     expect(studentErrorMessage('revoke', new Error('boom'))).toMatch(
       /сервер/i,

@@ -468,6 +468,10 @@ export interface StudentRosterItem {
 }
 
 export interface StudentRosterResponse {
+  // DD-6-M: the tenant these students belong to, so the author UI can build the
+  // shared portal link `${VITE_PORTAL_ORIGIN}/${tenant_id}/login` without
+  // exposing the UUID elsewhere. Present even at 0 courses.
+  tenant_id: string
   items: StudentRosterItem[]
   total: number
   limit: number
@@ -502,6 +506,13 @@ export interface ProvisionStudentResponse {
   student_id: string
   external_id: string
   login: string
+}
+
+// DD-6-J author-side password reset (fallback path). Schema floor only — the
+// real minimum-length policy is enforced backend-side at hash time (a weak
+// password maps to 422), exactly as provisioning does.
+export interface SetStudentPasswordRequest {
+  password: string
 }
 
 export interface EnrollmentRequest {

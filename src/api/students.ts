@@ -3,6 +3,7 @@ import type {
   EnrollmentRequest,
   ProvisionStudentRequest,
   ProvisionStudentResponse,
+  SetStudentPasswordRequest,
   StudentEnrollmentsResponse,
   StudentRosterResponse,
 } from '../types/api'
@@ -37,6 +38,17 @@ export const studentsApi = {
 
   restore: (studentId: string) =>
     api.post<void>(`/api/v1/students/${encodeURIComponent(studentId)}/restore`),
+
+  // DD-6-J author-side password reset (fallback). 204 on success; 422 weak
+  // password, 404 unknown student / no credential — mapped in studentErrors.ts.
+  // The secret is rotated in place; is_active (access) is never touched.
+  setPassword: (studentId: string, password: string) => {
+    const body: SetStudentPasswordRequest = { password }
+    return api.post<void>(
+      `/api/v1/students/${encodeURIComponent(studentId)}/password`,
+      body,
+    )
+  },
 
   bind: (body: EnrollmentRequest) =>
     api.post<{ student_id: string; course_node_id: string }>(

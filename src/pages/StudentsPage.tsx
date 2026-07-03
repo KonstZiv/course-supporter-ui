@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { AlertCircle, Loader2, UserPlus, Users } from 'lucide-react'
+import { AlertCircle, Copy, Loader2, UserPlus, Users } from 'lucide-react'
 import { studentsApi } from '../api/students'
 import { nodesApi } from '../api/nodes'
 import type { NodeResponse, StudentRosterResponse } from '../types/api'
@@ -9,6 +9,11 @@ import { ProvisionStudentModal } from '../components/students/ProvisionStudentMo
 
 const PAGE_SIZE = 20
 
+// DD-6-M: origin of the portal SPA (a different app/host), used to build the
+// shared login link. Empty in dev (C5 pattern, mirrors VITE_API_BASE_URL) — the
+// copy button is disabled then, since a relative link would be broken.
+const PORTAL_ORIGIN = import.meta.env.VITE_PORTAL_ORIGIN || ''
+
 export function StudentsPage() {
   const [resp, setResp] = useState<StudentRosterResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -16,6 +21,9 @@ export function StudentsPage() {
   const [offset, setOffset] = useState(0)
   const [provisionOpen, setProvisionOpen] = useState(false)
   const [roots, setRoots] = useState<NodeResponse[]>([])
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>(
+    'idle',
+  )
 
   const load = useCallback(async (off: number) => {
     setLoading(true)
@@ -55,6 +63,25 @@ export function StudentsPage() {
   const canPrev = offset > 0
   const canNext = offset + PAGE_SIZE < total
 
+  // DD-6-M: one shared portal link per tenant (student identifies on the login
+  // form, not in the URL). tenant_id comes from the roster payload.
+  const tenantId = resp?.tenant_id ?? null
+  const portalLink =
+    PORTAL_ORIGIN && tenantId ? `${PORTAL_ORIGIN}/${tenantId}/login` : null
+
+  const copyPortalLink = async () => {
+    if (!portalLink) return
+    try {
+      await navigator.clipboard.writeText(portalLink)
+      setCopyState('copied')
+      window.setTimeout(() => setCopyState('idle'), 2000)
+    } catch {
+      // Clipboard API unavailable (insecure context / older browser) — surface
+      // the link as selectable text for manual copy.
+      setCopyState('failed')
+    }
+  }
+
   return (
     <div className="max-w-[1600px] mx-auto px-6 py-8">
       <div className="flex items-center justify-between mb-8">
@@ -64,10 +91,36 @@ export function StudentsPage() {
             Доступ студентів до порталу та зарахування на курси
           </p>
         </div>
-        <button className="btn-primary" onClick={() => setProvisionOpen(true)}>
-          <UserPlus size={16} /> Додати студента
-        </button>
+        <div className="flex gap-2">
+          <button
+            className="btn-ghost"
+            disabled={!portalLink}
+            onClick={() => void copyPortalLink()}
+            title={
+              !PORTAL_ORIGIN
+                ? 'Портальне посилання недоступне: не задано VITE_PORTAL_ORIGIN.'
+                : undefined
+            }
+          >
+            <Copy size={16} />
+            {copyState === 'copied'
+              ? 'Скопійовано!'
+              : 'Скопіювати посилання порталу'}
+          </button>
+          <button className="btn-primary" onClick={() => setProvisionOpen(true)}>
+            <UserPlus size={16} /> Додати студента
+          </button>
+        </div>
       </div>
+
+      {copyState === 'failed' && portalLink && (
+        <div className="card p-3 mb-4 text-sm text-ink-light">
+          Не вдалося скопіювати автоматично. Скопіюйте вручну:{' '}
+          <span className="select-all font-mono text-ink break-all">
+            {portalLink}
+          </span>
+        </div>
+      )}
 
       {loading && !resp ? (
         <div className="flex justify-center py-20">
