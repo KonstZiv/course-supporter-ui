@@ -102,4 +102,5 @@ Wait for user confirmation before starting.
 ## Environment
 
 - `.env.example` → `.env.local` with `VITE_API_BASE_URL` (e.g., `https://api-stage.pythoncourse.me`).
+- `VITE_PORTAL_ORIGIN` (DD-6-M) — origin of the portal SPA (e.g., `https://campus.pythoncourse.me`), used by the Students tab to build the shareable portal link. Empty in dev disables the "copy portal link" button (a relative link would be broken). Build-time var — set it in the author project's CF Pages env for prod.
 - Browser console errors in dev are signals, not warnings — treat them as failures.
