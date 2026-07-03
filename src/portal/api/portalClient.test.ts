@@ -124,3 +124,89 @@ describe('portalApi read-path (c3b: submissions / submission)', () => {
     expect(usePortalSession.getState().token).toBeNull()
   })
 })
+
+describe('portalApi recovery (R3: public + protected JSON POST)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    usePortalSession.getState().clear()
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('forgotPassword POSTs JSON without a bearer and resolves on 202', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 202 })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      portalApi.forgotPassword({ tenant_id: 't', login: 'olena' }),
+    ).resolves.toBeUndefined()
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/api/v1/portal/password/forgot')
+    expect(init.method).toBe('POST')
+    const headers = init.headers as Record<string, string>
+    expect(headers['Content-Type']).toBe('application/json')
+    expect(headers.Authorization).toBeUndefined()
+    expect(init.body).toBe(JSON.stringify({ tenant_id: 't', login: 'olena' }))
+  })
+
+  it('resetPassword throws PortalApiError on a 400 (invalid/expired token)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        json: () => Promise.resolve({ detail: 'Invalid or expired token' }),
+      }),
+    )
+    await expect(
+      portalApi.resetPassword({ token: 'x', password: 'longenough1' }),
+    ).rejects.toMatchObject({ status: 400 })
+  })
+
+  it('setRecoveryEmail POSTs JSON with the bearer and returns the 200 body', async () => {
+    usePortalSession.getState().setSession({
+      token: 'jwt',
+      tenantId: 't',
+      studentId: 's',
+      displayName: null,
+    })
+    const body = { recovery_email: 'a@b.com', recovery_email_confirmed: false }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(body),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const res = await portalApi.setRecoveryEmail({ email: 'a@b.com' })
+    expect(res).toEqual(body)
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/api/v1/portal/recovery-email')
+    const headers = init.headers as Record<string, string>
+    expect(headers.Authorization).toBe('Bearer jwt')
+    expect(headers['Content-Type']).toBe('application/json')
+  })
+
+  it('setRecoveryEmail inherits the 401-clear-redirect contract', async () => {
+    usePortalSession.getState().setSession({
+      token: 'jwt',
+      tenantId: 't',
+      studentId: 's',
+      displayName: null,
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: () => Promise.resolve(null),
+      }),
+    )
+    await expect(
+      portalApi.setRecoveryEmail({ email: 'a@b.com' }),
+    ).rejects.toBeInstanceOf(PortalApiError)
+    expect(usePortalSession.getState().token).toBeNull()
+  })
+})

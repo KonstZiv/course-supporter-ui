@@ -1,5 +1,7 @@
 import { usePortalSession } from '../stores/session'
 import type {
+  ConfirmRecoveryEmailRequest,
+  ForgotPasswordRequest,
   PortalCourseListItem,
   PortalLoginRequest,
   PortalLoginResponse,
@@ -9,6 +11,9 @@ import type {
   PortalSubmissionDetail,
   PortalSubmissionListItem,
   PortalSubmitResponse,
+  RecoveryEmailRequest,
+  RecoveryEmailResponse,
+  ResetPasswordRequest,
 } from '../types'
 
 // Bearer session client for the student portal (Phase 6 / T4b). A sibling to
@@ -66,6 +71,21 @@ export async function portalLogin(
   return res.json() as Promise<PortalLoginResponse>
 }
 
+// Unauthenticated JSON POST for the public recovery flow (R3): forgot / reset /
+// confirm. Like portalLogin it attaches NO bearer and does NOT trigger the 401
+// redirect — the caller renders failures inline. The success responses are
+// empty (202/204), so this is void: the body is read ONLY to build the error.
+async function postPublicJson(path: string, body: unknown): Promise<void> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    throw await parseError(res)
+  }
+}
+
 // Authenticated GET. Attaches the bearer; on 401 clears the session and
 // redirects to login (the contract c2/c3 inherit for every bearer call).
 async function authGet<T>(path: string): Promise<T> {
@@ -115,6 +135,35 @@ async function authPost<T>(path: string, body: FormData): Promise<T> {
   return res.json() as Promise<T>
 }
 
+// Authenticated JSON POST (R3): the recovery-email set/change. Same bearer +
+// 401-clear-redirect contract as authGet/authPost, but a JSON body (the
+// existing authPost is multipart-only for file submission). Returns the parsed
+// 200 body; non-401 errors (422 validation) throw for inline rendering.
+async function postAuthJson<T>(path: string, body: unknown): Promise<T> {
+  const { token, tenantId } = usePortalSession.getState()
+  if (!token) {
+    redirectToLogin(tenantId)
+    throw new PortalApiError(401, 'No portal session')
+  }
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  })
+  if (res.status === 401) {
+    usePortalSession.getState().clear()
+    redirectToLogin(tenantId)
+    throw new PortalApiError(401, 'Portal session expired')
+  }
+  if (!res.ok) {
+    throw await parseError(res)
+  }
+  return res.json() as Promise<T>
+}
+
 export const portalApi = {
   me: () => authGet<PortalMe>('/api/v1/portal/me'),
   submitTask: (taskId: string, body: FormData) =>
@@ -139,4 +188,16 @@ export const portalApi = {
     authGet<PortalSubmissionDetail>(
       `/api/v1/portal/submissions/${submissionId}`,
     ),
+  // R3 password-recovery. Public (no bearer) — forgot always 202; reset/confirm
+  // 204 or 400 generic; caller renders inline.
+  forgotPassword: (req: ForgotPasswordRequest) =>
+    postPublicJson('/api/v1/portal/password/forgot', req),
+  resetPassword: (req: ResetPasswordRequest) =>
+    postPublicJson('/api/v1/portal/password/reset', req),
+  confirmEmail: (req: ConfirmRecoveryEmailRequest) =>
+    postPublicJson('/api/v1/portal/recovery-email/confirm', req),
+  // Protected — set/change the recovery email (also the resend mechanism:
+  // re-POSTing burns the old confirm token and mails a fresh link).
+  setRecoveryEmail: (req: RecoveryEmailRequest) =>
+    postAuthJson<RecoveryEmailResponse>('/api/v1/portal/recovery-email', req),
 }

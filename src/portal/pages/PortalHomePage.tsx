@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { BookOpen, LogOut, ChevronRight, Loader2 } from 'lucide-react'
 import { usePortalSession } from '../stores/session'
 import { portalApi, PortalApiError } from '../api/portalClient'
+import { RecoveryEmailSection } from '../components/RecoveryEmailSection'
 import type { PortalCourseListItem } from '../types'
 
 // Portal landing (Phase 6 / T4b, c2): the student's enrolled courses
@@ -94,6 +95,8 @@ export function PortalHomePage() {
             ))}
           </ul>
         )}
+
+        <RecoveryEmailSection />
       </main>
     </div>
   )
