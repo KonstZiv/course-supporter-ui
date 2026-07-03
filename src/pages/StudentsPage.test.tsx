@@ -29,6 +29,7 @@ vi.mock('../api/nodes', () => ({
 }))
 
 const ROSTER = {
+  tenant_id: '019eda80-67ea-7060-b4c4-9dc85761690e',
   total: 3,
   limit: 20,
   offset: 0,
