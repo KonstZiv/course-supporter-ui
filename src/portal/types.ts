@@ -25,6 +25,12 @@ export interface PortalMe {
   tenant_id: string
   login: string
   display_name: string | null
+  // R3 (password-recovery): the recovery-email state feeding the home section.
+  // ``recovery_email`` is null until the student sets one; ``confirmed`` flips
+  // false → true only after the confirm-link is redeemed (changing the email
+  // resets it to false).
+  recovery_email: string | null
+  recovery_email_confirmed: boolean
 }
 
 // --- c2: materials-listing (T4a) + media descriptor (T3) ---
@@ -120,4 +126,42 @@ export interface PortalSubmissionListItem {
 // slice otherwise — still no internal trace.
 export interface PortalSubmissionDetail extends PortalSubmissionListItem {
   review_markdown: string | null
+}
+
+// --- R3: password-recovery self-service ---
+// Mirror the shipped R2 backend schemas verbatim (verified against a fresh
+// OpenAPI snapshot from backend main 0208b8e). Email validation is deliberately
+// minimal on both ends (``@`` + non-empty domain, max 320) — the FE mirrors it,
+// no strict RFC (RP6).
+
+// Protected set/change of the recovery email (POST /portal/recovery-email).
+export interface RecoveryEmailRequest {
+  email: string
+}
+
+// The refreshed recovery-email state after a set/change (setting always resets
+// ``recovery_email_confirmed`` to false and re-sends a confirm link).
+export interface RecoveryEmailResponse {
+  recovery_email: string
+  recovery_email_confirmed: boolean
+}
+
+// Public confirm landing (POST /portal/recovery-email/confirm) → 204.
+export interface ConfirmRecoveryEmailRequest {
+  token: string
+}
+
+// Public forgot-password request (POST /portal/password/forgot) → always 202
+// (anti-enumeration). Identifies the credential by (tenant, login) — email is
+// not unique.
+export interface ForgotPasswordRequest {
+  tenant_id: string
+  login: string
+}
+
+// Public reset (POST /portal/password/reset) → 204. ``token`` from the email
+// link's query string; ``password`` is the new secret (min 10, weak → 422).
+export interface ResetPasswordRequest {
+  token: string
+  password: string
 }
