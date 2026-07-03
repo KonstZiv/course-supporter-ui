@@ -10,12 +10,16 @@ vi.mock('../api/portalClient', async (importOriginal) => {
     await importOriginal<typeof import('../api/portalClient')>()
   return {
     ...actual,
-    portalApi: { ...actual.portalApi, courses: vi.fn() },
+    portalApi: { ...actual.portalApi, courses: vi.fn(), me: vi.fn() },
   }
 })
 
 const TENANT = '019eda80-67ea-7060-b4c4-9dc85761690e'
 const mockedCourses = vi.mocked(portalApi.courses)
+// The recovery-email section (mounted on home) fetches /me on its own; give it
+// a deterministic "no recovery email yet" answer so these course-list tests
+// stay focused.
+const mockedMe = vi.mocked(portalApi.me)
 
 function renderHome() {
   render(
@@ -37,6 +41,14 @@ describe('PortalHomePage (course list)', () => {
       tenantId: TENANT,
       studentId: 's1',
       displayName: 'Олена',
+    })
+    mockedMe.mockResolvedValue({
+      student_id: 's1',
+      tenant_id: TENANT,
+      login: 'olena',
+      display_name: 'Олена',
+      recovery_email: null,
+      recovery_email_confirmed: false,
     })
   })
 
