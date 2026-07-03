@@ -17,7 +17,7 @@ React + TypeScript SPA for:
 - React 19 + TypeScript
 - Vite (build), Tailwind (styling)
 - Zustand (state), React Flow via `@xyflow/react` (course tree canvas)
-- React Router v6
+- React Router v7
 - API client: `fetch` wrapped in `src/api/client.ts`, auth via `X-API-Key` header
 
 ## Commands
