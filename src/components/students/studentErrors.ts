@@ -19,6 +19,7 @@ export type StudentAction =
   | 'restore'
   | 'bind'
   | 'unbind'
+  | 'reset'
 
 function detailOf(err: ApiError): string {
   const d = (err.body as { detail?: unknown } | null)?.detail
@@ -59,6 +60,17 @@ export function studentErrorMessage(action: StudentAction, err: unknown): string
       break
     case 'unbind':
       if (err.status === 404) return 'Зарахування не знайдено.'
+      break
+    case 'reset':
+      // DD-6-J author-side password reset. 422 = weak password (backend
+      // min-length floor); 404 splits like revoke/restore — no credential to
+      // reset vs unknown student.
+      if (err.status === 422) return 'Пароль не відповідає вимогам (замалий).'
+      if (err.status === 404) {
+        return has('credential')
+          ? 'У студента немає доступу до порталу.'
+          : 'Студента не знайдено.'
+      }
       break
   }
   // Unknown code for this action — fall back to the server phrase, else generic.
