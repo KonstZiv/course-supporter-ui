@@ -99,4 +99,20 @@ describe('StudentsPage', () => {
       screen.getByText('Дати доступ наявному студенту'),
     ).toBeInTheDocument()
   })
+
+  // DD-6-M: VITE_PORTAL_ORIGIN is unset in the test env, so the copy button is
+  // disabled with a hint (the dev/empty-origin branch). The happy copy path is
+  // covered by live-acceptance.
+  it('disables the portal-link button with a hint when origin is unset', async () => {
+    render(<StudentsPage />)
+    await screen.findByText('Alice')
+    const btn = screen.getByRole('button', {
+      name: /Скопіювати посилання порталу/,
+    })
+    expect(btn).toBeDisabled()
+    expect(btn).toHaveAttribute(
+      'title',
+      expect.stringContaining('VITE_PORTAL_ORIGIN'),
+    )
+  })
 })
