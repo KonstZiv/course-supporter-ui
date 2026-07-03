@@ -46,6 +46,7 @@ export function RecoveryEmailSection() {
 
   const [resending, setResending] = useState(false)
   const [resent, setResent] = useState(false)
+  const [resendError, setResendError] = useState('')
 
   useEffect(() => {
     portalApi
@@ -64,6 +65,7 @@ export function RecoveryEmailSection() {
     setEmailInput(prefill)
     setFormError('')
     setResent(false)
+    setResendError('')
     setEditing(true)
   }
 
@@ -103,13 +105,17 @@ export function RecoveryEmailSection() {
     if (!me?.recovery_email) return
     setResending(true)
     setResent(false)
+    setResendError('')
     try {
       await portalApi.setRecoveryEmail({ email: me.recovery_email })
       setResent(true)
-    } catch {
-      // A resend failure is non-critical; the pending state and the change
-      // affordance remain. Keep the section quiet rather than alarming.
-      setResent(false)
+    } catch (err) {
+      // An explicit user action must give feedback (mirror of handleSave). A
+      // 401 is handled inside the client (clear + redirect); anything else
+      // surfaces a network error while the pending state + affordances stay.
+      if (!(err instanceof PortalApiError && err.status === 401)) {
+        setResendError(flowError('network'))
+      }
     } finally {
       setResending(false)
     }
@@ -219,6 +225,12 @@ export function RecoveryEmailSection() {
         <p className="flex items-center gap-1.5 text-sm text-forest mb-4">
           <CheckCircle2 size={16} />
           {SECTION_RESENT}
+        </p>
+      )}
+      {resendError && (
+        <p className="flex items-start gap-1.5 text-sm text-coral mb-4">
+          <AlertCircle size={16} className="shrink-0 mt-0.5" />
+          {resendError}
         </p>
       )}
       <div className="flex items-center gap-2">

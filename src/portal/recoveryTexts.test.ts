@@ -20,6 +20,10 @@ describe('recoveryTexts.flowError', () => {
     expect(RESET_TOO_SHORT).toContain(String(PASSWORD_MIN_LENGTH))
   })
 
+  it('resolves the explicit network key (not via fallback)', () => {
+    expect(flowError('network')).toBe('Не вдалося зʼєднатися із сервером.')
+  })
+
   it('falls back to a generic network phrase for an unknown key', () => {
     expect(flowError('nope')).toBe('Не вдалося зʼєднатися із сервером.')
   })

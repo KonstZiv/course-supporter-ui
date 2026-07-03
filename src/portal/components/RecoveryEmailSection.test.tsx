@@ -125,6 +125,29 @@ describe('RecoveryEmailSection', () => {
     expect(mockedSet).toHaveBeenCalledWith({ email: 'a@b.com' })
   })
 
+  it('surfaces a network error on resend failure, keeping pending + buttons', async () => {
+    mockedMe.mockResolvedValue(
+      meWith({ recovery_email: 'a@b.com', recovery_email_confirmed: false }),
+    )
+    mockedSet.mockRejectedValue(new PortalApiError(500, 'boom'))
+    render(<RecoveryEmailSection />)
+    await waitFor(() => expect(screen.getByText('a@b.com')).toBeInTheDocument())
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Надіслати лист повторно' }),
+    )
+    await waitFor(() =>
+      expect(
+        screen.getByText('Не вдалося зʼєднатися із сервером.'),
+      ).toBeInTheDocument(),
+    )
+    // Pending state and the affordances remain live.
+    expect(screen.getByText(/очікує підтвердження/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Змінити' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Надіслати лист повторно' }),
+    ).toBeInTheDocument()
+  })
+
   it('shows a soft load error when /me fails (non-401)', async () => {
     mockedMe.mockRejectedValue(new PortalApiError(500, 'boom'))
     render(<RecoveryEmailSection />)

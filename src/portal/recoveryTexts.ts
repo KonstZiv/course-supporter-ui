@@ -74,6 +74,7 @@ const FLOW_ERRORS: Record<string, string> = {
   invalidEmail: 'Вкажіть коректну адресу пошти.',
   weakPassword: RESET_TOO_SHORT,
   missingToken: 'Посилання неповне або пошкоджене.',
+  network: 'Не вдалося зʼєднатися із сервером.',
 }
 
 export function flowError(key: string): string {
