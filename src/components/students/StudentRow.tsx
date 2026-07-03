@@ -11,6 +11,7 @@ import { studentsApi } from '../../api/students'
 import { studentErrorMessage } from './studentErrors'
 import { StudentStatusBadge } from './StudentStatusBadge'
 import { CoursePickerModal } from './CoursePickerModal'
+import { ResetPasswordModal } from './ResetPasswordModal'
 import { Modal } from '../ui/Modal'
 import type { StudentEnrollmentItem, StudentRosterItem } from '../../types/api'
 
@@ -33,6 +34,7 @@ export function StudentRow({ student, titleOf, onChanged }: Props) {
   const [actionBusy, setActionBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [confirmRevoke, setConfirmRevoke] = useState(false)
+  const [resetOpen, setResetOpen] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [unbindingId, setUnbindingId] = useState<string | null>(null)
 
@@ -134,6 +136,17 @@ export function StudentRow({ student, titleOf, onChanged }: Props) {
                 onClick={restore}
               >
                 Відновити
+              </button>
+            )}
+            {/* DD-6-J: reset is available whenever a credential exists (active
+                OR revoked) — the password is the secret, access is separate. */}
+            {student.is_active !== null && (
+              <button
+                className="btn-ghost btn-sm"
+                disabled={actionBusy}
+                onClick={() => setResetOpen(true)}
+              >
+                Скинути пароль
               </button>
             )}
           </div>
@@ -242,6 +255,13 @@ export function StudentRow({ student, titleOf, onChanged }: Props) {
           void loadEnrollments()
           onChanged()
         }}
+      />
+
+      <ResetPasswordModal
+        open={resetOpen}
+        onClose={() => setResetOpen(false)}
+        studentId={student.student_id}
+        studentLabel={displayName}
       />
     </>
   )
