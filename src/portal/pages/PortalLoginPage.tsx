@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { BookOpen, ArrowRight, AlertCircle, Loader2 } from 'lucide-react'
 import { usePortalSession } from '../stores/session'
 import { portalLogin, PortalApiError } from '../api/portalClient'
@@ -105,6 +105,14 @@ export function PortalLoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+            <div className="mt-1.5 text-right">
+              <Link
+                to={`/${tenantId}/forgot-password`}
+                className="text-sm text-ink-muted hover:text-ink"
+              >
+                Забули пароль?
+              </Link>
+            </div>
           </div>
 
           {error && (

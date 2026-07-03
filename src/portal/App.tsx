@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { PortalLoginPage } from './pages/PortalLoginPage'
+import { PortalForgotPasswordPage } from './pages/PortalForgotPasswordPage'
 import { PortalHomePage } from './pages/PortalHomePage'
 import { PortalCoursePage } from './pages/PortalCoursePage'
 import { PortalProtectedRoute } from './components/PortalProtectedRoute'
@@ -18,6 +19,10 @@ export function PortalApp() {
   return (
     <Routes>
       <Route path="/:tenantId/login" element={<PortalLoginPage />} />
+      <Route
+        path="/:tenantId/forgot-password"
+        element={<PortalForgotPasswordPage />}
+      />
       <Route
         path="/:tenantId/home"
         element={
