@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Loader2, Upload, CheckCircle2, Info, AlertCircle } from 'lucide-react'
 import { portalApi, PortalApiError } from '../api/portalClient'
 import type { PortalTaskBase } from '../types'
+import { submissionCodePhrase } from '../submissionCodes'
 
 // Allowed homework extensions + max size MIRROR the backend
 // (submission_core.py:49 ALLOWED_HOMEWORK_EXTENSIONS / :47 MAX_HOMEWORK_SIZE).
@@ -16,6 +17,41 @@ const ALLOWED_EXT = [
 const MAX_SIZE = 10 * 1024 * 1024 // 10 MB
 
 type SubmitState = 'idle' | 'submitting' | 'success' | 'duplicate' | 'error'
+
+// Map a submit failure to a uk message. FastAPI nests an HTTPException's detail
+// under the ``detail`` key, so a structured project-preflight error arrives as
+// ``body.detail = {code, details}`` (an OBJECT) — the code is body.detail.code,
+// NOT body.code. Order:
+//   • detail is an object with a string ``code`` → the code-keyed phrase (KD18
+//     P5; an unknown code falls back to the backend ``details``).
+//   • detail is a plain string (other 4xx) → show it as-is (graceful fallback).
+//   • no usable detail → the status-based curated fallback: a plain 422 is a
+//     file-type/size rejection, a plain 409 is the task-not-ready readiness gate
+//     (the render↔submit D5 race surfaces as BASE_NOT_READY via the code path).
+function submitErrorMessage(err: unknown): string {
+  if (err instanceof PortalApiError) {
+    const detail = (err.body as { detail?: unknown } | null)?.detail
+    if (detail !== null && typeof detail === 'object') {
+      const d = detail as { code?: unknown; details?: unknown }
+      if (typeof d.code === 'string') {
+        return submissionCodePhrase(
+          d.code,
+          typeof d.details === 'string' ? d.details : undefined,
+        )
+      }
+    }
+    if (typeof detail === 'string') {
+      return detail
+    }
+    if (err.status === 422) {
+      return `Файл не прийнято. Дозволені типи: ${ALLOWED_EXT.join(', ')} (до 10 МБ).`
+    }
+    if (err.status === 409) {
+      return 'Завдання ще не готове до подачі. Спробуйте трохи згодом.'
+    }
+  }
+  return 'Не вдалося надіслати. Перевірте зʼєднання та спробуйте ще раз.'
+}
 
 // Submission form for a task node (Phase 6 / T4b, c3a). The act of submitting +
 // driving the overlay to pending; the read-path (own attempts, review detail,
@@ -84,16 +120,7 @@ export function PortalSubmitForm({
     } catch (err) {
       if (err instanceof PortalApiError && err.status === 401) return // centralised
       setState('error')
-      if (err instanceof PortalApiError && err.status === 422) {
-        setMessage(
-          `Файл не прийнято. Дозволені типи: ${ALLOWED_EXT.join(', ')} (до 10 МБ).`,
-        )
-      } else if (err instanceof PortalApiError && err.status === 409) {
-        // corrective 3: temporary, not broken — task is visible but not ready.
-        setMessage('Завдання ще не готове до подачі. Спробуйте трохи згодом.')
-      } else {
-        setMessage('Не вдалося надіслати. Перевірте зʼєднання та спробуйте ще раз.')
-      }
+      setMessage(submitErrorMessage(err))
     }
   }
 

@@ -163,3 +163,84 @@ describe('PortalSubmitForm — KD18 P5 auto-echo + D5 gating', () => {
     expect(submitBtn()).toBeDisabled()
   })
 })
+
+describe('PortalSubmitForm — submit error-code dictionary (KD18 P5)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  const submitWith = (err: unknown) => {
+    mockedSubmit.mockRejectedValue(err)
+    renderForm()
+    pickFile('proj.zip')
+    fireEvent.click(submitBtn())
+  }
+
+  // The body mirrors the REAL FastAPI shape: HTTPException(detail={code,details})
+  // crosses the wire as {detail: {code, details}} — a nested object, NOT a
+  // top-level {code}. (The earlier fixtures used the wrong shape and masked a
+  // read-path bug that live acceptance caught.)
+  it('422 ARCHIVE_ONLY → the code-keyed uk phrase', async () => {
+    submitWith(
+      new PortalApiError(422, 'x', { detail: { code: 'ARCHIVE_ONLY', details: '...' } }),
+    )
+    await waitFor(() => expect(screen.getByText(/архів проєкту/)).toBeInTheDocument())
+  })
+
+  it('409 BASE_NOT_READY → the code-keyed uk phrase (D5 race backstop)', async () => {
+    submitWith(
+      new PortalApiError(409, 'x', { detail: { code: 'BASE_NOT_READY', details: '...' } }),
+    )
+    await waitFor(() => expect(screen.getByText(/ще готується/)).toBeInTheDocument())
+  })
+
+  it('422 MISSING_BASE_ECHO → the code-keyed uk phrase', async () => {
+    submitWith(
+      new PortalApiError(422, 'x', {
+        detail: { code: 'MISSING_BASE_ECHO', details: '...' },
+      }),
+    )
+    await waitFor(() => expect(screen.getByText(/визначити версію/)).toBeInTheDocument())
+  })
+
+  it('422 UNKNOWN_BASE_ECHO → the code-keyed uk phrase', async () => {
+    submitWith(
+      new PortalApiError(422, 'x', {
+        detail: { code: 'UNKNOWN_BASE_ECHO', details: '...' },
+      }),
+    )
+    await waitFor(() => expect(screen.getByText(/оновився/)).toBeInTheDocument())
+  })
+
+  it('unknown code → falls back to the backend detail.details', async () => {
+    submitWith(
+      new PortalApiError(422, 'x', {
+        detail: { code: 'NEW_CODE', details: 'сервер сказав так' },
+      }),
+    )
+    await waitFor(() =>
+      expect(screen.getByText('сервер сказав так')).toBeInTheDocument(),
+    )
+  })
+
+  it('plain string detail (other 4xx) → shown as-is', async () => {
+    submitWith(new PortalApiError(422, 'x', { detail: 'Розширення не дозволене' }))
+    await waitFor(() =>
+      expect(screen.getByText('Розширення не дозволене')).toBeInTheDocument(),
+    )
+  })
+
+  it('detail-less 422 → the curated file-type fallback', async () => {
+    submitWith(new PortalApiError(422, 'x', null))
+    await waitFor(() => expect(screen.getByText(/Файл не прийнято/)).toBeInTheDocument())
+  })
+
+  it('detail-less 409 → the curated readiness fallback', async () => {
+    submitWith(new PortalApiError(409, 'x', null))
+    await waitFor(() =>
+      expect(
+        screen.getByText('Завдання ще не готове до подачі. Спробуйте трохи згодом.'),
+      ).toBeInTheDocument(),
+    )
+  })
+})
