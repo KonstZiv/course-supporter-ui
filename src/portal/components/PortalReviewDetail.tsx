@@ -2,8 +2,32 @@ import { useEffect, useState } from 'react'
 import Markdown from 'react-markdown'
 import { Loader2 } from 'lucide-react'
 import { portalApi, PortalApiError } from '../api/portalClient'
-import type { PortalSubmissionDetail } from '../types'
+import type { PortalDeltaReceipt, PortalSubmissionDetail } from '../types'
 import { errorPhrase, PENDING_LABEL, statusBucket } from '../terminalStatus'
+
+// KD18 P5 (I2): the delta receipt for a project submission — how it diverged
+// from the base + whether the base has since moved on. Rendered ONLY in the
+// reviewed bucket (reuses the existing detail fetch; DD-6-D keeps error/pending
+// fetch-free). Counts only — the full diff is DD-6-Q, deliberately NOT built.
+// The hygiene level is not in the contract, so it is not shown. Absent for a
+// non-project submission (delta === null on the parent).
+function DeltaReceipt({ delta }: { delta: PortalDeltaReceipt }) {
+  return (
+    <div className="p-3 rounded-xl bg-canvas-dark/40 text-sm text-ink space-y-1">
+      <p className="font-medium">Порівняння з базовим проєктом</p>
+      <p className="text-ink-light">
+        Змінено {delta.changed}, нових {delta.new}, видалено {delta.deleted}.
+      </p>
+      {delta.base_version !== null && (
+        <p className="text-xs text-ink-muted">
+          {delta.is_stale
+            ? `Базовий проєкт v${delta.base_version} — автор оновив до v${delta.latest_version}.`
+            : `Базовий проєкт v${delta.base_version} (актуальна версія).`}
+        </p>
+      )}
+    </div>
+  )
+}
 
 // Inline review detail for one attempt (Phase 6 / T4b, c3b; Q1 — expanded row,
 // not a route). Rendered by state (Q6):
@@ -91,6 +115,7 @@ export function PortalReviewDetail({
           </span>
         </div>
       )}
+      {detail.delta && <DeltaReceipt delta={detail.delta} />}
       {detail.review_markdown ? (
         <div
           className="text-sm text-ink space-y-2 [&_h1]:font-display [&_h1]:text-lg

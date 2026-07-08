@@ -125,6 +125,67 @@ describe('portalApi read-path (c3b: submissions / submission)', () => {
   })
 })
 
+describe('portalApi.base (KD18 P5 base-download)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    usePortalSession.getState().setSession({
+      token: 'jwt',
+      tenantId: 't',
+      studentId: 's',
+      displayName: null,
+    })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('GETs the base descriptor with the bearer and returns original_url', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ original_url: 'https://s3/orig.zip?sig=1' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const res = await portalApi.base('task-9')
+    expect(res).toEqual({ original_url: 'https://s3/orig.zip?sig=1' })
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/api/v1/portal/tasks/task-9/base')
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer jwt')
+  })
+
+  it('distinct-404 (no ready base) surfaces body.detail for the caller', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: () =>
+          Promise.resolve({ detail: 'No base is available for this task yet.' }),
+      }),
+    )
+    await expect(portalApi.base('t')).rejects.toMatchObject({
+      status: 404,
+      body: { detail: 'No base is available for this task yet.' },
+    })
+  })
+
+  it('generic-404 (access) carries the generic detail — distinguishable', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: () => Promise.resolve({ detail: 'Task not found.' }),
+      }),
+    )
+    await expect(portalApi.base('t')).rejects.toMatchObject({
+      status: 404,
+      body: { detail: 'Task not found.' },
+    })
+  })
+})
+
 describe('portalApi recovery (R3: public + protected JSON POST)', () => {
   beforeEach(() => {
     localStorage.clear()

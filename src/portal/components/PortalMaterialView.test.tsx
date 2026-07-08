@@ -14,6 +14,8 @@ function item(source_type: PortalSourceType): PortalMaterialItem {
     label: 'Матеріал',
     source_type,
     order: 0,
+    task_type: null,
+    base: null,
     overlay: null,
   }
 }

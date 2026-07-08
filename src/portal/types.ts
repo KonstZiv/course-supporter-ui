@@ -70,12 +70,31 @@ export interface PortalSubmissionOverlay {
 export type PortalMaterialKind = 'material' | 'task'
 export type PortalSourceType = 'video' | 'presentation' | 'text' | 'web' | 'audio'
 
+// KD18 P5: the active base descriptor for a project task. ``state='ready'``
+// describes the active (latest READY) version — the student may submit and
+// ``snapshot_hash`` is the auto-echo source; ``pending`` / ``failed`` means the
+// latest version is not usable yet (submit blocked, ``snapshot_hash`` null). A
+// project task with NO base attached carries ``base = null`` on the item — a
+// DISTINCT state (submit allowed, everything new), never a non-ready ``state``.
+export type PortalTaskBaseState = 'pending' | 'ready' | 'failed'
+
+export interface PortalTaskBase {
+  version: number
+  snapshot_hash: string | null
+  state: PortalTaskBaseState
+}
+
 export interface PortalMaterialItem {
   id: string
   kind: PortalMaterialKind
   label: string
   source_type: PortalSourceType
   order: number
+  // KD18 P5: assignment type (e.g. ``project``) when kind=task; null for a
+  // material. ``base`` is the active base descriptor for a project task WITH a
+  // base; null for a base-less project task, a non-project task, or a material.
+  task_type: string | null
+  base: PortalTaskBase | null
   overlay: PortalSubmissionOverlay | null
 }
 
@@ -93,6 +112,15 @@ export interface PortalMediaResponse {
   kind: PortalMediaKind
   url: string | null
   slide_urls: string[] | null
+}
+
+// KD18 P5: presigned download of a project task's active base ORIGINAL archive
+// (GET /portal/tasks/{id}/base). Served on demand so the tree descriptor stays
+// cheap — no presigned URL is baked into every task node (D2 option B). The
+// active base is the latest READY version; a task with no READY base yields a
+// distinct 404 ("No base is available for this task yet.").
+export interface PortalBaseDownload {
+  original_url: string
 }
 
 // --- c3a: submission act (POST /portal/tasks/{id}/submissions) ---
@@ -122,10 +150,27 @@ export interface PortalSubmissionListItem {
   original_filename: string | null
 }
 
-// Detail adds the rendered review markdown (null until reviewed). Same curated
+// KD18 P5: I2 delta receipt — counters + staleness for a project submission,
+// derived on read (the DB stores manifests, not counts; compute_delta is
+// BE-only). Null on the detail for a non-project submission (no delta concept),
+// a DISTINCT state from an all-zero delta. ``is_stale`` is a signal, not a
+// blocker (a newer READY base exists than the one built on). The hygiene level
+// (normalizer-excluded new files) is deliberately NOT surfaced.
+export interface PortalDeltaReceipt {
+  changed: number
+  new: number
+  deleted: number
+  base_version: number | null
+  latest_version: number | null
+  is_stale: boolean
+}
+
+// Detail adds the rendered review markdown (null until reviewed) and, for a
+// project submission, the I2 delta receipt (null otherwise). Same curated
 // slice otherwise — still no internal trace.
 export interface PortalSubmissionDetail extends PortalSubmissionListItem {
   review_markdown: string | null
+  delta: PortalDeltaReceipt | null
 }
 
 // --- R3: password-recovery self-service ---

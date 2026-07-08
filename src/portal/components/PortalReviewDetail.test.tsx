@@ -21,6 +21,7 @@ const detail = (over: Partial<Parameters<typeof mockedSubmission.mockResolvedVal
   review_markdown: '# Рецензія\n\nДобре виконано.',
   created_at: '2026-06-29T10:00:00Z',
   original_filename: 'a.py',
+  delta: null,
   ...over,
 })
 
@@ -67,5 +68,83 @@ describe('PortalReviewDetail', () => {
     render(<PortalReviewDetail submissionId="sub-1" status="reviewing" />)
     expect(screen.getByText(/На перевірці/)).toBeInTheDocument()
     expect(mockedSubmission).not.toHaveBeenCalled()
+  })
+})
+
+describe('PortalReviewDetail — I2 delta receipt (KD18 P5)', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('project delta with a stale base → counts + "author updated" staleness', async () => {
+    mockedSubmission.mockResolvedValue(
+      detail({
+        delta: {
+          changed: 3,
+          new: 2,
+          deleted: 1,
+          base_version: 1,
+          latest_version: 2,
+          is_stale: true,
+        },
+      }),
+    )
+    render(<PortalReviewDetail submissionId="sub-1" status="completed" />)
+    await waitFor(() =>
+      expect(screen.getByText('Порівняння з базовим проєктом')).toBeInTheDocument(),
+    )
+    expect(screen.getByText('Змінено 3, нових 2, видалено 1.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Базовий проєкт v1 — автор оновив до v2.'),
+    ).toBeInTheDocument()
+  })
+
+  it('project delta on the latest base → counts + "current version"', async () => {
+    mockedSubmission.mockResolvedValue(
+      detail({
+        delta: {
+          changed: 0,
+          new: 0,
+          deleted: 0,
+          base_version: 2,
+          latest_version: 2,
+          is_stale: false,
+        },
+      }),
+    )
+    render(<PortalReviewDetail submissionId="sub-1" status="completed" />)
+    await waitFor(() =>
+      expect(screen.getByText('Змінено 0, нових 0, видалено 0.')).toBeInTheDocument(),
+    )
+    expect(
+      screen.getByText('Базовий проєкт v2 (актуальна версія).'),
+    ).toBeInTheDocument()
+  })
+
+  it('base-less project (base_version null) → counts only, NO staleness row', async () => {
+    mockedSubmission.mockResolvedValue(
+      detail({
+        delta: {
+          changed: 0,
+          new: 5,
+          deleted: 0,
+          base_version: null,
+          latest_version: null,
+          is_stale: false,
+        },
+      }),
+    )
+    render(<PortalReviewDetail submissionId="sub-1" status="completed" />)
+    await waitFor(() =>
+      expect(screen.getByText('Змінено 0, нових 5, видалено 0.')).toBeInTheDocument(),
+    )
+    expect(screen.queryByText(/Базовий проєкт v/)).not.toBeInTheDocument()
+  })
+
+  it('non-project submission (delta null) → no receipt block', async () => {
+    mockedSubmission.mockResolvedValue(detail({ delta: null }))
+    render(<PortalReviewDetail submissionId="sub-1" status="completed" />)
+    await waitFor(() => expect(screen.getByText('Рецензія')).toBeInTheDocument())
+    expect(
+      screen.queryByText('Порівняння з базовим проєктом'),
+    ).not.toBeInTheDocument()
   })
 })

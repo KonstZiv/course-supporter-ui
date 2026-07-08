@@ -51,6 +51,7 @@ describe('PortalSubmissionsList', () => {
     mockedSubmission.mockResolvedValue({
       ...row({ id: 'b' }),
       review_markdown: '# Рецензія\n\nЧудово.',
+      delta: null,
     })
     render(<PortalSubmissionsList taskId="t1" reloadKey={0} />)
     await waitFor(() =>
