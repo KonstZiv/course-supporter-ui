@@ -5,6 +5,7 @@ import { nodesApi } from '../../api/nodes'
 import { ApiError } from '../../api/client'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Modal } from '../ui/Modal'
+import { ProjectBaseSection } from './ProjectBaseSection'
 import { sourceTypeMeta } from '../../utils/sourceTypeIcon'
 import { rejectionDetail } from '../../utils/apiError'
 import {
@@ -566,11 +567,11 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
             const Icon = iconMap[meta.icon] || FileIcon
             const isMethodological = mat.material_role === 'methodological'
             return (
-              <div
-                key={mat.id}
-                className="flex items-center gap-3 p-3 rounded-xl bg-canvas hover:bg-canvas-dark/50
-                           transition-colors group"
-              >
+              <div key={mat.id} className="space-y-1.5">
+                <div
+                  className="flex items-center gap-3 p-3 rounded-xl bg-canvas hover:bg-canvas-dark/50
+                             transition-colors group"
+                >
                 <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shrink-0">
                   <Icon size={16} className={meta.color} />
                 </div>
@@ -622,6 +623,12 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                     <Trash2 size={14} className="text-coral" />
                   </button>
                 </div>
+                </div>
+                {mat.task_type === 'project' && (
+                  <div className="ml-2 pl-3 border-l-2 border-canvas-dark/40">
+                    <ProjectBaseSection documentId={mat.id} />
+                  </div>
+                )}
               </div>
             )
           })

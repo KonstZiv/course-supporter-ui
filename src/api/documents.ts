@@ -3,6 +3,9 @@ import type {
   AssignmentType,
   AuthoredDocumentResponse,
   MaterialRole,
+  ProjectBaseAttachResponse,
+  ProjectBaseManifest,
+  ProjectBaseStateResponse,
 } from '../types/api'
 
 export interface AuthoredDocumentCreateResponse {
@@ -79,5 +82,30 @@ export const documentsApi = {
     api.patch<AuthoredDocumentResponse>(
       `/api/v1/documents/${entryId}`,
       patch,
+    ),
+
+  // ── KD18 P6: project base archive (author side) ──
+
+  // Attach / re-upload a base archive → 202, a new append-only version starts
+  // ``pending`` and normalizes asynchronously (no job_id — poll getBaseState).
+  attachBase: (documentId: string, file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return api.post<ProjectBaseAttachResponse>(
+      `/api/v1/documents/${documentId}/base`,
+      formData,
+    )
+  },
+
+  // Latest base version's state, ANY state (author monitoring). 404 when no
+  // base is attached (NO_BASE_ATTACHED) — the caller renders the attach slot.
+  getBaseState: (documentId: string) =>
+    api.get<ProjectBaseStateResponse>(`/api/v1/documents/${documentId}/base`),
+
+  // The latest READY base's manifest (typed P1 Manifest). Call ONLY when
+  // state='ready' — the route is READY-only (404 otherwise).
+  getBaseManifest: (documentId: string) =>
+    api.get<ProjectBaseManifest>(
+      `/api/v1/documents/${documentId}/base/manifest`,
     ),
 }

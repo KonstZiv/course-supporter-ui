@@ -145,6 +145,59 @@ export interface AuthoredDocumentResponse {
   updated_at: string
 }
 
+// ─── Project base (KD18 P6) ───
+// The author-facing base archive attached to a ``task_type='project'`` document.
+// Its normalization is the base's OWN lifecycle (pending → ready | failed),
+// distinct from DocumentState — a dedicated union, not a reuse.
+
+export type ProjectBaseState = 'pending' | 'ready' | 'failed'
+
+// GET /documents/{id}/base — the LATEST version, ANY state (author monitoring
+// of a fresh upload; get_latest, not latest-ready). ``failure_reason`` is
+// non-null only for ``failed``; ``snapshot_hash`` is null until ``ready``.
+export interface ProjectBaseStateResponse {
+  version: number
+  state: ProjectBaseState
+  failure_reason: string | null
+  snapshot_hash: string | null
+}
+
+// POST /documents/{id}/base — 202, normalization runs async (NO job_id;
+// the FE polls GET /documents/{id}/base for pending → ready | failed).
+export interface ProjectBaseAttachResponse {
+  base_version_id: string
+  version: number
+  state: ProjectBaseState
+}
+
+// GET /documents/{id}/base/manifest — the typed P1 Manifest (DD-6-V). Fetched
+// ONLY when state='ready' (the route is READY-only, 404 otherwise).
+export type EntryClass = 'text' | 'document' | 'binary'
+export type ExcludedReason = 'denylist_dir' | 'magic_mismatch' | 'nested_archive'
+
+export interface ManifestEntry {
+  path: string
+  size: number
+  hash: string
+  cls: EntryClass
+}
+
+export interface ExcludedEntry {
+  path: string
+  reason: ExcludedReason
+  entries: number
+  size: number
+}
+
+export interface ProjectBaseManifest {
+  schema: number
+  aggregate_hash: string
+  included: ManifestEntry[]
+  excluded: ExcludedEntry[]
+  total_files: number
+  total_bytes: number
+}
+
 // ─── Job ───
 //
 // ``JobResponse`` is the full GET /jobs/{job_id} wrapper. The fields beyond
