@@ -3,12 +3,13 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { ApiError } from '../../api/client'
 import type { ProjectBaseStateResponse } from '../../types/api'
 
-const { getBaseState, attachBase } = vi.hoisted(() => ({
+const { getBaseState, attachBase, getBaseManifest } = vi.hoisted(() => ({
   getBaseState: vi.fn(),
   attachBase: vi.fn(),
+  getBaseManifest: vi.fn(),
 }))
 vi.mock('../../api/documents', () => ({
-  documentsApi: { getBaseState, attachBase },
+  documentsApi: { getBaseState, attachBase, getBaseManifest },
 }))
 // Isolate the render logic — the poller (usePolling) is the tested primitive
 // plus a thin tick; the live-Playwright pass exercises it end to end.
@@ -36,6 +37,7 @@ describe('ProjectBaseSection', () => {
   beforeEach(() => {
     getBaseState.mockReset()
     attachBase.mockReset()
+    getBaseManifest.mockReset()
   })
 
   it('no base (404) → renders the attach affordance, not a state', async () => {
@@ -91,6 +93,24 @@ describe('ProjectBaseSection', () => {
       expect(attachBase).toHaveBeenCalledWith('doc-9', file),
     )
     expect(await screen.findByText('Нормалізація…')).toBeInTheDocument()
+  })
+
+  it('ready → Manifest button opens the modal and fetches the manifest', async () => {
+    getBaseState.mockResolvedValue(state('ready', { version: 2 }))
+    getBaseManifest.mockResolvedValue({
+      schema: 1,
+      aggregate_hash: 'deadbeef0000',
+      included: [{ path: 'app.py', size: 5, hash: 'h', cls: 'text' }],
+      excluded: [],
+      total_files: 1,
+      total_bytes: 5,
+    })
+    render(<ProjectBaseSection documentId="doc-5" />)
+    fireEvent.click(await screen.findByText('Manifest'))
+    await waitFor(() =>
+      expect(getBaseManifest).toHaveBeenCalledWith('doc-5'),
+    )
+    expect(await screen.findByText('app.py')).toBeInTheDocument()
   })
 
   it('attach error → renders the curated code phrase', async () => {

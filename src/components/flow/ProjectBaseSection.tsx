@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { FileArchive, Upload, AlertTriangle } from 'lucide-react'
+import { FileArchive, Upload, AlertTriangle, ListTree } from 'lucide-react'
 import { documentsApi } from '../../api/documents'
 import { ApiError } from '../../api/client'
 import { usePolling } from '../../hooks/usePolling'
-import type { ProjectBaseStateResponse } from '../../types/api'
+import { Modal } from '../ui/Modal'
+import type {
+  ProjectBaseManifest,
+  ProjectBaseStateResponse,
+} from '../../types/api'
 import { ProjectBaseBadge } from './ProjectBaseBadge'
+import { BaseManifestView } from './BaseManifestView'
 import { baseErrorMessage } from './baseErrors'
 
 const POLL_INTERVAL_MS = 4000
@@ -32,6 +37,11 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // Manifest modal (fetched lazily on open — the route is READY-only).
+  const [manifestOpen, setManifestOpen] = useState(false)
+  const [manifest, setManifest] = useState<ProjectBaseManifest | null>(null)
+  const [manifestError, setManifestError] = useState('')
 
   // Initial state fetch. 404 = NO_BASE_ATTACHED → no base yet (attach slot),
   // a control-flow signal distinct from any normalization state.
@@ -81,6 +91,7 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
           failure_reason: null,
           snapshot_hash: null,
         })
+        setManifest(null) // the previous version's manifest is now stale
       } catch (err) {
         setError(baseErrorMessage(err))
       } finally {
@@ -89,6 +100,17 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
     },
     [documentId],
   )
+
+  const openManifest = useCallback(async () => {
+    setManifestOpen(true)
+    if (manifest) return // already fetched for this base version
+    setManifestError('')
+    try {
+      setManifest(await documentsApi.getBaseManifest(documentId))
+    } catch {
+      setManifestError('Не вдалося завантажити manifest.')
+    }
+  }, [documentId, manifest])
 
   const busy = uploading || base?.state === 'pending'
 
@@ -126,6 +148,18 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
             <FileArchive size={14} className="text-ink-muted shrink-0" />
             <span className="text-ink font-medium">Base v{base.version}</span>
             <ProjectBaseBadge state={base.state} />
+            {base.state === 'ready' && (
+              <button
+                onClick={openManifest}
+                className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg
+                           bg-navy/6 text-ink-muted hover:bg-navy/12 transition-colors
+                           cursor-pointer"
+                title="Переглянути manifest нормалізованого base"
+              >
+                <ListTree size={12} />
+                Manifest
+              </button>
+            )}
             {(base.state === 'ready' || base.state === 'failed') && (
               <button
                 onClick={pickFile}
@@ -157,6 +191,21 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
       )}
 
       {error && <p className="text-xs text-coral mt-1">{error}</p>}
+
+      <Modal
+        open={manifestOpen}
+        onClose={() => setManifestOpen(false)}
+        title={`Manifest base v${base?.version ?? ''}`}
+        wide
+      >
+        {manifestError ? (
+          <p className="text-sm text-coral">{manifestError}</p>
+        ) : manifest ? (
+          <BaseManifestView manifest={manifest} />
+        ) : (
+          <p className="text-sm text-ink-muted">Завантаження manifest…</p>
+        )}
+      </Modal>
     </div>
   )
 }
