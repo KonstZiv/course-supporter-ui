@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Loader2, Upload, CheckCircle2, Info, AlertCircle } from 'lucide-react'
 import { portalApi, PortalApiError } from '../api/portalClient'
+import type { PortalTaskBase } from '../types'
 
 // Allowed homework extensions + max size MIRROR the backend
 // (submission_core.py:49 ALLOWED_HOMEWORK_EXTENSIONS / :47 MAX_HOMEWORK_SIZE).
@@ -25,15 +26,25 @@ type SubmitState = 'idle' | 'submitting' | 'success' | 'duplicate' | 'error'
 // on duplicate NO re-fetch (no new attempt was created).
 export function PortalSubmitForm({
   taskId,
+  base = null,
   onSubmitted,
 }: {
   taskId: string
+  // KD18 P5: the active base descriptor for a project task (null for a
+  // non-project task or a base-less project). Drives the auto-echo + D5 gating.
+  base?: PortalTaskBase | null
   onSubmitted: () => void
 }) {
   const [file, setFile] = useState<File | null>(null)
   const [note, setNote] = useState('')
   const [state, setState] = useState<SubmitState>('idle')
   const [message, setMessage] = useState('')
+
+  // D5 gating: a project task whose base EXISTS but is not READY blocks submit
+  // (the base is not usable yet). base === null (no base attached) is a DISTINCT
+  // state — submit is ALLOWED (an all-new delta), no echo is sent. BE-409
+  // BASE_NOT_READY stays the authoritative backstop for a render↔submit race.
+  const baseNotReady = base != null && base.state !== 'ready'
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFile(e.target.files?.[0] ?? null)
@@ -55,6 +66,10 @@ export function PortalSubmitForm({
     const fd = new FormData()
     fd.append('file', file)
     if (note.trim()) fd.append('student_note', note.trim())
+    // Auto-echo the base snapshot_hash from the descriptor (KD18 P5) — sent ONLY
+    // when a READY base is attached (snapshot_hash is null otherwise). The
+    // student never sees or types it; base === null → no echo (all-new delta).
+    if (base?.snapshot_hash) fd.append('base_snapshot_hash', base.snapshot_hash)
     try {
       const res = await portalApi.submitTask(taskId, fd)
       if (res.duplicate) {
@@ -119,7 +134,8 @@ export function PortalSubmitForm({
       )}
       <button
         type="submit"
-        disabled={!file || state === 'submitting'}
+        disabled={!file || state === 'submitting' || baseNotReady}
+        title={baseNotReady ? 'Базовий проєкт ще не готовий.' : undefined}
         className="btn-primary"
       >
         {state === 'submitting' ? (
@@ -131,6 +147,11 @@ export function PortalSubmitForm({
           </>
         )}
       </button>
+      {baseNotReady && (
+        <p className="text-xs text-ink-muted">
+          Подача стане доступною, коли автор підготує базовий проєкт.
+        </p>
+      )}
     </form>
   )
 }

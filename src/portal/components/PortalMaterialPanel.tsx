@@ -178,7 +178,11 @@ export function PortalMaterialPanel({
               {item.task_type === 'project' && item.base && (
                 <ProjectBaseSection taskId={item.id} base={item.base} />
               )}
-              <PortalSubmitForm taskId={item.id} onSubmitted={handleSubmitted} />
+              <PortalSubmitForm
+                taskId={item.id}
+                base={item.base}
+                onSubmitted={handleSubmitted}
+              />
               <PortalSubmissionsList taskId={item.id} reloadKey={attemptsReload} />
             </div>
           )}
