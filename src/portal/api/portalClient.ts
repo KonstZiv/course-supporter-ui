@@ -2,6 +2,7 @@ import { usePortalSession } from '../stores/session'
 import type {
   ConfirmRecoveryEmailRequest,
   ForgotPasswordRequest,
+  PortalBaseDownload,
   PortalCourseListItem,
   PortalLoginRequest,
   PortalLoginResponse,
@@ -188,6 +189,13 @@ export const portalApi = {
     authGet<PortalSubmissionDetail>(
       `/api/v1/portal/submissions/${submissionId}`,
     ),
+  // KD18 P5: presigned download of a project task's active base ORIGINAL archive
+  // (D2 option B — served on demand, not baked into the descriptor). A visible
+  // task with no READY base throws a PortalApiError whose body.detail is the
+  // distinct "No base is available for this task yet." — the caller tells it
+  // apart from an access-failure 404 (body.detail = "Task not found.").
+  base: (taskId: string) =>
+    authGet<PortalBaseDownload>(`/api/v1/portal/tasks/${taskId}/base`),
   // R3 password-recovery. Public (no bearer) — forgot always 202; reset/confirm
   // 204 or 400 generic; caller renders inline.
   forgotPassword: (req: ForgotPasswordRequest) =>
