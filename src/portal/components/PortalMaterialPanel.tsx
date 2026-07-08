@@ -1,10 +1,81 @@
 import { useEffect, useState } from 'react'
-import { X, Loader2 } from 'lucide-react'
+import { X, Loader2, Download } from 'lucide-react'
 import { portalApi, PortalApiError } from '../api/portalClient'
-import type { PortalMaterialItem, PortalMediaResponse } from '../types'
+import type { PortalMaterialItem, PortalMediaResponse, PortalTaskBase } from '../types'
 import { PortalMaterialView } from './PortalMaterialView'
 import { PortalSubmitForm } from './PortalSubmitForm'
 import { PortalSubmissionsList } from './PortalSubmissionsList'
+
+// KD18 P5: the dedicated base-download section for a project task, driven by
+// ``item.base``. ready → an active download button (fetches a FRESH presigned
+// original on click — one-shot, never cached because it expires — and opens it
+// in a new tab); pending / failed → a disabled button + a hint; base === null →
+// nothing rendered (a base-less project, submit is still allowed). base === null
+// and a non-ready state are DISTINCT states, never collapsed.
+function ProjectBaseSection({
+  taskId,
+  base,
+}: {
+  taskId: string
+  base: PortalTaskBase
+}) {
+  const [downloading, setDownloading] = useState(false)
+  const [error, setError] = useState('')
+  const ready = base.state === 'ready'
+
+  const download = () => {
+    if (downloading) return
+    setError('')
+    setDownloading(true)
+    portalApi
+      .base(taskId)
+      .then((d) => {
+        // One-shot presigned URL — never cache it (it expires); open a new tab.
+        window.open(d.original_url, '_blank')
+      })
+      .catch((err) => {
+        // The base route's distinct 404 ("No base is available…") vs a generic
+        // access 404 ("Task not found.") both arrive as body.detail — show it.
+        const body =
+          err instanceof PortalApiError
+            ? (err.body as { detail?: unknown } | null)
+            : null
+        setError(
+          typeof body?.detail === 'string'
+            ? body.detail
+            : 'Не вдалося завантажити базовий проєкт.',
+        )
+      })
+      .finally(() => setDownloading(false))
+  }
+
+  return (
+    <section className="space-y-2">
+      <h3 className="font-display text-sm text-ink">Базовий проєкт</h3>
+      <button
+        type="button"
+        onClick={download}
+        disabled={!ready || downloading}
+        className="btn-secondary btn-sm"
+      >
+        {downloading ? (
+          <Loader2 size={16} className="animate-spin" />
+        ) : (
+          <Download size={16} />
+        )}
+        Завантажити базовий проєкт
+      </button>
+      {!ready && (
+        <p className="text-xs text-ink-muted">
+          {base.state === 'pending'
+            ? 'Базовий проєкт готується — спробуйте пізніше.'
+            : 'Базовий проєкт не вдалося обробити.'}
+        </p>
+      )}
+      {error && <p className="text-xs text-coral">{error}</p>}
+    </section>
+  )
+}
 
 // Material viewer panel (Phase 6 / T4b, c2, ratify Q2 — a panel, NOT a route).
 // Fetches the media descriptor for the selected tree item and renders it
@@ -71,7 +142,14 @@ export function PortalMaterialPanel({
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-center justify-between px-6 py-4 border-b border-canvas-dark/40">
-          <h2 className="font-display text-xl text-ink truncate pr-4">{item.label}</h2>
+          <div className="flex items-center gap-2 min-w-0 pr-4">
+            <h2 className="font-display text-xl text-ink truncate">{item.label}</h2>
+            {item.task_type === 'project' && (
+              <span className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap bg-canvas-dark text-ink-muted shrink-0">
+                Проєкт
+              </span>
+            )}
+          </div>
           <button
             onClick={onClose}
             aria-label="Закрити"
@@ -97,6 +175,9 @@ export function PortalMaterialPanel({
 
           {item.kind === 'task' && (
             <div className="mt-6 pt-5 border-t border-canvas-dark/40 space-y-8">
+              {item.task_type === 'project' && item.base && (
+                <ProjectBaseSection taskId={item.id} base={item.base} />
+              )}
               <PortalSubmitForm taskId={item.id} onSubmitted={handleSubmitted} />
               <PortalSubmissionsList taskId={item.id} reloadKey={attemptsReload} />
             </div>

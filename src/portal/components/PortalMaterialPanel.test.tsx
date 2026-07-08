@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { PortalMaterialPanel } from './PortalMaterialPanel'
-import { portalApi } from '../api/portalClient'
+import { portalApi, PortalApiError } from '../api/portalClient'
 import type { PortalMaterialItem } from '../types'
 
 vi.mock('../api/portalClient', async (importOriginal) => {
@@ -13,6 +13,7 @@ vi.mock('../api/portalClient', async (importOriginal) => {
       material: vi.fn(),
       submitTask: vi.fn(),
       submissions: vi.fn(),
+      base: vi.fn(),
     },
   }
 })
@@ -20,6 +21,7 @@ vi.mock('../api/portalClient', async (importOriginal) => {
 const mockedMaterial = vi.mocked(portalApi.material)
 const mockedSubmit = vi.mocked(portalApi.submitTask)
 const mockedSubmissions = vi.mocked(portalApi.submissions)
+const mockedBase = vi.mocked(portalApi.base)
 
 const TASK: PortalMaterialItem = {
   id: 't1',
@@ -111,5 +113,120 @@ describe('PortalMaterialPanel (c3a submit wiring)', () => {
     fireEvent.click(screen.getByRole('button', { name: /надіслати/i }))
     // reloadKey bump → the list effect re-runs → a second submissions() call.
     await waitFor(() => expect(mockedSubmissions).toHaveBeenCalledTimes(2))
+  })
+})
+
+const projectTask = (base: PortalMaterialItem['base']): PortalMaterialItem => ({
+  ...TASK,
+  task_type: 'project',
+  base,
+})
+
+const DL_BTN = /завантажити базовий проєкт/i
+
+describe('PortalMaterialPanel — project base affordance + marker (KD18 P5)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockedMaterial.mockResolvedValue(EXTERNAL)
+    mockedSubmissions.mockResolvedValue([])
+  })
+
+  it('renders the "Проєкт" marker in the header for a project task', async () => {
+    render(
+      <PortalMaterialPanel
+        item={projectTask(null)}
+        onClose={vi.fn()}
+        onSubmitted={vi.fn()}
+      />,
+    )
+    await waitFor(() => expect(screen.getByText('Проєкт')).toBeInTheDocument())
+  })
+
+  it('no marker and no base section for a non-project task', async () => {
+    render(<PortalMaterialPanel item={TASK} onClose={vi.fn()} onSubmitted={vi.fn()} />)
+    await waitFor(() => expect(screen.getByText('Мої спроби')).toBeInTheDocument())
+    expect(screen.queryByText('Проєкт')).not.toBeInTheDocument()
+    expect(screen.queryByText('Базовий проєкт')).not.toBeInTheDocument()
+  })
+
+  it('base=null (base-less project) → no base section, submit still allowed', async () => {
+    render(
+      <PortalMaterialPanel
+        item={projectTask(null)}
+        onClose={vi.fn()}
+        onSubmitted={vi.fn()}
+      />,
+    )
+    await waitFor(() => expect(screen.getByText('Проєкт')).toBeInTheDocument())
+    expect(screen.queryByText('Базовий проєкт')).not.toBeInTheDocument()
+    expect(screen.getByText('Надіслати рішення')).toBeInTheDocument()
+  })
+
+  it('base ready → active button; click fetches base + opens a new tab', async () => {
+    mockedBase.mockResolvedValue({ original_url: 'https://s3/orig.zip?sig=1' })
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null)
+    render(
+      <PortalMaterialPanel
+        item={projectTask({ version: 1, snapshot_hash: 'h1', state: 'ready' })}
+        onClose={vi.fn()}
+        onSubmitted={vi.fn()}
+      />,
+    )
+    const btn = await screen.findByRole('button', { name: DL_BTN })
+    expect(btn).toBeEnabled()
+    fireEvent.click(btn)
+    await waitFor(() => expect(mockedBase).toHaveBeenCalledWith('t1'))
+    await waitFor(() =>
+      expect(openSpy).toHaveBeenCalledWith('https://s3/orig.zip?sig=1', '_blank'),
+    )
+    openSpy.mockRestore()
+  })
+
+  it('base pending → disabled button + hint (NOT collapsed with base=null)', async () => {
+    render(
+      <PortalMaterialPanel
+        item={projectTask({ version: 1, snapshot_hash: null, state: 'pending' })}
+        onClose={vi.fn()}
+        onSubmitted={vi.fn()}
+      />,
+    )
+    const btn = await screen.findByRole('button', { name: DL_BTN })
+    expect(btn).toBeDisabled()
+    expect(screen.getByText(/готується/i)).toBeInTheDocument()
+  })
+
+  it('base failed → disabled button + hint', async () => {
+    render(
+      <PortalMaterialPanel
+        item={projectTask({ version: 2, snapshot_hash: null, state: 'failed' })}
+        onClose={vi.fn()}
+        onSubmitted={vi.fn()}
+      />,
+    )
+    const btn = await screen.findByRole('button', { name: DL_BTN })
+    expect(btn).toBeDisabled()
+    expect(screen.getByText(/не вдалося обробити/i)).toBeInTheDocument()
+  })
+
+  it('download 404 → surfaces the distinct body.detail', async () => {
+    mockedBase.mockRejectedValue(
+      new PortalApiError(404, 'x', {
+        detail: 'No base is available for this task yet.',
+      }),
+    )
+    render(
+      <PortalMaterialPanel
+        item={projectTask({ version: 1, snapshot_hash: 'h1', state: 'ready' })}
+        onClose={vi.fn()}
+        onSubmitted={vi.fn()}
+      />,
+    )
+    const btn = await screen.findByRole('button', { name: DL_BTN })
+    fireEvent.click(btn)
+    await waitFor(() =>
+      expect(
+        screen.getByText('No base is available for this task yet.'),
+      ).toBeInTheDocument(),
+    )
   })
 })
