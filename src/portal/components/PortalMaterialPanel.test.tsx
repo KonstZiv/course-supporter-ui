@@ -27,6 +27,8 @@ const TASK: PortalMaterialItem = {
   label: 'Завдання',
   source_type: 'text',
   order: 0,
+  task_type: null,
+  base: null,
   overlay: { submission_status: 'none', last: null, best: null },
 }
 const MATERIAL: PortalMaterialItem = {

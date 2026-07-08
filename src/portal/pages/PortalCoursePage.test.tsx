@@ -33,6 +33,8 @@ const TREE: PortalMaterialTreeNode = {
       label: 'Вступна лекція',
       source_type: 'video',
       order: 0,
+      task_type: null,
+      base: null,
       overlay: null,
     },
   ],
@@ -48,6 +50,8 @@ const TREE: PortalMaterialTreeNode = {
           label: 'Завдання 1',
           source_type: 'text',
           order: 0,
+          task_type: null,
+          base: null,
           overlay: {
             submission_status: 'reviewed',
             last: { score: 85, verdict: { passed: true, correctness: 'correct' } },
