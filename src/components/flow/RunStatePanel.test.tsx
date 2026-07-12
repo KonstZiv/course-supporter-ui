@@ -42,6 +42,7 @@ function makeJob(
     stage_progress,
     result_data: null,
     error_message: null,
+    error_category: null,
     queued_at: '2026-06-13T00:00:00Z',
     started_at: null,
     completed_at: null,

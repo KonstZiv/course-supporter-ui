@@ -84,6 +84,7 @@ export interface AuthoredDocumentSummary {
   state: DocumentState
   content_fingerprint: string | null
   error_message: string | null
+  error_category: string | null
   created_at: string
 }
 
@@ -141,6 +142,7 @@ export interface AuthoredDocumentResponse {
   pending_job_id: string | null
   pending_since: string | null
   error_message: string | null
+  error_category: string | null
   created_at: string
   updated_at: string
 }
@@ -224,6 +226,7 @@ export interface JobResponse {
   stage_progress: NodeSummaryRunState | null
   result_data: Record<string, unknown> | null
   error_message: string | null
+  error_category: string | null
   queued_at: string
   started_at: string | null
   completed_at: string | null

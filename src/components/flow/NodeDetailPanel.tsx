@@ -8,6 +8,7 @@ import { Modal } from '../ui/Modal'
 import { ProjectBaseSection } from './ProjectBaseSection'
 import { sourceTypeMeta } from '../../utils/sourceTypeIcon'
 import { rejectionDetail } from '../../utils/apiError'
+import { ingestErrorMessage } from '../../utils/ingestErrors'
 import {
   sourceTypeForExtension,
   isVideoUrl,
@@ -595,9 +596,9 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                       {isMethodological ? '📋 методичний' : '📚 учбовий'}
                     </button>
                   </div>
-                  {mat.state === 'error' && mat.error_message && (
+                  {mat.state === 'error' && (mat.error_category || mat.error_message) && (
                     <p className="text-xs text-coral mt-1 line-clamp-2">
-                      {mat.error_message}
+                      {ingestErrorMessage(mat.error_category, mat.error_message)}
                     </p>
                   )}
                 </div>

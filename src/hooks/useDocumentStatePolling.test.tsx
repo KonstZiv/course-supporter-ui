@@ -30,6 +30,7 @@ function makeDocument(state: DocumentState): AuthoredDocumentSummary {
     state,
     content_fingerprint: null,
     error_message: null,
+  error_category: null,
     created_at: '2026-05-07T00:00:00Z',
   }
 }
