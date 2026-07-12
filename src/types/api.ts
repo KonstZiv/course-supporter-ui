@@ -1,6 +1,6 @@
 // ─── Enums ───
 
-export type SourceType = 'video' | 'presentation' | 'text' | 'web' | 'audio'
+export type SourceType = 'video' | 'presentation' | 'text' | 'web' | 'audio' | 'code'
 export type DocumentState = 'raw' | 'pending' | 'ready' | 'integrity_broken' | 'error'
 export type MaterialRole = 'educational' | 'methodological'
 export type AssignmentType = 'test' | 'short_task' | 'task' | 'project'

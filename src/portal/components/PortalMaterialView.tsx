@@ -1,4 +1,4 @@
-import { ExternalLink } from 'lucide-react'
+import { Download, ExternalLink } from 'lucide-react'
 import type { PortalMaterialItem, PortalMediaResponse } from '../types'
 import { SlidesCarousel } from './SlidesCarousel'
 import { youtubeEmbedUrl } from './youtube'
@@ -83,6 +83,19 @@ export function PortalMaterialView({
   if (media.kind === 'file') {
     if (!media.url) return <Unrenderable />
     const url = media.url
+    if (item.source_type === 'code') {
+      // R7 (task-code-materials): code is download-only — single file and
+      // project archive alike. The URL is presigned with an attachment
+      // disposition server-side (R3), so no inline render is attempted.
+      return (
+        <div className="py-4">
+          <a href={url} className="btn-primary inline-flex" download>
+            Завантажити
+            <Download size={16} />
+          </a>
+        </div>
+      )
+    }
     if (item.source_type === 'video') {
       return (
         <div>
@@ -104,11 +117,18 @@ export function PortalMaterialView({
       )
     }
     // text / document / any other → best-effort inline, guaranteed affordance.
+    // F5 (task-code-materials): the served-file iframe is sandboxed (no
+    // scripts, no same-origin) for every type EXCEPT pdf — the built-in pdf
+    // viewer breaks under sandbox, and the spoofed-pdf-MIME risk is accepted
+    // (author→student trust boundary). Detection is by the signed key's
+    // extension (the path precedes the query string).
+    const isPdf = /\.pdf(\?|$)/i.test(url)
     return (
       <div>
         <iframe
           src={url}
           title={item.label}
+          {...(isPdf ? {} : { sandbox: '' })}
           className="w-full h-[60vh] rounded-lg border border-canvas-dark/40 bg-white"
         />
         <OpenLink url={url} />
