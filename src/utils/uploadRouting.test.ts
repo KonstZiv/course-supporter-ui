@@ -17,6 +17,18 @@ const BACKEND_ALL = [
   'mp3', 'wav', 'm4a', 'ogg', 'flac', // audio (5)
   'pdf', 'pptx', 'ppt', // presentation (3)
   'docx', 'txt', 'md', 'markdown', 'html', 'htm', // documents via TextProcessor (6)
+  // task-code-materials commit 3 — CODE_EXTENSIONS beyond the html/htm
+  // overlap (32) + the code project archive (R1).
+  'py', 'ipynb', // Python
+  'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', // JS / TS
+  'java', 'kt', 'kts', // Java / Kotlin
+  'cs', 'go', 'rs', 'php', 'rb', // C# / Go / Rust / PHP / Ruby
+  'c', 'h', 'cpp', 'hpp', 'cc', // C / C++
+  'swift', 'dart', // Swift / Dart
+  'css', 'scss', // styling
+  'json', 'xml', 'yaml', 'yml', 'toml', 'sql', // data / config
+  'sh', // shell
+  'zip', // code project archive
 ]
 
 describe('sourceTypeForExtension', () => {
@@ -35,6 +47,18 @@ describe('sourceTypeForExtension', () => {
   it('maps presentation extensions to presentation', () => {
     for (const ext of ['pdf', 'pptx', 'ppt']) {
       expect(sourceTypeForExtension(ext)).toBe('presentation')
+    }
+  })
+
+  it('maps code extensions and the zip archive to code (task-code-materials)', () => {
+    for (const ext of ['py', 'ipynb', 'ts', 'go', 'rs', 'java', 'cpp', 'json', 'sh', 'zip']) {
+      expect(sourceTypeForExtension(ext)).toBe('code')
+    }
+  })
+
+  it('keeps html/htm on the text default (html-as-code is dialog-driven, not extension-driven)', () => {
+    for (const ext of ['html', 'htm', 'md', 'txt']) {
+      expect(sourceTypeForExtension(ext)).toBe('text')
     }
   })
 
@@ -93,8 +117,8 @@ describe('whitelist drift-guard (mirrors backend AUTHORED_POLICY)', () => {
     expect([...VIDEO_EXTENSIONS].sort()).toEqual([...BACKEND_VIDEO].sort())
   })
 
-  it('ALL_UPLOAD_EXTENSIONS matches the backend allowed_extensions (19)', () => {
+  it('ALL_UPLOAD_EXTENSIONS matches the backend allowed_extensions (52)', () => {
     expect([...ALL_UPLOAD_EXTENSIONS].sort()).toEqual([...BACKEND_ALL].sort())
-    expect(ALL_UPLOAD_EXTENSIONS).toHaveLength(19)
+    expect(ALL_UPLOAD_EXTENSIONS).toHaveLength(52)
   })
 })

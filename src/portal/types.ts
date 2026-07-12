@@ -68,7 +68,7 @@ export interface PortalSubmissionOverlay {
 }
 
 export type PortalMaterialKind = 'material' | 'task'
-export type PortalSourceType = 'video' | 'presentation' | 'text' | 'web' | 'audio'
+export type PortalSourceType = 'video' | 'presentation' | 'text' | 'web' | 'audio' | 'code'
 
 // KD18 P5: the active base descriptor for a project task. ``state='ready'``
 // describes the active (latest READY) version — the student may submit and

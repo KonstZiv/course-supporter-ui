@@ -4,11 +4,14 @@ import { documentsApi } from '../../api/documents'
 import { nodesApi } from '../../api/nodes'
 import { ApiError } from '../../api/client'
 import { StatusBadge } from '../ui/StatusBadge'
-import { Modal } from '../ui/Modal'
+import { UploadConfirmDialog } from '../ui/UploadConfirmDialog'
+import { formatAudioDuration } from '../ui/uploadConfirmMeta'
 import { ProjectBaseSection } from './ProjectBaseSection'
 import { sourceTypeMeta } from '../../utils/sourceTypeIcon'
 import { rejectionDetail } from '../../utils/apiError'
+import { ingestErrorMessage } from '../../utils/ingestErrors'
 import {
+  CODE_ELIGIBLE_TEXT_EXTENSIONS,
   sourceTypeForExtension,
   isVideoUrl,
   UPLOAD_DROPZONE_ACCEPT,
@@ -36,13 +39,6 @@ import type {
   MaterialRole,
 } from '../../types/api'
 
-const TASK_TYPE_OPTIONS: { value: AssignmentType; label: string; hint: string }[] = [
-  { value: 'test', label: 'Тест', hint: '5–10 хв, quiz' },
-  { value: 'short_task', label: 'Коротке завдання', hint: '20–60 хв' },
-  { value: 'task', label: 'Завдання', hint: 'мульти-крок' },
-  { value: 'project', label: 'Проєкт', hint: '1–2 тижні' },
-]
-
 const iconMap: Record<string, typeof FileText> = {
   FileText, Video, FileImage, Globe, AudioLines, File: FileIcon,
 }
@@ -55,15 +51,6 @@ const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'm4a', 'ogg', 'flac'])
 function isAudioFile(file: File): boolean {
   const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
   return AUDIO_EXTENSIONS.has(ext)
-}
-
-function formatAudioDuration(seconds: number): string {
-  const total = Math.floor(seconds)
-  const h = Math.floor(total / 3600)
-  const m = Math.floor((total % 3600) / 60)
-  const s = total % 60
-  const pad = (n: number) => n.toString().padStart(2, '0')
-  return h > 0 ? `[${h}:${pad(m)}:${pad(s)}]` : `[${pad(m)}:${pad(s)}]`
 }
 
 // Reads audio file duration via HTMLAudioElement loadedmetadata event.
@@ -103,132 +90,6 @@ function readAudioDuration(file: File): Promise<number | null> {
     audioEl.addEventListener('error', onError)
     audioEl.src = url
   })
-}
-
-/* ── Upload confirmation dialog ── */
-
-interface UploadConfirmProps {
-  open: boolean
-  files: { name: string; sourceType: string; durationSec?: number | null }[]
-  linkUrl?: string
-  onConfirm: (role: MaterialRole, taskType: AssignmentType | null) => void
-  onCancel: () => void
-}
-
-function UploadConfirmDialog({ open, files, linkUrl, onConfirm, onCancel }: UploadConfirmProps) {
-  const [role, setRole] = useState<MaterialRole | null>(null)
-  const [taskType, setTaskType] = useState<AssignmentType | null>(null)
-
-  const handleConfirm = () => {
-    if (role) {
-      onConfirm(role, taskType)
-      setRole(null)
-      setTaskType(null)
-    }
-  }
-  const handleCancel = () => {
-    setRole(null)
-    setTaskType(null)
-    onCancel()
-  }
-
-  const single = files.length === 1 ? files[0]! : null
-  const label = linkUrl
-    ? linkUrl.slice(0, 50) + (linkUrl.length > 50 ? '…' : '')
-    : single
-      ? `${single.name}${single.durationSec != null ? ` ${formatAudioDuration(single.durationSec)}` : ''}`
-      : `${files.length} файлів`
-
-  return (
-    <Modal open={open} onClose={handleCancel} title="Тип документа">
-      <p className="text-sm text-ink-muted mb-1">
-        Завантаження: <span className="font-medium text-ink">{label}</span>
-      </p>
-      <p className="text-sm text-ink-muted mb-4">
-        Оберіть тип документа перед завантаженням:
-      </p>
-
-      <div className="flex gap-3 mb-6">
-        <button
-          onClick={() => setRole('educational')}
-          className={`
-            flex-1 rounded-xl border-2 p-4 text-center transition-all
-            ${role === 'educational'
-              ? 'border-navy bg-navy/5 shadow-sm'
-              : 'border-canvas-dark hover:border-navy/40'}
-          `}
-        >
-          <span className="text-2xl block mb-1">📚</span>
-          <span className="text-sm font-medium text-ink">Учбовий</span>
-          <span className="text-[11px] text-ink-muted block mt-0.5">
-            Доносить інформацію студенту
-          </span>
-        </button>
-        <button
-          onClick={() => setRole('methodological')}
-          className={`
-            flex-1 rounded-xl border-2 p-4 text-center transition-all
-            ${role === 'methodological'
-              ? 'border-plum bg-plum/5 shadow-sm'
-              : 'border-canvas-dark hover:border-plum/40'}
-          `}
-        >
-          <span className="text-2xl block mb-1">📋</span>
-          <span className="text-sm font-medium text-ink">Методичний</span>
-          <span className="text-[11px] text-ink-muted block mt-0.5">
-            Декларує наміри курсу
-          </span>
-        </button>
-      </div>
-
-      <div className="mb-4">
-        <p className="text-sm text-ink-muted mb-2">
-          Якщо документ — це концретне завдання, оберіть тип:
-        </p>
-        <div className="grid grid-cols-4 gap-2">
-          <button
-            onClick={() => setTaskType(null)}
-            className={`
-              rounded-lg border p-2 text-xs transition-all
-              ${taskType === null
-                ? 'border-navy bg-navy/5 text-ink font-medium'
-                : 'border-canvas-dark text-ink-muted hover:border-navy/40'}
-            `}
-          >
-            Не завдання
-          </button>
-          {TASK_TYPE_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => setTaskType(opt.value)}
-              title={opt.hint}
-              className={`
-                rounded-lg border p-2 text-xs transition-all
-                ${taskType === opt.value
-                  ? 'border-plum bg-plum/5 text-ink font-medium'
-                  : 'border-canvas-dark text-ink-muted hover:border-plum/40'}
-              `}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex justify-end gap-2">
-        <button className="btn-secondary btn-sm" onClick={handleCancel}>
-          Скасувати
-        </button>
-        <button
-          className="btn-primary btn-sm"
-          onClick={handleConfirm}
-          disabled={role === null}
-        >
-          Завантажити
-        </button>
-      </div>
-    </Modal>
-  )
 }
 
 /* ── Main panel ── */
@@ -330,7 +191,11 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
 
   // Confirmed upload with role and optional task_type
   const handleConfirmUpload = useCallback(
-    async (role: MaterialRole, taskType: AssignmentType | null) => {
+    async (
+      role: MaterialRole,
+      taskType: AssignmentType | null,
+      asCode: boolean,
+    ) => {
       if (!node) return
 
       // Capture and clear immediately to close the dialog and prevent re-submission
@@ -348,7 +213,12 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
           for (let i = 0; i < filesToUpload.length; i++) {
             const file = filesToUpload[i]!
             const ext = file.name.split('.').pop()?.toLowerCase() || ''
-            const type = sourceTypeForExtension(ext)
+            // Code axis (R6): the author's explicit «Це код» declaration
+            // overrides the text default for code-eligible files only.
+            const type =
+              asCode && CODE_ELIGIBLE_TEXT_EXTENSIONS.includes(ext)
+                ? 'code'
+                : sourceTypeForExtension(ext)
             try {
               await documentsApi.upload(node.id, file, type, role, null, taskType)
             } catch (err) {
@@ -595,9 +465,9 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                       {isMethodological ? '📋 методичний' : '📚 учбовий'}
                     </button>
                   </div>
-                  {mat.state === 'error' && mat.error_message && (
+                  {mat.state === 'error' && (mat.error_category || mat.error_message) && (
                     <p className="text-xs text-coral mt-1 line-clamp-2">
-                      {mat.error_message}
+                      {ingestErrorMessage(mat.error_category, mat.error_message)}
                     </p>
                   )}
                 </div>
@@ -640,7 +510,9 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
         open={showConfirm}
         files={pendingFiles.map((f) => ({
           name: f.name,
-          sourceType: '',
+          sourceType: sourceTypeForExtension(
+            f.name.split('.').pop()?.toLowerCase() ?? '',
+          ),
           durationSec: pendingFileDurations.get(f.name) ?? null,
         }))}
         linkUrl={pendingLink || undefined}

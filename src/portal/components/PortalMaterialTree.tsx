@@ -6,6 +6,7 @@ import {
   Music,
   Image,
   FileText,
+  FileCode,
   Globe,
   type LucideIcon,
 } from 'lucide-react'
@@ -18,6 +19,7 @@ const ICON_BY_SOURCE: Record<PortalSourceType, LucideIcon> = {
   presentation: Image,
   text: FileText,
   web: Globe,
+  code: FileCode,
 }
 
 function iconFor(sourceType: string): LucideIcon {
