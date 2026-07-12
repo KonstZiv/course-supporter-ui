@@ -13,10 +13,16 @@ import { useNavigate } from 'react-router-dom'
 import { nodesApi } from '../../api/nodes'
 import { ApiError } from '../../api/client'
 import { rejectionDetail } from '../../utils/apiError'
-import { sourceTypeForExtension, UPLOAD_ACCEPT_ATTR } from '../../utils/uploadRouting'
+import {
+  CODE_ELIGIBLE_TEXT_EXTENSIONS,
+  sourceTypeForExtension,
+  UPLOAD_ACCEPT_ATTR,
+} from '../../utils/uploadRouting'
 import { useCourseStore } from '../../stores/course'
 import { documentsApi } from '../../api/documents'
 import { Modal } from '../ui/Modal'
+import { UploadConfirmDialog } from '../ui/UploadConfirmDialog'
+import type { AssignmentType, MaterialRole } from '../../types/api'
 
 export interface MenuPosition {
   x: number
@@ -64,6 +70,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
   const [showRename, setShowRename] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const [showPipelineInfo, setShowPipelineInfo] = useState<string | null>(null)
+  const [pendingUpload, setPendingUpload] = useState<File[]>([])
   const [newTitle, setNewTitle] = useState('')
   const [renameTitle, setRenameTitle] = useState(position.nodeTitle)
   const [busy, setBusy] = useState(false)
@@ -74,12 +81,13 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (showAdd || showRename || showPipelineInfo) return
+      if (showAdd || showRename || showPipelineInfo || pendingUpload.length)
+        return
       if (ref.current && !ref.current.contains(e.target as HTMLElement)) onClose()
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [onClose, showAdd, showRename, showPipelineInfo])
+  }, [onClose, showAdd, showRename, showPipelineInfo, pendingUpload.length])
 
   // Cleanup hover timer
   useEffect(() => {
@@ -159,21 +167,48 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
     onClose()
   }, [onGenerate, position.nodeId, position.nodeTitle, onClose])
 
+  // Defect #10 + R6: the context-menu path previously uploaded with silent
+  // defaults (role=educational, no task_type) — bypassing the «Тип
+  // документа» dialog the side zone shows. Both paths now run the SAME
+  // shared dialog; the picker only collects files, the upload fires from
+  // the dialog's confirm.
   const triggerUpload = useCallback(() => {
     const input = document.createElement('input')
     input.type = 'file'
     input.multiple = true
     input.accept = UPLOAD_ACCEPT_ATTR
-    input.onchange = async () => {
-      if (!input.files) return
+    input.onchange = () => {
+      if (input.files?.length) setPendingUpload(Array.from(input.files))
+    }
+    input.click()
+  }, [])
+
+  const handleConfirmUpload = useCallback(
+    async (
+      role: MaterialRole,
+      taskType: AssignmentType | null,
+      asCode: boolean,
+    ) => {
+      const files = pendingUpload
+      setPendingUpload([])
       setBusy(true)
       const rejected: string[] = []
       try {
-        for (const file of Array.from(input.files)) {
+        for (const file of files) {
           const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
-          const type = sourceTypeForExtension(ext)
+          const type =
+            asCode && CODE_ELIGIBLE_TEXT_EXTENSIONS.includes(ext)
+              ? 'code'
+              : sourceTypeForExtension(ext)
           try {
-            await documentsApi.upload(position.nodeId, file, type)
+            await documentsApi.upload(
+              position.nodeId,
+              file,
+              type,
+              role,
+              null,
+              taskType,
+            )
           } catch (err) {
             rejected.push(
               rejectionDetail(err) ??
@@ -187,9 +222,9 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
         onClose()
       }
       if (rejected.length) alert(rejected.join('\n'))
-    }
-    input.click()
-  }, [position.nodeId, refreshTree, onClose])
+    },
+    [pendingUpload, position.nodeId, refreshTree, onClose],
+  )
 
   const handleInfoHover = (key: string) => {
     hoverTimer.current = setTimeout(() => setHoveredInfo(key), 1500)
@@ -388,6 +423,19 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
           </button>
         </div>
       </Modal>
+
+      {/* «Тип документа» — the SAME dialog as the side-zone path (R6). */}
+      <UploadConfirmDialog
+        open={pendingUpload.length > 0}
+        files={pendingUpload.map((f) => ({
+          name: f.name,
+          sourceType: sourceTypeForExtension(
+            f.name.split('.').pop()?.toLowerCase() ?? '',
+          ),
+        }))}
+        onConfirm={handleConfirmUpload}
+        onCancel={() => setPendingUpload([])}
+      />
     </>
   )
 }

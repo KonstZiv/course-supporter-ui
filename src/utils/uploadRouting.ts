@@ -54,6 +54,14 @@ export const CODE_ROUTED_EXTENSIONS: readonly string[] = [
 
 const ARCHIVE_EXTENSIONS: readonly string[] = ['zip']
 
+// Text-family extensions the author may EXPLICITLY re-declare as code in the
+// upload dialog (the ratified defect-#9 axis: html-as-code is author intent,
+// not extension-derived). Mirrors the backend rule: source_type=code accepts
+// only CODE_EXTENSIONS ∪ zip — of the text-routed family, only html/htm are
+// in CODE_EXTENSIONS, so only they are re-declarable (a .md sent as code
+// would 400 at the light-gate).
+export const CODE_ELIGIBLE_TEXT_EXTENSIONS: readonly string[] = ['html', 'htm']
+
 /** Full accepted-extension set (52) — the source for every accept string. */
 export const ALL_UPLOAD_EXTENSIONS: readonly string[] = [
   ...VIDEO_EXTENSIONS,
