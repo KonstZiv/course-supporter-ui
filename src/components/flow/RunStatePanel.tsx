@@ -13,6 +13,8 @@ const STATUS_META: Record<JobStatus, { label: string; cls: string }> = {
   complete: { label: 'Готово', cls: 'bg-forest-pale text-forest' },
   failed: { label: 'Помилка', cls: 'bg-coral-pale text-coral' },
   cancelled: { label: 'Скасовано', cls: 'bg-canvas-dark text-ink-muted' },
+  // L2 "subject vanished" — a benign terminal (muted, not an error colour).
+  obsolete: { label: 'Неактуально', cls: 'bg-canvas-dark text-ink-muted' },
 }
 
 // Pass labels for the optional progress tally (Task 3.2.5a §5).
@@ -84,7 +86,8 @@ export function RunStatePanel({ job, nodeTitle, onDismiss }: Props) {
   const isDone =
     job.status === 'complete' ||
     job.status === 'failed' ||
-    job.status === 'cancelled'
+    job.status === 'cancelled' ||
+    job.status === 'obsolete'
 
   const stage = job.status === 'active' ? stageLabel(job.current_stage) : null
   const passTally = tallyPasses(runState)
