@@ -6,7 +6,16 @@ export type MaterialRole = 'educational' | 'methodological'
 export type AssignmentType = 'test' | 'short_task' | 'task' | 'project'
 // ``cancelled`` is a valid ``queued → cancelled`` transition in the backend
 // Job state machine (Task 3.2.5a; the pre-3.2.4 UI type was missing it).
-export type JobStatus = 'queued' | 'active' | 'complete' | 'failed' | 'cancelled'
+// ``obsolete`` is the L2 execution-seam terminal for "subject vanished" (the
+// material/node was soft-deleted while the job was in flight) — a benign
+// terminal, distinct from a human-driven ``cancelled``.
+export type JobStatus =
+  | 'queued'
+  | 'active'
+  | 'complete'
+  | 'failed'
+  | 'cancelled'
+  | 'obsolete'
 
 // ─── Course languages (Task 2.4.13) ───
 // Whitelist + display metadata served by GET /api/v1/config/languages.

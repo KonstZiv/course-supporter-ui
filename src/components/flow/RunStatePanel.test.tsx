@@ -164,6 +164,21 @@ describe('RunStatePanel', () => {
     expect(onDismiss).toHaveBeenCalledTimes(1)
   })
 
+  it('renders obsolete as a benign terminal (label + dismissible)', () => {
+    const onDismiss = vi.fn()
+    render(
+      <RunStatePanel
+        job={makeJob('obsolete', makeRunState())}
+        nodeTitle="X"
+        onDismiss={onDismiss}
+      />,
+    )
+    expect(screen.getByText('Неактуально')).toBeInTheDocument()
+    // Terminal → dismissible (L2 "subject vanished").
+    fireEvent.click(screen.getByRole('button', { name: /закрити/i }))
+    expect(onDismiss).toHaveBeenCalledTimes(1)
+  })
+
   it('hides dismiss while the run is in flight (active)', () => {
     render(
       <RunStatePanel

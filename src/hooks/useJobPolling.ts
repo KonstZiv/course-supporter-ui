@@ -21,6 +21,9 @@ const TERMINAL_STATUSES: ReadonlySet<JobStatus> = new Set<JobStatus>([
   'complete',
   'failed',
   'cancelled',
+  // L2 "subject vanished" terminal — a job whose subject was deleted while in
+  // flight stops here (otherwise polling would never terminate).
+  'obsolete',
 ])
 
 /**
