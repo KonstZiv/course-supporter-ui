@@ -4,6 +4,7 @@ import { useAuthStore } from './stores/auth'
 import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { CoursePage } from './pages/CoursePage'
+import { ConfirmRolesPage } from './pages/ConfirmRolesPage'
 import { CostPage } from './pages/CostPage'
 import { HomeworkCostPage } from './pages/HomeworkCostPage'
 import { StudentsPage } from './pages/StudentsPage'
@@ -41,6 +42,10 @@ export default function App() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="course/:nodeId" element={<CoursePage />} />
+        <Route
+          path="document/:documentId/confirm-roles"
+          element={<ConfirmRolesPage />}
+        />
         <Route path="students" element={<StudentsPage />} />
         <Route path="cost" element={<CostPage />} />
         <Route path="cost/homework" element={<HomeworkCostPage />} />

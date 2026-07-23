@@ -66,12 +66,23 @@ export const CourseRootNode = memo(function CourseRootNode({
               key={m.id}
               className={`
                 text-[11px] px-2 py-0.5 rounded-full font-medium
-                ${m.state === 'ready' ? 'bg-forest/8 text-forest' : ''}
-                ${m.state === 'pending' ? 'bg-amber/10 text-amber-dark animate-pulse-soft' : ''}
-                ${m.state === 'error' ? 'bg-coral/10 text-coral' : ''}
-                ${m.state === 'raw' ? 'bg-canvas-dark text-ink-muted' : ''}
+                ${m.processing_phase === 'awaiting_author'
+                  ? 'bg-navy/10 text-navy'
+                  : m.state === 'ready'
+                    ? 'bg-forest/8 text-forest'
+                    : m.state === 'pending'
+                      ? 'bg-amber/10 text-amber-dark animate-pulse-soft'
+                      : m.state === 'error'
+                        ? 'bg-coral/10 text-coral'
+                        : m.state === 'raw'
+                          ? 'bg-canvas-dark text-ink-muted'
+                          : ''}
               `}
-              title={m.filename || m.source_url || m.source_type}
+              title={
+                m.processing_phase === 'awaiting_author'
+                  ? `${m.filename || m.source_url || m.source_type} — очікує підтвердження`
+                  : m.filename || m.source_url || m.source_type
+              }
             >
               {m.filename?.slice(0, 18) || m.source_url?.slice(0, 18) || m.source_type}
             </span>

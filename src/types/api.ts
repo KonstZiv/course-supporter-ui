@@ -91,6 +91,11 @@ export interface AuthoredDocumentSummary {
   source_url: string
   language: string | null
   state: DocumentState
+  // The node-tree summary carries the derived phase (backend
+  // AuthoredDocumentSummaryResponse), so lists/cards can show ``awaiting_author``
+  // without fetching the full document. Unlike the detail response it does NOT
+  // carry ``file_roles`` — the confirm screen fetches those separately.
+  processing_phase: ProcessingPhase
   content_fingerprint: string | null
   error_message: string | null
   error_category: string | null
@@ -130,6 +135,52 @@ export interface NodeListResponse {
   offset: number
 }
 
+// ─── File roles (№21) ───
+
+// External processing phase (L3 + №21): ``awaiting_author`` = prep produced a
+// file-role proposal the author has not yet confirmed.
+export type ProcessingPhase =
+  | 'queued'
+  | 'processing'
+  | 'awaiting_author'
+  | 'ready'
+  | 'error'
+
+export type FileRoleToken = 'full' | 'auxiliary' | 'structure_only'
+
+export interface FileRoleProposalEntry {
+  role: FileRoleToken
+  reason: string
+}
+
+// The system's suggestion, written by the DOCUMENT_PREPARATION job.
+export interface FileRoleProposal {
+  files: Record<string, FileRoleProposalEntry>
+  tree_digest: string
+  computed_at: string
+  // Files sanitization removed (safety + service dirs) — count only; the
+  // author cannot restore them (decision 4). Absent on older proposals.
+  removed?: { count: number }
+}
+
+// The author's confirmation, written by the confirm endpoint.
+export interface FileRoleDecision {
+  files: Record<string, FileRoleToken>
+  tree_digest: string
+  decided_at: string
+}
+
+export interface FileRoles {
+  proposal?: FileRoleProposal
+  decision?: FileRoleDecision
+}
+
+// POST /documents/{id}/file-roles body — full coverage of proposal.files.
+export interface ConfirmFileRolesRequest {
+  files: Record<string, FileRoleToken>
+  tree_digest: string
+}
+
 // ─── Document ───
 
 export interface AuthoredDocumentResponse {
@@ -143,6 +194,8 @@ export interface AuthoredDocumentResponse {
   source_url: string
   language: string | null
   state: DocumentState
+  processing_phase: ProcessingPhase
+  file_roles: FileRoles | null
   content_fingerprint: string | null
   raw_hash: string | null
   raw_size_bytes: number | null
