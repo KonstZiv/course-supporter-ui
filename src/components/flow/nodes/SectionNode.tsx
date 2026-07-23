@@ -68,13 +68,23 @@ export const SectionNode = memo(function SectionNode({
               key={m.id}
               className={`
                 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-medium
-                ${m.state === 'ready' ? 'bg-forest/6 text-forest' : ''}
-                ${m.state === 'pending' ? 'bg-amber/8 text-amber-dark animate-pulse-soft' : ''}
-                ${m.state === 'error' ? 'bg-coral/8 text-coral' : ''}
-                ${m.state === 'raw' ? 'bg-canvas-dark/60 text-ink-muted' : ''}
-                ${m.state === 'integrity_broken' ? 'bg-coral/8 text-coral' : ''}
+                ${m.processing_phase === 'awaiting_author'
+                  ? 'bg-navy/8 text-navy'
+                  : m.state === 'ready'
+                    ? 'bg-forest/6 text-forest'
+                    : m.state === 'pending'
+                      ? 'bg-amber/8 text-amber-dark animate-pulse-soft'
+                      : m.state === 'error' || m.state === 'integrity_broken'
+                        ? 'bg-coral/8 text-coral'
+                        : m.state === 'raw'
+                          ? 'bg-canvas-dark/60 text-ink-muted'
+                          : ''}
               `}
-              title={`${m.filename || m.source_url || m.source_type} — ${m.state}`}
+              title={`${m.filename || m.source_url || m.source_type} — ${
+                m.processing_phase === 'awaiting_author'
+                  ? 'очікує підтвердження'
+                  : m.state
+              }`}
             >
               <Paperclip size={9} />
               {m.filename?.slice(0, 14) || m.source_url?.slice(0, 14) || m.source_type}

@@ -91,6 +91,11 @@ export interface AuthoredDocumentSummary {
   source_url: string
   language: string | null
   state: DocumentState
+  // The node-tree summary carries the derived phase (backend
+  // AuthoredDocumentSummaryResponse), so lists/cards can show ``awaiting_author``
+  // without fetching the full document. Unlike the detail response it does NOT
+  // carry ``file_roles`` — the confirm screen fetches those separately.
+  processing_phase: ProcessingPhase
   content_fingerprint: string | null
   error_message: string | null
   error_category: string | null

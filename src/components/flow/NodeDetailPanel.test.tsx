@@ -2,7 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { NodeDetailPanel } from './NodeDetailPanel'
 import { useCourseStore } from '../../stores/course'
-import type { NodeWithDocuments } from '../../types/api'
+import type { AuthoredDocumentSummary, NodeWithDocuments } from '../../types/api'
+
+// NodeDetailPanel now calls useNavigate for the awaiting_author confirm entry —
+// mock it so the bare render (no Router) works and the target is assertable.
+const { navigateMock } = vi.hoisted(() => ({ navigateMock: vi.fn() }))
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-router-dom')>()
+  return { ...actual, useNavigate: () => navigateMock }
+})
 
 function makeNode(overrides: Partial<NodeWithDocuments> = {}): NodeWithDocuments {
   return {
@@ -28,6 +36,29 @@ function seed(node: NodeWithDocuments): void {
     loading: false,
     error: null,
   })
+}
+
+function makeDoc(
+  overrides: Partial<AuthoredDocumentSummary> = {},
+): AuthoredDocumentSummary {
+  return {
+    id: 'doc-1',
+    course_node_id: 'node-1',
+    source_type: 'code',
+    material_role: 'educational',
+    task_type: null,
+    order: 0,
+    filename: 'lesson.zip',
+    source_url: 's3://bucket/lesson.zip',
+    language: 'ukr',
+    state: 'ready',
+    processing_phase: 'awaiting_author',
+    content_fingerprint: null,
+    error_message: null,
+    error_category: null,
+    created_at: '',
+    ...overrides,
+  }
 }
 
 describe('NodeDetailPanel — summary affordance (Task 3.2.5b c2)', () => {
@@ -63,5 +94,39 @@ describe('NodeDetailPanel — summary affordance (Task 3.2.5b c2)', () => {
     render(<NodeDetailPanel onOpenSummary={onOpen} />)
     fireEvent.click(screen.getByText(LABEL))
     expect(onOpen).toHaveBeenCalledExactlyOnceWith('node-xyz', 'Вузол XYZ')
+  })
+})
+
+describe('NodeDetailPanel — awaiting_author entry (№21 UI2)', () => {
+  beforeEach(() => {
+    useCourseStore.getState().reset()
+    navigateMock.mockReset()
+  })
+
+  it('shows the awaiting-author badge and a confirm entry for that phase', () => {
+    seed(makeNode({ authored_documents: [makeDoc()] }))
+    render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
+    expect(screen.getByText('Очікує підтвердження')).toBeInTheDocument()
+    expect(screen.getByText('Підтвердити ролі')).toBeInTheDocument()
+  })
+
+  it('navigates to the confirm screen on click', () => {
+    seed(makeNode({ authored_documents: [makeDoc({ id: 'doc-xyz' })] }))
+    render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
+    fireEvent.click(screen.getByText('Підтвердити ролі'))
+    expect(navigateMock).toHaveBeenCalledWith('/document/doc-xyz/confirm-roles')
+  })
+
+  it('shows no confirm entry for a non-awaiting document (tolerance)', () => {
+    seed(
+      makeNode({
+        authored_documents: [
+          makeDoc({ state: 'ready', processing_phase: 'ready' }),
+        ],
+      }),
+    )
+    render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
+    expect(screen.getByText('Готово')).toBeInTheDocument()
+    expect(screen.queryByText('Підтвердити ролі')).not.toBeInTheDocument()
   })
 })

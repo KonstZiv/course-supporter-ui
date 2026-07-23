@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useCourseStore } from '../../stores/course'
 import { documentsApi } from '../../api/documents'
 import { nodesApi } from '../../api/nodes'
@@ -109,6 +110,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
   const selectedNodeId = useCourseStore((s) => s.selectedNodeId)
   const setSelectedNodeId = useCourseStore((s) => s.setSelectedNodeId)
   const setTree = useCourseStore((s) => s.setTree)
+  const navigate = useNavigate()
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 })
   const [linkUrl, setLinkUrl] = useState('')
@@ -450,7 +452,10 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                     {mat.filename || mat.source_url || mat.source_type}
                   </p>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <StatusBadge state={mat.state} />
+                    <StatusBadge
+                      state={mat.state}
+                      processingPhase={mat.processing_phase}
+                    />
                     <button
                       onClick={() => handleToggleRole(mat)}
                       className={`
@@ -464,6 +469,19 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                     >
                       {isMethodological ? '📋 методичний' : '📚 учбовий'}
                     </button>
+                    {mat.processing_phase === 'awaiting_author' && (
+                      <button
+                        onClick={() =>
+                          navigate(`/document/${mat.id}/confirm-roles`)
+                        }
+                        className="text-[10px] px-1.5 py-0.5 rounded font-medium
+                                   bg-navy text-white hover:bg-navy-light
+                                   transition-colors cursor-pointer"
+                        title="Підтвердити ролі файлів перед обробкою"
+                      >
+                        Підтвердити ролі
+                      </button>
+                    )}
                   </div>
                   {mat.state === 'error' && (mat.error_category || mat.error_message) && (
                     <p className="text-xs text-coral mt-1 line-clamp-2">

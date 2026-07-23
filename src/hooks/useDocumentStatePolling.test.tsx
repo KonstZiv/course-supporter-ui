@@ -28,6 +28,8 @@ function makeDocument(state: DocumentState): AuthoredDocumentSummary {
     source_url: 'https://example/file.txt',
     language: null,
     state,
+    processing_phase:
+      state === 'pending' ? 'processing' : state === 'error' ? 'error' : 'ready',
     content_fingerprint: null,
     error_message: null,
   error_category: null,
