@@ -46,3 +46,21 @@ describe('documentsApi project-base methods (KD18 P6)', () => {
     )
   })
 })
+
+describe('documentsApi.confirmFileRoles (№21)', () => {
+  beforeEach(() => {
+    postMock.mockReset()
+  })
+
+  it('POSTs the decision to /file-roles with files + tree_digest', () => {
+    postMock.mockResolvedValue({})
+    documentsApi.confirmFileRoles('doc-9', {
+      files: { 'a.ts': 'full', 'cfg.json': 'structure_only' },
+      tree_digest: 'digest-1',
+    })
+    expect(postMock).toHaveBeenCalledWith('/api/v1/documents/doc-9/file-roles', {
+      files: { 'a.ts': 'full', 'cfg.json': 'structure_only' },
+      tree_digest: 'digest-1',
+    })
+  })
+})

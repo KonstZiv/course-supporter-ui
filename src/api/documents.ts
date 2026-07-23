@@ -2,6 +2,7 @@ import { api } from './client'
 import type {
   AssignmentType,
   AuthoredDocumentResponse,
+  ConfirmFileRolesRequest,
   MaterialRole,
   ProjectBaseAttachResponse,
   ProjectBaseManifest,
@@ -70,6 +71,16 @@ export const documentsApi = {
   retry: (entryId: string, force: boolean = false) =>
     api.post<{ job_id: string }>(
       `/api/v1/documents/${entryId}/retry${force ? '?force=true' : ''}`,
+    ),
+
+  // №21 confirm-api: persist the author's file-role decision (full coverage of
+  // proposal.files + proposal.tree_digest), then processing is enqueued. 409
+  // ``file_roles_stale`` → re-read the document and rebuild the screen; 422 →
+  // show the validation message.
+  confirmFileRoles: (documentId: string, body: ConfirmFileRolesRequest) =>
+    api.post<AuthoredDocumentResponse>(
+      `/api/v1/documents/${documentId}/file-roles`,
+      body,
     ),
 
   update: (
