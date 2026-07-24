@@ -100,8 +100,10 @@ export function ConfirmRolesPage() {
         files: roles,
         tree_digest: proposal.tree_digest,
       })
-      // Processing is enqueued; return to the owning course.
-      if (doc) navigate(`/course/${doc.course_node_id}`)
+      // Processing is enqueued; return to the course ROOT (full tree) with the
+      // worked-on node preselected (A-UI-2) so its detail panel opens on arrival.
+      if (doc)
+        navigate(`/course/${doc.course_root_id}?selected=${doc.course_node_id}`)
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
         // file_roles_stale: the file tree changed — re-read and rebuild.

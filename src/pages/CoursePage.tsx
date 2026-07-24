@@ -1,5 +1,5 @@
-import { useEffect, useCallback, useState, type DragEvent } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useEffect, useCallback, useState, useRef, type DragEvent } from 'react'
+import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { nodesApi } from '../api/nodes'
 import { summaryApi, uncoveredStaleDetail } from '../api/node-summary'
 import { ApiError } from '../api/client'
@@ -30,6 +30,11 @@ type GenerationSlot =
 
 export function CoursePage() {
   const { nodeId } = useParams<{ nodeId: string }>()
+  const [searchParams] = useSearchParams()
+  // A-UI-2: one-time preselect target from ``?selected=`` — captured at mount so
+  // later query/tree changes never yank a node the user has since chosen (an
+  // entry intent, not a subscription). Consumed once, then cleared.
+  const preselectRef = useRef(searchParams.get('selected'))
   const tree = useCourseStore((s) => s.tree)
   const setTree = useCourseStore((s) => s.setTree)
   const selectedNodeId = useCourseStore((s) => s.selectedNodeId)
@@ -127,6 +132,14 @@ export function CoursePage() {
         if (cancelled) return
         const node = Array.isArray(detail) ? detail[0] : detail
         setTree(node)
+        // A-UI-2: open the detail panel for the node we arrived to work on —
+        // only if it exists in the loaded tree; a stale/foreign id is ignored
+        // silently. Consume-once so subsequent user clicks keep full control.
+        const preselect = preselectRef.current
+        if (preselect && findNode(node, preselect)) {
+          useCourseStore.getState().setSelectedNodeId(preselect)
+          preselectRef.current = null
+        }
         setLoading(false)
       },
       (err) => {

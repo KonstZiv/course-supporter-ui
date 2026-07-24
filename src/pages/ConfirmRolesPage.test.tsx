@@ -37,6 +37,7 @@ function makeDoc(fileRoles: FileRoles | null): AuthoredDocumentResponse {
   return {
     id: 'doc-1',
     course_node_id: 'node-1',
+    course_root_id: 'root-1',
     source_type: 'code',
     material_role: 'educational',
     task_type: null,
@@ -127,7 +128,9 @@ describe('ConfirmRolesPage', () => {
       tree_digest: 'digest-1',
     })
     await waitFor(() =>
-      expect(navigateMock).toHaveBeenCalledWith('/course/node-1'),
+      expect(navigateMock).toHaveBeenCalledWith(
+        '/course/root-1?selected=node-1',
+      ),
     )
   })
 
