@@ -1,10 +1,13 @@
 import type { FileRoleDecision, FileRoleProposal, FileRoleToken } from '../types/api'
 
-// Role token → Ukrainian label for the confirm screen (decision 2).
+// Role token → Ukrainian label for the confirm screen (decision 2). Display
+// strings ONLY — the ``structure_only`` token, its API value and the stored
+// proposal/decision data are unchanged; only the author-facing wording of the
+// third role was renamed to «Несуттєвий для теми» (A-UI-1).
 export const ROLE_LABELS: Record<FileRoleToken, string> = {
   full: 'Повний',
   auxiliary: 'Допоміжний',
-  structure_only: 'Лише структура',
+  structure_only: 'Несуттєвий для теми',
 }
 
 export const ROLE_TOKENS: FileRoleToken[] = ['full', 'auxiliary', 'structure_only']
@@ -16,7 +19,7 @@ export const ROLE_TOKENS: FileRoleToken[] = ['full', 'auxiliary', 'structure_onl
 const REASON_LABELS: Record<string, string> = {
   custom_source: 'власний код уроку',
   build_config: 'конфігурація складання проєкту',
-  author_structure_only: 'рішення автора: лише структура',
+  author_structure_only: 'рішення автора: несуттєвий для теми',
   lockfile: 'залежності проєкту',
   vendored_dir: 'стороння бібліотека',
   generated_artifact: 'згенерований артефакт',

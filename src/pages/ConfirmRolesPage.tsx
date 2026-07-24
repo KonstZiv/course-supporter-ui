@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { AlertCircle, HelpCircle, Loader2 } from 'lucide-react'
 import { documentsApi } from '../api/documents'
 import { ApiError } from '../api/client'
 import type {
@@ -15,6 +15,12 @@ import {
   initialRoles,
   reasonLabel,
 } from '../utils/fileRoles'
+import { RolesIntroModal } from '../components/ui/RolesIntroModal'
+import { hasSeenRolesIntro, markRolesIntroSeen } from '../components/ui/rolesIntro'
+
+// The educational block has three states: hidden, the acknowledge-gated first
+// visit, and the voluntary reopen via «Навіщо це?» (freely dismissable).
+type IntroMode = 'hidden' | 'first' | 'reference'
 
 // №21 UI1 (confirm-screen): the author confirms the file-role proposal a
 // document produced (phase ``awaiting_author``). Direct route; the entry from
@@ -32,6 +38,16 @@ export function ConfirmRolesPage() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  // Show the educational block on the first visit (until acknowledged); the
+  // «Навіщо це?» link reopens it on demand without re-requiring acknowledgement.
+  const [introMode, setIntroMode] = useState<IntroMode>(() =>
+    hasSeenRolesIntro() ? 'hidden' : 'first',
+  )
+
+  const acknowledgeIntro = () => {
+    markRolesIntroSeen()
+    setIntroMode('hidden')
+  }
 
   const load = useCallback(async () => {
     if (!documentId) return
@@ -127,7 +143,24 @@ export function ConfirmRolesPage() {
 
   return (
     <div className="max-w-3xl mx-auto p-6">
-      <h1 className="text-xl font-semibold text-ink mb-1">Ролі файлів матеріалу</h1>
+      <RolesIntroModal
+        open={introMode !== 'hidden'}
+        requireAck={introMode === 'first'}
+        onAcknowledge={acknowledgeIntro}
+        onClose={() => setIntroMode('hidden')}
+      />
+
+      <div className="flex items-start justify-between gap-3 mb-1">
+        <h1 className="text-xl font-semibold text-ink">Ролі файлів матеріалу</h1>
+        <button
+          type="button"
+          onClick={() => setIntroMode('reference')}
+          className="inline-flex items-center gap-1 text-sm text-navy hover:underline shrink-0"
+        >
+          <HelpCircle size={15} />
+          Навіщо це?
+        </button>
+      </div>
       <p className="text-sm text-ink-muted mb-4">
         {doc?.filename ?? doc?.source_url}
       </p>
