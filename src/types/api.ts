@@ -199,13 +199,12 @@ export interface AuthoredDocumentResponse {
   state: DocumentState
   processing_phase: ProcessingPhase
   file_roles: FileRoles | null
-  content_fingerprint: string | null
-  raw_hash: string | null
-  raw_size_bytes: number | null
-  processed_hash: string | null
-  processed_at: string | null
-  pending_job_id: string | null
-  pending_since: string | null
+  // Id of the Job currently processing this material, or null (wire field
+  // ``job_id``). Full openapi resync: replaces the mistyped ``pending_job_id``
+  // and the raw/processed hash block (content_fingerprint, raw_hash,
+  // raw_size_bytes, processed_hash, processed_at, pending_since) — none of which
+  // the response schema carries.
+  job_id: string | null
   error_message: string | null
   error_category: string | null
   created_at: string
