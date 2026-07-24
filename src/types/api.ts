@@ -186,6 +186,9 @@ export interface ConfirmFileRolesRequest {
 export interface AuthoredDocumentResponse {
   id: string
   course_node_id: string
+  // Denormalised course root (A-BE-2). Backend column is NOT NULL, so this is
+  // always present — never null. Equals course_node_id for a root-node document.
+  course_root_id: string
   source_type: SourceType
   material_role: MaterialRole
   task_type: AssignmentType | null
