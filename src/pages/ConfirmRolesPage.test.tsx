@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import type {
   AuthoredDocumentResponse,
@@ -7,6 +7,7 @@ import type {
   FileRoles,
 } from '../types/api'
 import { ApiError } from '../api/client'
+import { markRolesIntroSeen } from '../components/ui/rolesIntro'
 import { ConfirmRolesPage } from './ConfirmRolesPage'
 
 const { getMock, confirmMock, navigateMock } = vi.hoisted(() => ({
@@ -78,6 +79,11 @@ describe('ConfirmRolesPage', () => {
     getMock.mockReset()
     confirmMock.mockReset()
     navigateMock.mockReset()
+    // Default: the educational block is already acknowledged, so the behaviour
+    // tests below run without the first-visit modal. The modal-specific tests
+    // clear the flag explicitly.
+    localStorage.clear()
+    markRolesIntroSeen()
   })
 
   it('renders each proposal file with its role and mapped reason (Р15)', async () => {
@@ -170,5 +176,53 @@ describe('ConfirmRolesPage', () => {
     getMock.mockResolvedValue(makeDoc(null))
     renderPage()
     expect(await screen.findByText(/немає пропозиції ролей/)).toBeInTheDocument()
+  })
+
+  it('renders the renamed third-role label «Несуттєвий для теми» (A-UI-1)', async () => {
+    getMock.mockResolvedValue(makeDoc({ proposal: PROPOSAL }))
+    renderPage()
+    await screen.findByText('app.ts')
+    expect(screen.getAllByText('Несуттєвий для теми').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Лише структура')).toBeNull()
+  })
+
+  describe('educational block (A-UI-1)', () => {
+    it('shows the block on the first visit', async () => {
+      localStorage.clear() // undo beforeEach's "seen" flag → first visit
+      getMock.mockResolvedValue(makeDoc({ proposal: PROPOSAL }))
+      renderPage()
+      const dialog = await screen.findByRole('dialog')
+      expect(dialog).toHaveTextContent('Найкраща стратегія')
+      expect(screen.getByText('Прочитав, зрозуміло')).toBeInTheDocument()
+    })
+
+    it('stops auto-showing after acknowledging, and the flag persists', async () => {
+      localStorage.clear()
+      getMock.mockResolvedValue(makeDoc({ proposal: PROPOSAL }))
+      renderPage()
+      fireEvent.click(await screen.findByText('Прочитав, зрозуміло'))
+      await waitFor(() =>
+        expect(screen.queryByText('Прочитав, зрозуміло')).toBeNull(),
+      )
+      // Remount: the persisted flag suppresses the first-visit modal.
+      cleanup()
+      renderPage()
+      await screen.findByText('app.ts')
+      expect(screen.queryByRole('dialog')).toBeNull()
+    })
+
+    it('reopens via «Навіщо це?» without re-requiring acknowledgement', async () => {
+      // beforeEach set the "seen" flag → no first-visit modal.
+      getMock.mockResolvedValue(makeDoc({ proposal: PROPOSAL }))
+      renderPage()
+      await screen.findByText('app.ts')
+      expect(screen.queryByRole('dialog')).toBeNull()
+      fireEvent.click(screen.getByText('Навіщо це?'))
+      const dialog = await screen.findByRole('dialog')
+      expect(dialog).toHaveTextContent('Найкраща стратегія')
+      // Voluntary reopen is dismissable, not acknowledge-gated.
+      expect(screen.queryByText('Прочитав, зрозуміло')).toBeNull()
+      expect(screen.getByText('Закрити')).toBeInTheDocument()
+    })
   })
 })

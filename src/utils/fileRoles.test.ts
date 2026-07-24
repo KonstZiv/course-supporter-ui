@@ -51,6 +51,19 @@ describe('ROLE_LABELS', () => {
   it('labels every role token', () => {
     for (const t of ROLE_TOKENS) expect(ROLE_LABELS[t]).toBeTruthy()
   })
+
+  it('renders the third role as «Несуттєвий для теми» (A-UI-1 rename)', () => {
+    // Display string only — the token stays ``structure_only``.
+    expect(ROLE_LABELS.structure_only).toBe('Несуттєвий для теми')
+  })
+})
+
+describe('reasonLabel — renamed author-structure-only wording (A-UI-1)', () => {
+  it('phrases the author-demoted reason with the new label', () => {
+    expect(reasonLabel('author_structure_only')).toBe(
+      'рішення автора: несуттєвий для теми',
+    )
+  })
 })
 
 const proposal: FileRoleProposal = {
