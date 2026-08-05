@@ -296,6 +296,89 @@ export interface JobResponse {
   completed_at: string | null
 }
 
+// ─── Author work-list (step A) ───
+//
+// Two read-only doors over one query layer: GET /api/v1/jobs (flat list) and
+// GET /api/v1/jobs/history (grouped by material). Author scope only. NOT yet
+// consumed by any screen — step B wires the UI; these are synced now per the
+// contract-drift discipline (vision-rules#18), even without a consumer.
+
+// The work-state axis of a Job ROW (step A §3): derived purely from the backend
+// Job.status. Distinct from ProcessingPhase (a MATERIAL axis) — a job row never
+// carries ``awaiting_author``. Live tokens ('queued' / 'processing') match the
+// material phase words verbatim; terminals are outcome words.
+export type JobState =
+  | 'queued'
+  | 'processing'
+  | 'ready'
+  | 'error'
+  | 'cancelled'
+  | 'obsolete'
+
+// The four job kinds the doors ever return (homework_processing / s3_cleanup are
+// never author-facing and cannot appear).
+export type AuthorJobType =
+  | 'document_processing'
+  | 'document_preparation'
+  | 'node_summary_regeneration'
+  | 'base_normalize'
+
+// One row of door 1; also the ``last_job`` of a history row (door 2).
+export interface JobListItemResponse {
+  id: string
+  job_type: AuthorJobType
+  job_state: JobState
+  queued_at: string
+  // Worker-pickup time; null for work terminated straight from the queue.
+  started_at: string | null
+  completed_at: string | null
+  subject_type: string | null
+  subject_id: string | null
+  // Resolved material anchor; null for node-summary work.
+  material_id: string | null
+  // Material label as stored — a scrubbed marker for a deleted source; the
+  // server neither invents nor hides it.
+  display_name: string | null
+  display_deleted: boolean
+  display_deleted_at: string | null
+  // Source type (document work only), for the deleted marker.
+  material_source_type: SourceType | null
+  // Base-archive version (base-normalize work only).
+  base_version: number | null
+  current_stage: string | null
+  // Progress checkpoint as stored — polymorphic by job_type (frame-progress for
+  // video ingestion, run-state for node summary); a later step narrows the shape.
+  stage_progress: Record<string, unknown> | null
+}
+
+export interface JobListResponse {
+  items: JobListItemResponse[]
+  total: number
+  limit: number
+  offset: number
+}
+
+// One row of door 2 — a material with its work history (grouped server-side).
+export interface MaterialHistoryItemResponse {
+  material_id: string
+  display_name: string | null
+  material_deleted: boolean
+  material_deleted_at: string | null
+  material_source_type: SourceType | null
+  // The material's real processing phase; null when the material is deleted
+  // (a deleted material is a marker, not a phase).
+  processing_phase: ProcessingPhase | null
+  last_job: JobListItemResponse
+  jobs_count: number
+}
+
+export interface MaterialHistoryResponse {
+  items: MaterialHistoryItemResponse[]
+  total: number
+  limit: number
+  offset: number
+}
+
 // ─── NodeSummary run-state (Job.stage_progress for node_summary_regeneration) ───
 //
 // Mirrors backend ``storage/node_summary_run_state.py`` (Pydantic). That
