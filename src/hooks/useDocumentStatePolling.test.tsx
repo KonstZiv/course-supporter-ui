@@ -64,7 +64,6 @@ describe('hasAnyPendingDocument', () => {
       authored_documents: [
         makeDocument('ready'),
         makeDocument('error'),
-        makeDocument('raw'),
       ],
     })
     expect(hasAnyPendingDocument(tree)).toBe(false)
@@ -88,12 +87,5 @@ describe('hasAnyPendingDocument', () => {
       ],
     })
     expect(hasAnyPendingDocument(tree)).toBe(true)
-  })
-
-  it('returns false when integrity_broken is the only non-ready state', () => {
-    const tree = makeNode({
-      authored_documents: [makeDocument('integrity_broken')],
-    })
-    expect(hasAnyPendingDocument(tree)).toBe(false)
   })
 })

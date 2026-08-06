@@ -1,8 +1,10 @@
 import { memo } from 'react'
+import { clsx } from 'clsx'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { BookOpen, Layers, Paperclip } from 'lucide-react'
 import type { FlowNodeData } from '../../../utils/treeToFlow'
 import { SummaryBadge } from '../SummaryBadge'
+import { phaseVocab, phasePillClass } from '../../../utils/stateVocabulary'
 
 export const CourseRootNode = memo(function CourseRootNode({
   data,
@@ -61,32 +63,21 @@ export const CourseRootNode = memo(function CourseRootNode({
       {/* Materials pills */}
       {data.authored_documents.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-3">
-          {data.authored_documents.slice(0, 4).map((m) => (
-            <span
-              key={m.id}
-              className={`
-                text-[11px] px-2 py-0.5 rounded-full font-medium
-                ${m.processing_phase === 'awaiting_author'
-                  ? 'bg-navy/10 text-navy'
-                  : m.state === 'ready'
-                    ? 'bg-forest/8 text-forest'
-                    : m.state === 'pending'
-                      ? 'bg-amber/10 text-amber-dark animate-pulse-soft'
-                      : m.state === 'error'
-                        ? 'bg-coral/10 text-coral'
-                        : m.state === 'raw'
-                          ? 'bg-canvas-dark text-ink-muted'
-                          : ''}
-              `}
-              title={
-                m.processing_phase === 'awaiting_author'
-                  ? `${m.filename || m.source_url || m.source_type} — очікує підтвердження`
-                  : m.filename || m.source_url || m.source_type
-              }
-            >
-              {m.filename?.slice(0, 18) || m.source_url?.slice(0, 18) || m.source_type}
-            </span>
-          ))}
+          {data.authored_documents.slice(0, 4).map((m) => {
+            const v = phaseVocab(m.processing_phase)
+            return (
+              <span
+                key={m.id}
+                className={clsx(
+                  'text-[11px] px-2 py-0.5 rounded-full font-medium',
+                  phasePillClass(v),
+                )}
+                title={`${m.filename || m.source_url || m.source_type} — ${v.label}`}
+              >
+                {m.filename?.slice(0, 18) || m.source_url?.slice(0, 18) || m.source_type}
+              </span>
+            )
+          })}
           {data.authored_documents.length > 4 && (
             <span className="text-[11px] px-2 py-0.5 rounded-full bg-canvas-dark text-ink-muted">
               +{data.authored_documents.length - 4}

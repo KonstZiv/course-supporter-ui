@@ -1,7 +1,7 @@
 import { clsx } from 'clsx'
 
 // Tri-state credential status for the tenant-admin roster. NOT the shared
-// StatusBadge (that one is typed to DocumentState). Never "видалено" —
+// StatusBadge (that one is typed to ProcessingPhase). Never "видалено" —
 // revoke keeps the student + history (DD-6-A is deferred hard-delete):
 //   null  → no portal credential provisioned
 //   true  → active

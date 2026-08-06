@@ -1,7 +1,11 @@
 // ─── Enums ───
 
 export type SourceType = 'video' | 'presentation' | 'text' | 'web' | 'audio' | 'code'
-export type DocumentState = 'raw' | 'pending' | 'ready' | 'integrity_broken' | 'error'
+// The three states the server actually derives (backend ``MaterialState``:
+// PENDING > READY > ERROR — orm.py). ``raw`` / ``integrity_broken`` were phantom
+// UI-only values the wire never carries (deferred to Phase 2.x); narrowed
+// 2026-08-06 (TASK-B §3 Б1) so the compiler forbids dead comparisons.
+export type DocumentState = 'pending' | 'ready' | 'error'
 export type MaterialRole = 'educational' | 'methodological'
 export type AssignmentType = 'test' | 'short_task' | 'task' | 'project'
 // ``cancelled`` is a valid ``queued → cancelled`` transition in the backend

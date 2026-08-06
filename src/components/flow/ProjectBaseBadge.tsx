@@ -2,7 +2,7 @@ import { clsx } from 'clsx'
 import type { ProjectBaseState } from '../../types/api'
 
 // Own domain badge for the project base's normalization lifecycle — NOT a reuse
-// of StatusBadge (which is bound to DocumentState). The states are distinct:
+// of StatusBadge (which is bound to ProcessingPhase). The states are distinct:
 // pending ≠ ready ≠ failed, each a separate render; failed carries a reason
 // shown next to the badge by the caller.
 const config: Record<ProjectBaseState, { label: string; cls: string }> = {
