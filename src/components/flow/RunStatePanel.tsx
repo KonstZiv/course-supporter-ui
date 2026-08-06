@@ -5,16 +5,20 @@ import type {
   NodeSummaryNodeStatus,
   NodeSummaryRunState,
 } from '../../types/api'
+import { JOB_STATE_LABEL } from '../../utils/stateVocabulary'
 
-// Job-level status badge — mirrors the map-driven ``StatusBadge`` pattern.
+// Job-level status badge. Colours are local to this card; the words come from
+// the shared work-state vocabulary (TASK-B §2), so the second axis speaks one
+// dictionary with the rest of the product. Keys are raw ``JobStatus`` values —
+// each maps to its JobState token (active -> processing, complete -> ready).
 const STATUS_META: Record<JobStatus, { label: string; cls: string }> = {
-  queued: { label: 'У черзі', cls: 'bg-canvas-dark text-ink-muted' },
-  active: { label: 'Генерується…', cls: 'bg-amber-pale text-amber-dark animate-pulse-soft' },
-  complete: { label: 'Готово', cls: 'bg-forest-pale text-forest' },
-  failed: { label: 'Помилка', cls: 'bg-coral-pale text-coral' },
-  cancelled: { label: 'Скасовано', cls: 'bg-canvas-dark text-ink-muted' },
+  queued: { label: JOB_STATE_LABEL.queued, cls: 'bg-canvas-dark text-ink-muted' },
+  active: { label: JOB_STATE_LABEL.processing, cls: 'bg-amber-pale text-amber-dark animate-pulse-soft' },
+  complete: { label: JOB_STATE_LABEL.ready, cls: 'bg-forest-pale text-forest' },
+  failed: { label: JOB_STATE_LABEL.error, cls: 'bg-coral-pale text-coral' },
+  cancelled: { label: JOB_STATE_LABEL.cancelled, cls: 'bg-canvas-dark text-ink-muted' },
   // L2 "subject vanished" — a benign terminal (muted, not an error colour).
-  obsolete: { label: 'Неактуально', cls: 'bg-canvas-dark text-ink-muted' },
+  obsolete: { label: JOB_STATE_LABEL.obsolete, cls: 'bg-canvas-dark text-ink-muted' },
 }
 
 // Pass labels for the optional progress tally (Task 3.2.5a §5).

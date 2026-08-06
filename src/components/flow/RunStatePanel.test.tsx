@@ -147,7 +147,7 @@ describe('RunStatePanel', () => {
         onDismiss={vi.fn()}
       />,
     )
-    expect(screen.getByText('Генерується…')).toBeInTheDocument()
+    expect(screen.getByText('Обробляється')).toBeInTheDocument()
   })
 
   it('shows a manual dismiss on terminal status and calls onDismiss', () => {
@@ -173,7 +173,7 @@ describe('RunStatePanel', () => {
         onDismiss={onDismiss}
       />,
     )
-    expect(screen.getByText('Неактуально')).toBeInTheDocument()
+    expect(screen.getByText('Застаріло')).toBeInTheDocument()
     // Terminal → dismissible (L2 "subject vanished").
     fireEvent.click(screen.getByRole('button', { name: /закрити/i }))
     expect(onDismiss).toHaveBeenCalledTimes(1)
