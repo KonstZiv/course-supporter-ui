@@ -9,14 +9,14 @@ vi.mock('../api/nodes', () => ({
   nodesApi: { getDetail: vi.fn() },
 }))
 
-import { hasAnyPendingDocument } from './useDocumentStatePolling'
+import { hasAnyInFlightDocument } from './useDocumentStatePolling'
 import type {
   AuthoredDocumentSummary,
-  DocumentState,
   NodeWithDocuments,
+  ProcessingPhase,
 } from '../types/api'
 
-function makeDocument(state: DocumentState): AuthoredDocumentSummary {
+function makeDocument(phase: ProcessingPhase): AuthoredDocumentSummary {
   return {
     id: 'doc-id',
     course_node_id: 'node-id',
@@ -27,12 +27,18 @@ function makeDocument(state: DocumentState): AuthoredDocumentSummary {
     filename: 'file.txt',
     source_url: 'https://example/file.txt',
     language: null,
-    state,
-    processing_phase:
-      state === 'pending' ? 'processing' : state === 'error' ? 'error' : 'ready',
+    // The coarse axis is irrelevant to the poll now; keep it plausible
+    // (inverse of derive_processing_phase) for fixture realism.
+    state:
+      phase === 'error'
+        ? 'error'
+        : phase === 'queued' || phase === 'processing'
+          ? 'pending'
+          : 'ready',
+    processing_phase: phase,
     content_fingerprint: null,
     error_message: null,
-  error_category: null,
+    error_category: null,
     created_at: '2026-05-07T00:00:00Z',
   }
 }
@@ -54,38 +60,48 @@ function makeNode(overrides: Partial<NodeWithDocuments> = {}): NodeWithDocuments
   }
 }
 
-describe('hasAnyPendingDocument', () => {
+describe('hasAnyInFlightDocument', () => {
   it('returns false for an empty tree', () => {
-    expect(hasAnyPendingDocument(makeNode())).toBe(false)
+    expect(hasAnyInFlightDocument(makeNode())).toBe(false)
   })
 
-  it('returns false when all documents are settled', () => {
+  it('returns false when every document is at rest (awaiting_author / ready / error)', () => {
+    // The equivalence-preserving case (TASK-B §3 Б3): the poll must STOP at
+    // awaiting_author — the system waits on the author, not on itself.
     const tree = makeNode({
       authored_documents: [
+        makeDocument('awaiting_author'),
         makeDocument('ready'),
         makeDocument('error'),
       ],
     })
-    expect(hasAnyPendingDocument(tree)).toBe(false)
+    expect(hasAnyInFlightDocument(tree)).toBe(false)
   })
 
-  it('returns true when the root node has a pending document', () => {
+  it('returns true for a queued document', () => {
     const tree = makeNode({
-      authored_documents: [makeDocument('ready'), makeDocument('pending')],
+      authored_documents: [makeDocument('ready'), makeDocument('queued')],
     })
-    expect(hasAnyPendingDocument(tree)).toBe(true)
+    expect(hasAnyInFlightDocument(tree)).toBe(true)
   })
 
-  it('returns true when a nested child has a pending document', () => {
+  it('returns true for a processing document', () => {
+    const tree = makeNode({
+      authored_documents: [makeDocument('processing')],
+    })
+    expect(hasAnyInFlightDocument(tree)).toBe(true)
+  })
+
+  it('returns true when a nested child is in flight', () => {
     const tree = makeNode({
       children: [
         makeNode({
           children: [
-            makeNode({ authored_documents: [makeDocument('pending')] }),
+            makeNode({ authored_documents: [makeDocument('processing')] }),
           ],
         }),
       ],
     })
-    expect(hasAnyPendingDocument(tree)).toBe(true)
+    expect(hasAnyInFlightDocument(tree)).toBe(true)
   })
 })
