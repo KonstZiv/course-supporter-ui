@@ -452,10 +452,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                     {mat.filename || mat.source_url || mat.source_type}
                   </p>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <StatusBadge
-                      state={mat.state}
-                      processingPhase={mat.processing_phase}
-                    />
+                    <StatusBadge phase={mat.processing_phase} />
                     <button
                       onClick={() => handleToggleRole(mat)}
                       className={`
@@ -483,7 +480,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                       </button>
                     )}
                   </div>
-                  {mat.state === 'error' && (mat.error_category || mat.error_message) && (
+                  {mat.processing_phase === 'error' && (mat.error_category || mat.error_message) && (
                     <p className="text-xs text-coral mt-1 line-clamp-2">
                       {ingestErrorMessage(mat.error_category, mat.error_message)}
                     </p>

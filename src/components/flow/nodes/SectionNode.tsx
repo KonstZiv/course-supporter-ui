@@ -1,21 +1,35 @@
 import { memo } from 'react'
+import { clsx } from 'clsx'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { FolderOpen, Paperclip } from 'lucide-react'
 import type { FlowNodeData } from '../../../utils/treeToFlow'
 import { SummaryBadge } from '../SummaryBadge'
+import { phaseVocab, phasePillClass } from '../../../utils/stateVocabulary'
 
 export const SectionNode = memo(function SectionNode({
   data,
   selected,
 }: NodeProps & { data: FlowNodeData }) {
-  const hasError = data.authored_documents.some((m) => m.state === 'error')
-  const hasPending = data.authored_documents.some((m) => m.state === 'pending')
-  const allReady = data.authored_documents.length > 0 && data.authored_documents.every((m) => m.state === 'ready')
+  const docs = data.authored_documents
+  const hasError = docs.some((m) => m.processing_phase === 'error')
+  const hasAwaiting = docs.some((m) => m.processing_phase === 'awaiting_author')
+  const hasBusy = docs.some(
+    (m) => m.processing_phase === 'queued' || m.processing_phase === 'processing',
+  )
+  const allReady = docs.length > 0 && docs.every((m) => m.processing_phase === 'ready')
 
+  // Aggregate border/icon priority on the phase axis (TASK-B §2, ratified
+  // 2026-08-06): error > awaiting-author > busy (queued|processing) > ready;
+  // the navy/30 fallback stays the empty node. Full navy for awaiting is a
+  // deliberate visible change — a section whose only unsettled material waits on
+  // the author must not read as green "done" (the per-material pills already
+  // show navy). Priority "awaiting above busy" is intentional: processing ends
+  // on its own, awaiting does not; the mix is visible in the pills.
   let accentColor = 'border-l-navy/30'
   if (hasError) accentColor = 'border-l-coral'
+  else if (hasAwaiting) accentColor = 'border-l-navy'
+  else if (hasBusy) accentColor = 'border-l-amber'
   else if (allReady) accentColor = 'border-l-forest'
-  else if (hasPending) accentColor = 'border-l-amber'
 
   return (
     <div
@@ -34,9 +48,9 @@ export const SectionNode = memo(function SectionNode({
       <div className="flex items-start gap-2.5 mb-2">
         <div className={`
           w-7 h-7 rounded-lg flex items-center justify-center shrink-0
-          ${allReady ? 'bg-forest/8' : hasPending ? 'bg-amber/8' : 'bg-navy/6'}
+          ${allReady ? 'bg-forest/8' : hasBusy ? 'bg-amber/8' : 'bg-navy/6'}
         `}>
-          <FolderOpen size={14} className={allReady ? 'text-forest' : hasPending ? 'text-amber' : 'text-navy/60'} />
+          <FolderOpen size={14} className={allReady ? 'text-forest' : hasBusy ? 'text-amber' : 'text-navy/60'} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
@@ -61,38 +75,27 @@ export const SectionNode = memo(function SectionNode({
       </div>
 
       {/* Materials */}
-      {data.authored_documents.length > 0 && (
+      {docs.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2">
-          {data.authored_documents.slice(0, 5).map((m) => (
-            <span
-              key={m.id}
-              className={`
-                inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-medium
-                ${m.processing_phase === 'awaiting_author'
-                  ? 'bg-navy/8 text-navy'
-                  : m.state === 'ready'
-                    ? 'bg-forest/6 text-forest'
-                    : m.state === 'pending'
-                      ? 'bg-amber/8 text-amber-dark animate-pulse-soft'
-                      : m.state === 'error' || m.state === 'integrity_broken'
-                        ? 'bg-coral/8 text-coral'
-                        : m.state === 'raw'
-                          ? 'bg-canvas-dark/60 text-ink-muted'
-                          : ''}
-              `}
-              title={`${m.filename || m.source_url || m.source_type} — ${
-                m.processing_phase === 'awaiting_author'
-                  ? 'очікує підтвердження'
-                  : m.state
-              }`}
-            >
-              <Paperclip size={9} />
-              {m.filename?.slice(0, 14) || m.source_url?.slice(0, 14) || m.source_type}
-            </span>
-          ))}
-          {data.authored_documents.length > 5 && (
+          {docs.slice(0, 5).map((m) => {
+            const v = phaseVocab(m.processing_phase)
+            return (
+              <span
+                key={m.id}
+                className={clsx(
+                  'inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-medium',
+                  phasePillClass(v),
+                )}
+                title={`${m.filename || m.source_url || m.source_type} — ${v.label}`}
+              >
+                <Paperclip size={9} />
+                {m.filename?.slice(0, 14) || m.source_url?.slice(0, 14) || m.source_type}
+              </span>
+            )
+          })}
+          {docs.length > 5 && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-canvas-dark/60 text-ink-muted">
-              +{data.authored_documents.length - 5}
+              +{docs.length - 5}
             </span>
           )}
         </div>
