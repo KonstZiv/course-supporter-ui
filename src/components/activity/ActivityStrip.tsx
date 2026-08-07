@@ -6,18 +6,18 @@ import { JOB_STATE_LABEL, jobStateWordClass } from '../../utils/stateVocabulary'
 import { deriveFloors } from '../../utils/activityFloors'
 import { ActivityStripPanel } from './ActivityStripPanel'
 
-// Collapsed floor (§2 / В4): pinned in the header. Shows the week compressed to
-// one headline — the newest live job, else the newest finished this week — as a
-// state word + subject label, with "і ще N" for the rest of the loaded list.
+// Collapsed floor (§2 / В4): pinned in the header. Shows the window compressed to
+// one headline — the newest live job, else the newest finished in the window — as
+// a state word + subject label, with "і ще N" for the rest of that same list.
 // Clicking opens the detailed floor. Colour belongs to the material phase, not
 // here (§3): the work word carries motion/mute/alarm-text, never a filled chip.
 export function ActivityStrip({ items }: { items: JobListItemResponse[] }) {
   const [open, setOpen] = useState(false)
   const now = Date.now()
-  const { headline, moreCount, detailed } = deriveFloors(items, now)
+  const { headline, moreCount, detailed } = deriveFloors(items)
 
-  // Empty state (§2): nothing live and nothing finished this week → no strip in
-  // the header, not an empty shell.
+  // Empty state (§2): nothing live and nothing finished within the window → no
+  // strip in the header, not an empty shell.
   if (!headline) return null
 
   return (

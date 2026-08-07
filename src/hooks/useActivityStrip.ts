@@ -10,10 +10,12 @@ import type { JobListItemResponse } from '../types/api'
 const FAST_MS = 4000
 const SLOW_MS = 60000
 
-// Widest floor the strip shows (Р3 / §2): one read per cycle with a week-back
-// lower bound feeds both the week-wide collapsed floor and the three-day
-// detailed floor; the split happens over the loaded list, not via a second read.
-const WINDOW_MS = 7 * 24 * 60 * 60 * 1000
+// The one window both floors read (Р3, narrowed 2026-08-07): live work plus
+// completed within three days. One read per cycle with this lower bound feeds
+// both floors — the collapsed floor summarises exactly what the detailed floor
+// opens, so "і ще N" reconciles by row count (§2). Work older than three days
+// is not in the strip; the author finds it on the history page (Р6, step Г).
+const WINDOW_MS = 3 * 24 * 60 * 60 * 1000
 
 // One page per cycle. "І ще N" counts loaded rows beyond the visible ones (Р4),
 // never the response's total — so this cap is also the ceiling of what the strip

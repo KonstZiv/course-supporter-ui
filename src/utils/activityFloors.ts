@@ -1,20 +1,17 @@
 import type { JobListItemResponse } from '../types/api'
 
-// The strip's two floors are derived over ONE loaded list (§2): the collapsed
-// floor summarises the week, the detailed floor shows live work plus the last
-// three days. Pure functions — the poll and the display consume them; ``now`` is
-// injected so the three-day boundary is testable without wall-clock.
-
-const DAY_MS = 24 * 60 * 60 * 1000
-const DETAIL_WINDOW_DAYS = 3
+// The strip's two floors read ONE window (§2 / Р3, narrowed 2026-08-07): the door
+// call already bounds it to live work + completed within three days, so no
+// client-side slicing remains. The collapsed floor summarises exactly the list
+// the detailed floor opens — that is what makes "і ще N" reconcile by row count.
+// Pure functions over the already-windowed list.
 
 function isLive(j: JobListItemResponse): boolean {
   return j.job_state === 'queued' || j.job_state === 'processing'
 }
 
 // Activity time: a terminal's completion, or the queue time when it never ran /
-// is still live (a live row has no completion). Used for ordering and the
-// three-day cut.
+// is still live (a live row has no completion). Used only for ordering now.
 function activityTime(j: JobListItemResponse): number {
   return Date.parse(j.completed_at ?? j.queued_at)
 }
@@ -24,31 +21,28 @@ function byActivityDesc(a: JobListItemResponse, b: JobListItemResponse): number 
 }
 
 export interface ActivityFloors {
-  /** Collapsed floor: the single newest live job, else the newest of the week. */
+  /** Collapsed floor: the single newest live job, else the newest of the window. */
   headline: JobListItemResponse | null
-  /** "І ще N" — loaded rows beyond the one visible headline (Р4), not the door total. */
+  /** "І ще N" — the rows the detailed floor opens beyond the one visible headline. */
   moreCount: number
-  /** Detailed floor: live work first, then completed within three days, newest first. */
+  /** Detailed floor: the whole window, live first then completed, newest first. */
   detailed: JobListItemResponse[]
 }
 
-export function deriveFloors(
-  items: JobListItemResponse[],
-  now: number,
-): ActivityFloors {
+export function deriveFloors(items: JobListItemResponse[]): ActivityFloors {
   const live = items.filter(isLive).sort(byActivityDesc)
   const completed = items.filter((j) => !isLive(j)).sort(byActivityDesc)
 
-  // Headline: newest live, else newest completed anywhere in the loaded week.
-  const headline = live[0] ?? completed[0] ?? null
+  // The whole loaded window, in display order — no slice: what is loaded is what
+  // opens. The headline is its first row (newest live, else newest completed),
+  // i.e. the one row the collapsed floor already shows.
+  const detailed = [...live, ...completed]
+  const headline = detailed[0] ?? null
 
-  const cutoff = now - DETAIL_WINDOW_DAYS * DAY_MS
-  const recentCompleted = completed.filter((j) => activityTime(j) >= cutoff)
-  const detailed = [...live, ...recentCompleted]
-
-  // Counted from the loaded list, never the door's ``total`` (Р4): with only the
-  // headline visible in the collapsed floor, that is everything else loaded.
-  const moreCount = headline ? items.length - 1 : 0
+  // N = rows the detailed floor opens minus the one already visible in the
+  // collapsed floor (the headline). Promise and opening reconcile with no
+  // remainder because both read one list (Р4 / §2, 2026-08-07).
+  const moreCount = detailed.length > 0 ? detailed.length - 1 : 0
 
   return { headline, moreCount, detailed }
 }

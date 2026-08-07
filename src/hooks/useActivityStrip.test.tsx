@@ -84,7 +84,7 @@ describe('useActivityStrip', () => {
     expect(intervalMs).toBe(SLOW_MS)
   })
 
-  it('reads the door with a week-back completed_after and the page limit', async () => {
+  it('reads the door with a three-day-back completed_after and the page limit', async () => {
     listMock.mockResolvedValue(page([]))
     renderHook(() => useActivityStrip())
     await act(async () => {
@@ -93,8 +93,9 @@ describe('useActivityStrip', () => {
     expect(listMock).toHaveBeenCalledTimes(1)
     const [arg] = listMock.mock.calls[0] as [{ completed_after: string; limit: number }]
     expect(arg.limit).toBe(50)
+    // One window for both floors (Р3 narrowed 2026-08-07): three days, not a week.
     const ageMs = Date.now() - Date.parse(arg.completed_after)
-    expect(Math.abs(ageMs - 7 * 24 * 60 * 60 * 1000)).toBeLessThan(60_000)
+    expect(Math.abs(ageMs - 3 * 24 * 60 * 60 * 1000)).toBeLessThan(60_000)
   })
 
   it('flips to fast when live work appears, back to slow when it clears', async () => {

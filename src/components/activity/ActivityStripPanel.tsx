@@ -26,22 +26,19 @@ export function ActivityStripPanel({
                    max-h-[70vh] overflow-y-auto z-40 bg-white rounded-xl
                    shadow-card-lg border border-canvas-dark/40 p-2"
       >
-        {rows.length === 0 ? (
-          <p className="text-xs text-ink-muted px-2 py-3 text-center">
-            Немає активних чи недавніх робіт
-          </p>
-        ) : (
-          <ul className="space-y-0.5">
-            {rows.map((job) => (
-              <li
-                key={job.id}
-                className="px-2 py-1.5 rounded-lg hover:bg-canvas-dark/40"
-              >
-                <ActivityStripRow job={job} now={now} />
-              </li>
-            ))}
-          </ul>
-        )}
+        {/* rows is never empty here: the panel only opens from the collapsed
+            floor, which renders only when a headline exists — and the headline
+            IS the first row (one window, §2). No empty-state branch. */}
+        <ul className="space-y-0.5">
+          {rows.map((job) => (
+            <li
+              key={job.id}
+              className="px-2 py-1.5 rounded-lg hover:bg-canvas-dark/40"
+            >
+              <ActivityStripRow job={job} now={now} />
+            </li>
+          ))}
+        </ul>
       </div>
     </>
   )
