@@ -150,6 +150,33 @@ describe('RunStatePanel', () => {
     expect(screen.getByText('Обробляється')).toBeInTheDocument()
   })
 
+  it('speaks the work state as a word per the §3 formula — never a filled chip (В4)', () => {
+    // Live run → motion on the word, no chip fill.
+    const { rerender } = render(
+      <RunStatePanel job={makeJob('active', makeRunState())} nodeTitle="X" onDismiss={vi.fn()} />,
+    )
+    const live = screen.getByText('Обробляється')
+    expect(live.className).toContain('animate-pulse-soft')
+    expect(live.className).not.toContain('bg-')
+
+    // Failed run → alarm colour as text, still no chip fill.
+    rerender(
+      <RunStatePanel job={makeJob('failed', makeRunState())} nodeTitle="X" onDismiss={vi.fn()} />,
+    )
+    const err = screen.getByText('Помилка')
+    expect(err.className).toContain('text-coral')
+    expect(err.className).not.toContain('bg-')
+
+    // Finished run → muted word, no chip fill, no motion.
+    rerender(
+      <RunStatePanel job={makeJob('complete', makeRunState())} nodeTitle="X" onDismiss={vi.fn()} />,
+    )
+    const done = screen.getByText('Готово')
+    expect(done.className).toContain('text-ink-muted')
+    expect(done.className).not.toContain('bg-')
+    expect(done.className).not.toContain('animate-pulse-soft')
+  })
+
   it('shows a manual dismiss on terminal status and calls onDismiss', () => {
     const onDismiss = vi.fn()
     render(

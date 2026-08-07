@@ -1,24 +1,27 @@
 import { AlertTriangle, Info, Loader2, X } from 'lucide-react'
+import { clsx } from 'clsx'
 import type {
   JobResponse,
+  JobState,
   JobStatus,
   NodeSummaryNodeStatus,
   NodeSummaryRunState,
 } from '../../types/api'
-import { JOB_STATE_LABEL } from '../../utils/stateVocabulary'
+import { JOB_STATE_LABEL, jobStateWordClass } from '../../utils/stateVocabulary'
 
-// Job-level status badge. Colours are local to this card; the words come from
-// the shared work-state vocabulary (TASK-B §2), so the second axis speaks one
-// dictionary with the rest of the product. Keys are raw ``JobStatus`` values —
-// each maps to its JobState token (active -> processing, complete -> ready).
-const STATUS_META: Record<JobStatus, { label: string; cls: string }> = {
-  queued: { label: JOB_STATE_LABEL.queued, cls: 'bg-canvas-dark text-ink-muted' },
-  active: { label: JOB_STATE_LABEL.processing, cls: 'bg-amber-pale text-amber-dark animate-pulse-soft' },
-  complete: { label: JOB_STATE_LABEL.ready, cls: 'bg-forest-pale text-forest' },
-  failed: { label: JOB_STATE_LABEL.error, cls: 'bg-coral-pale text-coral' },
-  cancelled: { label: JOB_STATE_LABEL.cancelled, cls: 'bg-canvas-dark text-ink-muted' },
-  // L2 "subject vanished" — a benign terminal (muted, not an error colour).
-  obsolete: { label: JOB_STATE_LABEL.obsolete, cls: 'bg-canvas-dark text-ink-muted' },
+// Raw ``JobStatus`` → the derived work-state axis (mirrors backend
+// ``derive_job_state``). This card is the only surface holding a raw JobStatus;
+// strip rows already carry ``job_state``. The word and its treatment then come
+// from the shared vocabulary, so the card speaks the two-axis formula (В1/В4)
+// like every other work surface — a word, never a filled chip.
+const STATUS_TO_STATE: Record<JobStatus, JobState> = {
+  queued: 'queued',
+  active: 'processing',
+  complete: 'ready',
+  failed: 'error',
+  cancelled: 'cancelled',
+  // L2 "subject vanished" — a benign terminal.
+  obsolete: 'obsolete',
 }
 
 // Pass labels for the optional progress tally (Task 3.2.5a §5).
@@ -81,7 +84,7 @@ interface Props {
  */
 export function RunStatePanel({ job, nodeTitle, onDismiss }: Props) {
   const runState = job.stage_progress
-  const meta = STATUS_META[job.status] ?? STATUS_META.queued
+  const state = STATUS_TO_STATE[job.status] ?? 'queued'
   const runLabel =
     nodeTitle?.trim() || runState?.vertex_node_id.slice(0, 8) || '—'
 
@@ -108,11 +111,11 @@ export function RunStatePanel({ job, nodeTitle, onDismiss }: Props) {
           <p className="text-xs text-ink-muted mb-1.5">
             Генерація опису · «{runLabel}»
           </p>
-          <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full
-                        text-xs font-medium ${meta.cls}`}
-          >
-            {meta.label}
+          {/* Work-state word, not a filled chip (§3 formula, В4): motion for a
+              live run, muting for a finished one, alarm colour as text for an
+              error. Colour belongs to the material phase, never to this word. */}
+          <span className={clsx('text-xs font-medium', jobStateWordClass(state))}>
+            {JOB_STATE_LABEL[state]}
           </span>
         </div>
         {isDone && (
