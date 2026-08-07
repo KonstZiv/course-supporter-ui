@@ -9,8 +9,14 @@ import {
   Users,
 } from 'lucide-react'
 import { clsx } from 'clsx'
+import type { JobListItemResponse } from '../../types/api'
+import { ActivityStrip } from '../activity/ActivityStrip'
 
-export function Header() {
+export function Header({
+  stripItems = [],
+}: {
+  stripItems?: JobListItemResponse[]
+}) {
   const logout = useAuthStore((s) => s.logout)
   const location = useLocation()
   const isHome = location.pathname === '/'
@@ -20,9 +26,9 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-canvas-dark/40">
-      <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center gap-4">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-3 group">
+        <Link to="/" className="flex items-center gap-3 group shrink-0">
           <div className="w-9 h-9 rounded-lg bg-navy flex items-center justify-center
                           group-hover:bg-navy-light transition-colors">
             <BookOpen size={18} className="text-amber-light" />
@@ -32,8 +38,14 @@ export function Header() {
           </span>
         </Link>
 
+        {/* Activity strip — collapsed floor (В4). Center of the bar; competes
+            with the nav for width on a narrow window, never grows the height. */}
+        <div className="flex-1 min-w-0 flex justify-center">
+          <ActivityStrip items={stripItems} />
+        </div>
+
         {/* Nav */}
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-1 shrink-0">
           <Link
             to="/"
             className={clsx(

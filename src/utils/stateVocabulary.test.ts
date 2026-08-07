@@ -6,6 +6,7 @@ import {
   phaseVocab,
   phaseBadgeClass,
   phasePillClass,
+  jobStateWordClass,
 } from './stateVocabulary'
 
 // Second witness for totality (mirrors the backend ``_JOB_STATE_BY_STATUS``
@@ -100,5 +101,43 @@ describe('JOB_STATE_LABEL — work-state axis', () => {
     expect(JOB_STATE_LABEL.error).toBe('Помилка')
     expect(JOB_STATE_LABEL.cancelled).toBe('Скасовано')
     expect(JOB_STATE_LABEL.obsolete).toBe('Застаріло')
+  })
+})
+
+describe('jobStateWordClass — two-axis formula (§3, four buckets)', () => {
+  it('is total over the six job-state tokens (never empty)', () => {
+    ALL_JOB_STATES.forEach((s) => {
+      expect(jobStateWordClass(s).length).toBeGreaterThan(0)
+    })
+  })
+
+  // Bucket 1 — motion ONLY for the running work ("happening now").
+  it('moves only processing, never the queue', () => {
+    expect(jobStateWordClass('processing')).toContain('animate-pulse-soft')
+    expect(jobStateWordClass('queued')).not.toContain('animate-pulse-soft')
+  })
+
+  // Bucket 2 — queued is a calm word: no motion AND no muting (work is ahead).
+  it('keeps the queue calm — no motion, no muting, no chip', () => {
+    const cls = jobStateWordClass('queued')
+    expect(cls).not.toContain('animate-pulse-soft')
+    expect(cls).not.toContain('text-ink-muted')
+    expect(cls).not.toContain('bg-')
+  })
+
+  // Bucket 3 — a finished job is muted and never pulses.
+  it('mutes a finished job and never pulses it', () => {
+    for (const s of ['ready', 'cancelled', 'obsolete'] as JobState[]) {
+      expect(jobStateWordClass(s)).toContain('text-ink-muted')
+      expect(jobStateWordClass(s)).not.toContain('animate-pulse-soft')
+    }
+  })
+
+  // Bucket 4 — an error speaks the alarm colour as text, not a chip fill.
+  it('speaks an error in the alarm colour as text, not a chip fill', () => {
+    const cls = jobStateWordClass('error')
+    expect(cls).toContain('text-coral')
+    expect(cls).not.toContain('bg-') // colour is on the word, never a filled chip
+    expect(cls).not.toContain('animate-pulse-soft')
   })
 })

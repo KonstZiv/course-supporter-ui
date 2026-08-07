@@ -303,9 +303,10 @@ export interface JobResponse {
 // ─── Author work-list (step A) ───
 //
 // Two read-only doors over one query layer: GET /api/v1/jobs (flat list) and
-// GET /api/v1/jobs/history (grouped by material). Author scope only. NOT yet
-// consumed by any screen — step B wires the UI; these are synced now per the
-// contract-drift discipline (vision-rules#18), even without a consumer.
+// GET /api/v1/jobs/history (grouped by material). Author scope only. The flat
+// door feeds the activity strip (step В, useActivityStrip); the history door is
+// not yet consumed (step Г). Types stay synced to the server per the
+// contract-drift discipline (vision-rules#18).
 
 // The work-state axis of a Job ROW (step A §3): derived purely from the backend
 // Job.status. Distinct from ProcessingPhase (a MATERIAL axis) — a job row never
@@ -326,6 +327,10 @@ export type AuthorJobType =
   | 'document_preparation'
   | 'node_summary_regeneration'
   | 'base_normalize'
+
+// Door-1 ``state_class`` query filter (backend ``Literal["in_flight","at_rest"]``):
+// narrows the flat list to live work or to finished work. Omitted → both.
+export type StateClass = 'in_flight' | 'at_rest'
 
 // One row of door 1; also the ``last_job`` of a history row (door 2).
 export interface JobListItemResponse {
