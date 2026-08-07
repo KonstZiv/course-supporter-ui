@@ -87,13 +87,19 @@ export function phasePillClass(entry: PhaseVocabEntry): string {
 
 // ── Work-state axis treatment (В1 / TASK-V §3) ──
 //
-// The two-axis formula: colour belongs to the material, the WORD to the work.
-// So the work-state word never gets a filled chip — it carries motion for live
-// work (the same pulse that means "processing"), muting for a finished one, and
-// the alarm colour AS TEXT for an error. Lives here beside the phase resolvers
+// The two-axis formula: colour belongs to the material, the WORD to the work, so
+// the work-state word never gets a filled chip. Four buckets on the word:
+//   * ``processing`` — motion (the pulse that means "something is happening NOW");
+//   * ``queued``     — a calm word: no motion, no muting (the work is still ahead);
+//   * finished (``ready`` / ``cancelled`` / ``obsolete``) — muted;
+//   * ``error``      — the alarm colour AS TEXT.
+// Motion is reserved for "happening now", not "still alive" (ratified 2026-08-07):
+// the phase axis already splits queue from processing by the pulse, so pulsing the
+// queue here would move the strip while the material chip stayed calm about the
+// same moment — two truths about one moment (Р2). Lives beside the phase resolvers
 // so the second axis stays in the one vocabulary module (§3 / §5), not inline.
 const JOB_STATE_WORD_TONE: Record<JobState, string> = {
-  queued: 'text-ink animate-pulse-soft',
+  queued: 'text-ink',
   processing: 'text-ink animate-pulse-soft',
   ready: 'text-ink-muted',
   cancelled: 'text-ink-muted',
