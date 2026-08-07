@@ -327,6 +327,10 @@ export type AuthorJobType =
   | 'node_summary_regeneration'
   | 'base_normalize'
 
+// Door-1 ``state_class`` query filter (backend ``Literal["in_flight","at_rest"]``):
+// narrows the flat list to live work or to finished work. Omitted → both.
+export type StateClass = 'in_flight' | 'at_rest'
+
 // One row of door 1; also the ``last_job`` of a history row (door 2).
 export interface JobListItemResponse {
   id: string
