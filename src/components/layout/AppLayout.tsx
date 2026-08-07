@@ -4,12 +4,12 @@ import { useActivityStrip } from '../../hooks/useActivityStrip'
 
 export function AppLayout() {
   // The activity-strip poll lives here — above the route outlet — so it survives
-  // child-route changes (В3). This commit only mounts the session-long loop in
-  // the shell; the two display floors land in the next commit.
-  useActivityStrip()
+  // child-route changes (В3). The last successful list feeds the header's
+  // collapsed floor (and, when opened, the detailed panel).
+  const { items } = useActivityStrip()
   return (
     <div className="min-h-screen bg-canvas">
-      <Header />
+      <Header stripItems={items} />
       <main className="mx-auto">
         <Outlet />
       </main>

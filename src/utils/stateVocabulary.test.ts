@@ -6,6 +6,7 @@ import {
   phaseVocab,
   phaseBadgeClass,
   phasePillClass,
+  jobStateWordClass,
 } from './stateVocabulary'
 
 // Second witness for totality (mirrors the backend ``_JOB_STATE_BY_STATUS``
@@ -100,5 +101,31 @@ describe('JOB_STATE_LABEL — work-state axis', () => {
     expect(JOB_STATE_LABEL.error).toBe('Помилка')
     expect(JOB_STATE_LABEL.cancelled).toBe('Скасовано')
     expect(JOB_STATE_LABEL.obsolete).toBe('Застаріло')
+  })
+})
+
+describe('jobStateWordClass — two-axis formula (§3)', () => {
+  it('is total over the six job-state tokens (never empty)', () => {
+    ALL_JOB_STATES.forEach((s) => {
+      expect(jobStateWordClass(s).length).toBeGreaterThan(0)
+    })
+  })
+
+  it('moves the word for live work (the "processing" pulse)', () => {
+    expect(jobStateWordClass('queued')).toContain('animate-pulse-soft')
+    expect(jobStateWordClass('processing')).toContain('animate-pulse-soft')
+  })
+
+  it('mutes a finished job and never pulses it', () => {
+    for (const s of ['ready', 'cancelled', 'obsolete'] as JobState[]) {
+      expect(jobStateWordClass(s)).toContain('text-ink-muted')
+      expect(jobStateWordClass(s)).not.toContain('animate-pulse-soft')
+    }
+  })
+
+  it('speaks an error in the alarm colour as text, not a chip fill', () => {
+    const cls = jobStateWordClass('error')
+    expect(cls).toContain('text-coral')
+    expect(cls).not.toContain('bg-') // colour is on the word, never a filled chip
   })
 })

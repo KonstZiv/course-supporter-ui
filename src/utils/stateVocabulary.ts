@@ -84,3 +84,24 @@ export function phaseBadgeClass(entry: PhaseVocabEntry): string {
 export function phasePillClass(entry: PhaseVocabEntry): string {
   return clsx(PHASE_PILL_TONE[entry.tone], entry.pulse && 'animate-pulse-soft')
 }
+
+// ── Work-state axis treatment (В1 / TASK-V §3) ──
+//
+// The two-axis formula: colour belongs to the material, the WORD to the work.
+// So the work-state word never gets a filled chip — it carries motion for live
+// work (the same pulse that means "processing"), muting for a finished one, and
+// the alarm colour AS TEXT for an error. Lives here beside the phase resolvers
+// so the second axis stays in the one vocabulary module (§3 / §5), not inline.
+const JOB_STATE_WORD_TONE: Record<JobState, string> = {
+  queued: 'text-ink animate-pulse-soft',
+  processing: 'text-ink animate-pulse-soft',
+  ready: 'text-ink-muted',
+  cancelled: 'text-ink-muted',
+  obsolete: 'text-ink-muted',
+  error: 'text-coral',
+}
+
+/** Work-state word classes (strip rows) — colour/motion on the word, never a chip. */
+export function jobStateWordClass(state: JobState): string {
+  return JOB_STATE_WORD_TONE[state]
+}
