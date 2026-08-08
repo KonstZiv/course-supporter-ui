@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import type { ProcessingPhase, JobState } from '../types/api'
+import type { ProcessingPhase, JobState, AuthorJobType } from '../types/api'
 import {
   PHASE_VOCAB,
   JOB_STATE_LABEL,
+  JOB_KIND_LABEL,
   phaseVocab,
   phaseBadgeClass,
   phasePillClass,
@@ -28,6 +29,13 @@ const ALL_JOB_STATES: JobState[] = [
   'error',
   'cancelled',
   'obsolete',
+]
+
+const ALL_AUTHOR_JOB_TYPES: AuthorJobType[] = [
+  'document_processing',
+  'document_preparation',
+  'node_summary_regeneration',
+  'base_normalize',
 ]
 
 describe('PHASE_VOCAB — material phase axis', () => {
@@ -139,5 +147,34 @@ describe('jobStateWordClass — two-axis formula (§3, four buckets)', () => {
     expect(cls).toContain('text-coral')
     expect(cls).not.toContain('bg-') // colour is on the word, never a filled chip
     expect(cls).not.toContain('animate-pulse-soft')
+  })
+})
+
+describe('JOB_KIND_LABEL — work-kind axis (§7 Г4)', () => {
+  it('covers exactly the four author job-kind tokens, no more no less', () => {
+    expect(Object.keys(JOB_KIND_LABEL).sort()).toEqual(
+      [...ALL_AUTHOR_JOB_TYPES].sort(),
+    )
+  })
+
+  it('gives every job kind a non-empty distinct label', () => {
+    const labels = ALL_AUTHOR_JOB_TYPES.map((t) => JOB_KIND_LABEL[t])
+    labels.forEach((l) => expect(l.length).toBeGreaterThan(0))
+    expect(new Set(labels).size).toBe(labels.length)
+  })
+
+  it('ratified words (§7 Г4)', () => {
+    expect(JOB_KIND_LABEL.document_processing).toBe('Обробка матеріалу')
+    expect(JOB_KIND_LABEL.document_preparation).toBe('Підготовка матеріалу')
+    expect(JOB_KIND_LABEL.base_normalize).toBe('Підготовка проєкту')
+    expect(JOB_KIND_LABEL.node_summary_regeneration).toBe('Оновлення підсумку теми')
+  })
+
+  // No internal terminology (§7 Г4 / language-rules): a raw job_type token is
+  // snake_case Latin, so any Latin letter or underscore in a label is a leak.
+  it('carries no internal terminology (no Latin/underscore raw-token leak)', () => {
+    ALL_AUTHOR_JOB_TYPES.forEach((t) => {
+      expect(JOB_KIND_LABEL[t]).not.toMatch(/[A-Za-z_]/)
+    })
   })
 })
