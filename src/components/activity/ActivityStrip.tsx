@@ -3,6 +3,7 @@ import { clsx } from 'clsx'
 import { ChevronDown, Trash2 } from 'lucide-react'
 import type { JobListItemResponse } from '../../types/api'
 import { JOB_STATE_LABEL, jobStateWordClass } from '../../utils/stateVocabulary'
+import { deletedMaterialLabelShort } from '../../utils/materialLabel'
 import { deriveFloors } from '../../utils/activityFloors'
 import { ActivityStripPanel } from './ActivityStripPanel'
 
@@ -39,18 +40,17 @@ export function ActivityStrip({ items }: { items: JobListItemResponse[] }) {
           {JOB_STATE_LABEL[headline.job_state]}
         </span>
         <span className="min-w-0 flex items-center gap-1 text-ink-light">
-          {headline.display_deleted && (
-            <Trash2 size={12} className="shrink-0 text-ink-muted" />
-          )}
-          {headline.display_name && (
-            <span
-              className={clsx(
-                'truncate',
-                headline.display_deleted && 'text-ink-muted',
-              )}
-            >
-              {headline.display_name}
-            </span>
+          {headline.display_deleted ? (
+            <>
+              <Trash2 size={12} className="shrink-0 text-ink-muted" />
+              <span className="truncate text-ink-muted">
+                {deletedMaterialLabelShort()}
+              </span>
+            </>
+          ) : (
+            headline.display_name && (
+              <span className="truncate">{headline.display_name}</span>
+            )
           )}
         </span>
         {moreCount > 0 && (
