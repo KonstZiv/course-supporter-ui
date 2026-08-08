@@ -3,7 +3,7 @@ import { AlertCircle, History, Loader2 } from 'lucide-react'
 import { jobsApi } from '../api/jobs'
 import type { MaterialHistoryResponse } from '../types/api'
 import { EmptyState } from '../components/ui/EmptyState'
-import { MaterialHistoryRow } from '../components/history/MaterialHistoryRow'
+import { MaterialHistoryRowExpandable } from '../components/history/MaterialHistoryRowExpandable'
 
 // The page's own page size — the call decides the amount, the client bakes none
 // (step Г c3). Expansion (c6) asks the same door for a different amount.
@@ -95,9 +95,16 @@ export function HistoryPage() {
                   <th className="text-left px-4 py-3 font-medium">Активність</th>
                 </tr>
               </thead>
-              <tbody>
+              {/* Keyed by offset so a page change remounts every row — the
+                  expansion state (and its cached work-list) resets with the page
+                  (c6): a cached list never outlives the page it was fetched for. */}
+              <tbody key={offset}>
                 {items.map((it) => (
-                  <MaterialHistoryRow key={it.material_id} item={it} now={now} />
+                  <MaterialHistoryRowExpandable
+                    key={it.material_id}
+                    item={it}
+                    now={now}
+                  />
                 ))}
               </tbody>
             </table>
