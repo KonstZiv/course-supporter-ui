@@ -13,7 +13,10 @@ import {
 // Second witness for totality (mirrors the backend ``_JOB_STATE_BY_STATUS``
 // import-time guard + ``test_job_state``): the token lists are re-declared here
 // independently, so a value added to a union without a vocabulary entry fails
-// loudly rather than defaulting silently at a render site.
+// loudly rather than defaulting silently at a render site. Keep them hand-written
+// — never derive a list from its union type (e.g. via a mapped type): a derived
+// list would agree with the map by construction, turning the lock into a
+// self-witness that no longer catches a composition drift.
 const ALL_PHASES: ProcessingPhase[] = [
   'queued',
   'processing',

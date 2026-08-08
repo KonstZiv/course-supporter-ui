@@ -11,6 +11,8 @@ export function sourceTypeMeta(type: string) {
       return { label: 'Веб', icon: 'Globe', color: 'text-forest' }
     case 'audio':
       return { label: 'Аудіо', icon: 'AudioLines', color: 'text-amber' }
+    case 'code':
+      return { label: 'Код', icon: 'FileCode', color: 'text-ink-light' }
     default:
       return { label: type, icon: 'File', color: 'text-ink-muted' }
   }
