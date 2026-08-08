@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // Dev-only routing for the portal SPA (Phase 6 / T4b, ratify Q1=A). The portal
@@ -52,33 +52,45 @@ function portalDevRouting(): Plugin {
   }
 }
 
-export default defineConfig({
-  plugins: [react(), portalDevRouting()],
-  server: {
-    port: 5173,
-    proxy: {
-      '/api': {
-        // Default proxy points at local backend for sub-area `ui`
-        // smoke-testing (Phase 1 KD-η.2/η.3). Override per
-        // developer if hitting prod is needed.
-        target: 'https://api.pythoncourse.me',
-        changeOrigin: true,
+export default defineConfig(({ mode }) => {
+  // Dev-server proxy target for `/api`, read from CS_DEV_API_PROXY_TARGET.
+  // loadEnv with the empty prefix reads the repo's .env / .env.local files so
+  // the value can live in a repo env file (not only a shell export), while a
+  // NON-`VITE_` name keeps it out of client code and the production bundle —
+  // this is a dev-server-only setting, never shipped. envDir '.' resolves
+  // against the Vite cwd (the project root), so we don't need @types/node for
+  // `process` in the config scope (see the narrow-cast note above).
+  const env = loadEnv(mode, '.', '')
+  const devApiProxyTarget = env.CS_DEV_API_PROXY_TARGET || 'http://127.0.0.1:8000'
+  return {
+    plugins: [react(), portalDevRouting()],
+    server: {
+      port: 5173,
+      proxy: {
+        '/api': {
+          // Defaults to the LOCAL backend (uvicorn on 127.0.0.1:8000) so local
+          // dev and live-acceptance never write to prod data or spend prod-LLM
+          // budget. To deliberately work against LIVE data, set
+          // CS_DEV_API_PROXY_TARGET in .env (see .env.example).
+          target: devApiProxyTarget,
+          changeOrigin: true,
+        },
       },
     },
-  },
-  build: {
-    rollupOptions: {
-      // Two SPA inputs: author (index.html) + portal (portal.html). Each is a
-      // separate static bundle (ratify Q1=A).
-      input: {
-        main: './index.html',
-        portal: './portal.html',
-      },
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom', 'zustand'],
-          flow: ['@xyflow/react', '@dagrejs/dagre'],
-          ui: ['framer-motion', 'lucide-react', 'react-markdown', 'react-dropzone']
+    build: {
+      rollupOptions: {
+        // Two SPA inputs: author (index.html) + portal (portal.html). Each is a
+        // separate static bundle (ratify Q1=A).
+        input: {
+          main: './index.html',
+          portal: './portal.html',
+        },
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom', 'react-router-dom', 'zustand'],
+            flow: ['@xyflow/react', '@dagrejs/dagre'],
+            ui: ['framer-motion', 'lucide-react', 'react-markdown', 'react-dropzone']
+          }
         }
       }
     }
