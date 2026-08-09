@@ -70,7 +70,7 @@ describe('MaterialHistoryRow — three composition cases (§3 c4, Г2/Г7)', () 
     expect(screen.getByTestId('phase-chip')).toBeInTheDocument()
   })
 
-  it('deleted with a null name: still the deleted label — split by the flag, not the name (Г7)', () => {
+  it('deleted with a null name: still the deleted label — split by the flag, not the name (Г7); two lines (Г9)', () => {
     renderRow(
       item({
         material_deleted: true,
@@ -79,7 +79,9 @@ describe('MaterialHistoryRow — three composition cases (§3 c4, Г2/Г7)', () 
         processing_phase: null,
       }),
     )
-    expect(screen.getByText(/^Матеріал видалено автором /)).toBeInTheDocument()
+    // Г9: the SAME words, laid out as two lines — the FACT, then author + moment.
+    expect(screen.getByText('Матеріал видалено')).toBeInTheDocument()
+    expect(screen.getByText(/^автором \d/)).toBeInTheDocument()
     expect(screen.queryByText('Без назви')).toBeNull()
   })
 })

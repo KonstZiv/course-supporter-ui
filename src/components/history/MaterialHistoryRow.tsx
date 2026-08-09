@@ -20,7 +20,10 @@ import {
   JOB_KIND_LABEL,
   jobStateWordClass,
 } from '../../utils/stateVocabulary'
-import { deletedMaterialLabelFull } from '../../utils/materialLabel'
+import {
+  deletedMaterialLabelShort,
+  deletedMaterialAuthorLine,
+} from '../../utils/materialLabel'
 import { relativeTime } from '../../utils/relativeTime'
 import { sourceTypeMeta } from '../../utils/sourceTypeIcon'
 
@@ -59,9 +62,16 @@ function MaterialName({ item }: { item: MaterialHistoryItemResponse }) {
   // students-table sample, so a long name never forces the material column past the
   // card and clips the row (Г8 п.6).
   if (item.material_deleted) {
+    // Г9: the SAME verbatim words (Г3), laid out as two lines so the marker's
+    // natural width falls to a normal name's — the FACT, then the author + moment
+    // smaller and dimmer. ``leading-tight`` keeps the two-line row from towering
+    // over the one-line rows; the second line is the row's only planned wrap.
     return (
-      <span className="text-ink-muted">
-        {deletedMaterialLabelFull(item.material_deleted_at ?? '')}
+      <span className="flex flex-col leading-tight text-ink-muted">
+        <span>{deletedMaterialLabelShort()}</span>
+        <span className="text-xs text-ink-muted/70">
+          {deletedMaterialAuthorLine(item.material_deleted_at ?? '')}
+        </span>
       </span>
     )
   }

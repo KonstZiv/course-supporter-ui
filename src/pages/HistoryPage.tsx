@@ -84,23 +84,24 @@ export function HistoryPage() {
       ) : (
         <>
           <div className="card overflow-hidden">
-            {/* ``table-fixed`` + an explicit colgroup (Г9): auto-layout piled the
-                whole slack into the single free column (material, ~40%), so a short
-                name sat ~400px from its state chip. The three left columns get FIXED
-                widths — material bound near the longest name, so a name and its state
-                chip read as one group at every width instead of the column stretching
-                with the viewport; the two right columns stay flexible and soak up the
-                slack. The chip keeps its own column (c8 alignment intact). */}
+            {/* ``table-fixed`` + an explicit colgroup (Г9, ratified). The table
+                still fills the card like the students sample — the natural content
+                is narrower than the card, and that difference has to land somewhere;
+                by decision it lands as a tail in the two RIGHT columns (a right-edge
+                tail reads fine), never as a gap inside the name→chip pair. The two
+                LEFT columns are fixed to their content so neither wraps: Матеріал
+                fits the longest TYPICAL name, Стан fits the longest ratified state
+                chip (a chip wrapping inside itself is a defect, not a trade-off). A
+                short name sits up to ~a chip-width from its chip — acceptable: "one
+                group" meant "not a third of the screen", not "flush". The deleted
+                marker no longer dictates this width — it lays out as two lines in the
+                cell (see MaterialHistoryRow), so its natural width is a normal
+                name's. NB: no text nodes inside colgroup (whitespace between <col>
+                triggers a hydration warning), so comments stay out here. */}
             <table className="w-full table-fixed text-sm">
-              {/* Columns, in order: Матеріал (fixed, bound near the longest name so
-                  it never stretches with the viewport), Стан (chip), Остання робота
-                  (flexible), Робіт (fixed count), Активність (flexible). The two
-                  flexible columns absorb the slack — it never piles up between a name
-                  and its chip. NB: no text nodes inside colgroup (whitespace between
-                  <col> triggers a hydration warning), so comments stay out here. */}
               <colgroup>
-                <col className="w-[14rem]" />
-                <col className="w-[8.5rem]" />
+                <col className="w-[16rem]" />
+                <col className="w-[12rem]" />
                 <col />
                 <col className="w-16" />
                 <col />
