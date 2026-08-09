@@ -8,6 +8,7 @@ import { ConfirmRolesPage } from './pages/ConfirmRolesPage'
 import { CostPage } from './pages/CostPage'
 import { HomeworkCostPage } from './pages/HomeworkCostPage'
 import { StudentsPage } from './pages/StudentsPage'
+import { HistoryPage } from './pages/HistoryPage'
 import { AppLayout } from './components/layout/AppLayout'
 import { getLanguages } from './utils/languages'
 
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="students" element={<StudentsPage />} />
         <Route path="cost" element={<CostPage />} />
         <Route path="cost/homework" element={<HomeworkCostPage />} />
+        <Route path="history" element={<HistoryPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
