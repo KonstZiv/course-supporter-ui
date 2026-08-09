@@ -84,7 +84,27 @@ export function HistoryPage() {
       ) : (
         <>
           <div className="card overflow-hidden">
-            <table className="w-full text-sm">
+            {/* ``table-fixed`` + an explicit colgroup (Г9): auto-layout piled the
+                whole slack into the single free column (material, ~40%), so a short
+                name sat ~400px from its state chip. The three left columns get FIXED
+                widths — material bound near the longest name, so a name and its state
+                chip read as one group at every width instead of the column stretching
+                with the viewport; the two right columns stay flexible and soak up the
+                slack. The chip keeps its own column (c8 alignment intact). */}
+            <table className="w-full table-fixed text-sm">
+              {/* Columns, in order: Матеріал (fixed, bound near the longest name so
+                  it never stretches with the viewport), Стан (chip), Остання робота
+                  (flexible), Робіт (fixed count), Активність (flexible). The two
+                  flexible columns absorb the slack — it never piles up between a name
+                  and its chip. NB: no text nodes inside colgroup (whitespace between
+                  <col> triggers a hydration warning), so comments stay out here. */}
+              <colgroup>
+                <col className="w-[14rem]" />
+                <col className="w-[8.5rem]" />
+                <col />
+                <col className="w-16" />
+                <col />
+              </colgroup>
               <thead className="bg-canvas text-ink-muted text-xs uppercase">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium">Матеріал</th>
