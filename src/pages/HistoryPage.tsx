@@ -113,7 +113,7 @@ export function HistoryPage() {
                   <th className="text-left px-4 py-3 font-medium">
                     Остання робота
                   </th>
-                  <th className="text-left px-4 py-3 font-medium">Робіт</th>
+                  <th className="text-center px-4 py-3 font-medium">Робіт</th>
                   <th className="text-left px-4 py-3 font-medium">Активність</th>
                 </tr>
               </thead>

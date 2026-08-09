@@ -113,7 +113,7 @@ export function MaterialHistoryRow({
     <tr className="border-t border-canvas-dark/40">
       {/* Матеріал — chevron + source icon + name (NO chip; the chip is its own
           column, so names align on one left edge, Г8 п.5). */}
-      <td className="px-4 py-3">
+      <td className="px-4 py-3 align-middle">
         <button
           type="button"
           onClick={onToggle}
@@ -135,20 +135,27 @@ export function MaterialHistoryRow({
         </button>
       </td>
       {/* Стан — the material phase chip; a deleted material's cell is empty (Г2). */}
-      <td className="px-4 py-3">
+      <td className="px-4 py-3 align-middle">
         {!item.material_deleted && <PhaseChip phase={item.processing_phase} />}
       </td>
-      {/* Остання робота — kind + state word (wraps, no forced width, Г8 п.6). */}
-      <td className="px-4 py-3">
-        <span className="text-ink-light">{JOB_KIND_LABEL[last.job_type]}</span>
-        <span
-          className={clsx('ml-2 font-medium', jobStateWordClass(last.job_state))}
-        >
+      {/* Остання робота — kind + state word. A REAL space between the two spans
+          (JSX drops inter-tag whitespace, so the ratified ml-2 gap gave no break
+          point — "матеріалуГотово" stayed one unbreakable token and overflowed the
+          fixed column into the count on narrow, Г11). The space both breaks and
+          spaces; the state word stays distinct by weight + colour (В1). */}
+      <td className="px-4 py-3 align-middle">
+        <span className="text-ink-light">{JOB_KIND_LABEL[last.job_type]}</span>{' '}
+        <span className={clsx('font-medium', jobStateWordClass(last.job_state))}>
           {JOB_STATE_LABEL[last.job_state]}
         </span>
       </td>
-      <td className="px-4 py-3 text-ink-light">{item.jobs_count}</td>
-      <td className="px-4 py-3 text-ink-muted text-sm">{when}</td>
+      {/* Робіт — a count, centred in its own column so it never crowds the
+          Остання робота text on its left when that wraps to several lines (Г11): a
+          left-hugged digit beside a multi-line neighbour reads as part of it. */}
+      <td className="px-4 py-3 align-middle text-center text-ink-light">
+        {item.jobs_count}
+      </td>
+      <td className="px-4 py-3 align-middle text-ink-muted text-sm">{when}</td>
     </tr>
   )
 }
