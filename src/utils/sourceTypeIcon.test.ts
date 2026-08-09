@@ -33,8 +33,14 @@ describe('sourceTypeMeta', () => {
     expect(sourceTypeMeta('code')).toEqual({
       label: 'Код',
       icon: 'FileCode',
-      color: 'text-ink-light',
+      color: 'text-ink',
     })
+  })
+
+  it('code uses a neutral distinct from the unknown-default (Г8 — readable by icon alone)', () => {
+    // No 6th chromatic hue exists; code takes a STRONG neutral that must not read
+    // like the muted grey the unknown fallback gets (Р7 for a deleted code file).
+    expect(sourceTypeMeta('code').color).not.toBe(sourceTypeMeta('unknown').color)
   })
 
   it('is total over the SourceType union — no value falls to the raw-token default', () => {

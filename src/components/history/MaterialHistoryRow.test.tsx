@@ -127,3 +127,19 @@ describe('MaterialHistoryRow — two axes stay on different carriers (§3 c4, В
     expect(word.className).not.toMatch(/bg-/) // the word never does (a merge adds bg-)
   })
 })
+
+describe('MaterialHistoryRow — chip has its own column (§3 Г8 п.5)', () => {
+  it('renders the phase chip OUTSIDE the material/name cell, so names align', () => {
+    const { container } = renderRow(
+      item({ display_name: 'lecture.mp4', processing_phase: 'ready' }),
+    )
+    const chip = container.querySelector('[data-testid="phase-chip"]')!
+    const nameCell = [...container.querySelectorAll('tbody td')].find((c) =>
+      c.textContent?.includes('lecture.mp4'),
+    )!
+    expect(chip).toBeInTheDocument()
+    // The chip lives in its own column — never inside the name cell (a chip in the
+    // name flow is what made the left edge ragged; Г8 п.5).
+    expect(nameCell.contains(chip)).toBe(false)
+  })
+})

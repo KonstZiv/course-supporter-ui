@@ -132,4 +132,17 @@ describe('ActivityStrip', () => {
     expect(screen.getByText('live.mp4')).toBeInTheDocument()
     expect(screen.queryByText('Матеріал видалено')).toBeNull()
   })
+
+  it('collapses to a named icon below the breakpoint, opening the same panel (Г8)', () => {
+    render(<ActivityStrip items={[job('processing', { display_name: 'a.mp4' })]} />)
+    // One trigger, named for screen readers like the collapsed nav items.
+    const btn = screen.getByRole('button', { name: 'Останні роботи' })
+    // Below `lg` it is an icon; the full headline is gated to `lg`+. jsdom applies
+    // no CSS, so we assert the breakpoint classes, not computed visibility.
+    expect(btn.querySelector('.lg\\:hidden')).toBeTruthy() // the icon
+    expect(btn.querySelector('.hidden.lg\\:flex')).toBeTruthy() // the full floor
+    // The collapsed trigger opens the same detailed panel.
+    fireEvent.click(btn)
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
 })

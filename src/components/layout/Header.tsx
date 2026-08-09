@@ -2,11 +2,11 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../stores/auth'
 import {
   BookOpen,
+  ClipboardCheck,
   DollarSign,
   History,
   LayoutDashboard,
   LogOut,
-  Receipt,
   Users,
 } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -19,7 +19,9 @@ const NAV = [
   { to: '/', label: 'Курси', icon: LayoutDashboard },
   { to: '/students', label: 'Студенти', icon: Users },
   { to: '/cost', label: 'Витрати', icon: DollarSign },
-  { to: '/cost/homework', label: 'Витрати ДЗ', icon: Receipt },
+  // Витрати ДЗ = homework-review cost. ClipboardCheck (not a $-shaped icon) so it
+  // never reads the same as "Витрати" (DollarSign) once labels collapse (Г8 п.4).
+  { to: '/cost/homework', label: 'Витрати ДЗ', icon: ClipboardCheck },
   { to: '/history', label: 'Історія матеріалів', icon: History },
 ] as const
 
@@ -58,6 +60,11 @@ export function Header({
         <div className="flex-1 min-w-0 flex justify-center">
           <ActivityStrip items={stripItems} />
         </div>
+
+        {/* A persistent divider between the central zone and the nav (Г8 п.3): the
+            zones must not read as one stream once the flex whitespace collapses on
+            a narrow window. Independent of the remaining width. */}
+        <div className="w-px h-6 bg-canvas-dark/60 shrink-0" aria-hidden />
 
         {/* Nav. ONE switching point for the whole header (§3 c7): below `lg` every
             label collapses to its icon so the strip keeps its width (В4) — a single

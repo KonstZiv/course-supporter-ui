@@ -66,7 +66,7 @@ export function MaterialHistoryRowExpandable({
       />
       {expanded && (
         <tr className="bg-canvas/50">
-          <td colSpan={4} className="px-4 py-3">
+          <td colSpan={5} className="px-4 py-3">
             {loading ? (
               <div className="flex items-center gap-2 text-sm text-ink-muted py-1">
                 <Loader2 size={14} className="animate-spin" /> Завантаження…

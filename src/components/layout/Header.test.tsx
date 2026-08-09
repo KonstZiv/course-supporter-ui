@@ -55,3 +55,25 @@ describe('Header — nav compaction keeps the accessible name (§3 c7, clar.1/2)
     })
   })
 })
+
+describe('Header — visual pass (§ Г8)', () => {
+  it('separates the central zone and the nav with a persistent divider (п.3)', () => {
+    const { container } = renderHeader()
+    const divider = container.querySelector('header .w-px')
+    expect(divider).toBeTruthy()
+    expect(divider).toHaveAttribute('aria-hidden')
+  })
+
+  it('gives the two cost items distinct icons — no money-icon collision (п.4)', () => {
+    renderHeader()
+    const cost = screen
+      .getByRole('link', { name: 'Витрати' })
+      .querySelector('svg')!
+    const costHw = screen
+      .getByRole('link', { name: 'Витрати ДЗ' })
+      .querySelector('svg')!
+    // Different lucide icons → different class token; they no longer merge as
+    // icon-only ($ vs $-sheet).
+    expect(cost.getAttribute('class')).not.toBe(costHw.getAttribute('class'))
+  })
+})

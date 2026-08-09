@@ -88,6 +88,7 @@ export function HistoryPage() {
               <thead className="bg-canvas text-ink-muted text-xs uppercase">
                 <tr>
                   <th className="text-left px-4 py-3 font-medium">Матеріал</th>
+                  <th className="text-left px-4 py-3 font-medium">Стан</th>
                   <th className="text-left px-4 py-3 font-medium">
                     Остання робота
                   </th>

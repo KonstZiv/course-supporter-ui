@@ -49,45 +49,38 @@ function PhaseChip({ phase }: { phase: ProcessingPhase | null }) {
   )
 }
 
-// The material identity — THREE separate cases (Г2), split by the deletion flag,
-// NEVER by name emptiness (Г7): a deleted material with no stored name still reads
-// as deleted; a live material with no stored name reads as "Без назви".
-function MaterialIdentity({ item }: { item: MaterialHistoryItemResponse }) {
-  // Case 3 — deleted: no phase chip at all; the full deletion label in place of
-  // the name. The material is gone, only its work trail remains.
+// The material NAME — THREE separate cases (Г2), split by the deletion flag, NEVER
+// by name emptiness (Г7): a deleted material with no stored name still reads as
+// deleted; a live material with no stored name reads as "Без назви". The phase
+// chip is NOT here — it lives in its own column (Г8 п.5), so names align on one
+// left edge regardless of whether a chip is present.
+function MaterialName({ item }: { item: MaterialHistoryItemResponse }) {
+  // No ``truncate`` (which carries ``white-space: nowrap``): the name WRAPS like the
+  // students-table sample, so a long name never forces the material column past the
+  // card and clips the row (Г8 п.6).
   if (item.material_deleted) {
     return (
-      <span className="truncate text-ink-muted">
+      <span className="text-ink-muted">
         {deletedMaterialLabelFull(item.material_deleted_at ?? '')}
       </span>
     )
   }
-  // Case 1 — live + named.
   if (item.display_name) {
-    return (
-      <>
-        <PhaseChip phase={item.processing_phase} />
-        <span className="truncate">{item.display_name}</span>
-      </>
-    )
+    return <span>{item.display_name}</span>
   }
-  // Case 2 — live + unnamed.
-  return (
-    <>
-      <PhaseChip phase={item.processing_phase} />
-      <span className="truncate italic text-ink-muted">Без назви</span>
-    </>
-  )
+  return <span className="italic text-ink-muted">Без назви</span>
 }
 
-// One collapsed material row of the history page (§3 c4) — the FIRST place both
-// state axes meet on one line: the phase CHIP carries the material (colour, В1),
-// the work-state WORD carries the last work (no chip, jobStateWordClass). They
-// stay different carriers on purpose — a merge would read as a single axis.
+// One collapsed material row of the history page (§3 c4, columns split in the Г8
+// visual pass). Both state axes still meet on one line but in SEPARATE columns:
+// the phase CHIP (material, colour, В1) has its own "Стан" column, the work-state
+// WORD (last work, no chip) sits in "Остання робота". Different carriers on
+// purpose — a merge would read as one axis. Splitting the chip out of the name
+// cell aligns every name on one left edge (Г8 п.5) without an empty chip node in a
+// deleted row (Г2 stays: the deleted material's "Стан" cell is simply empty).
 //
 // Presentational only: it takes the row plus the expansion props and returns
-// markup — no state, no fetch. Expansion (its state and lazy load) is wired from
-// outside in c6.
+// markup — no state, no fetch. Expansion is wired from outside in c6.
 export function MaterialHistoryRow({
   item,
   now,
@@ -108,6 +101,8 @@ export function MaterialHistoryRow({
 
   return (
     <tr className="border-t border-canvas-dark/40">
+      {/* Матеріал — chevron + source icon + name (NO chip; the chip is its own
+          column, so names align on one left edge, Г8 п.5). */}
       <td className="px-4 py-3">
         <button
           type="button"
@@ -126,10 +121,15 @@ export function MaterialHistoryRow({
               className={clsx('shrink-0', meta.color)}
             />
           )}
-          <MaterialIdentity item={item} />
+          <MaterialName item={item} />
         </button>
       </td>
-      <td className="px-4 py-3 whitespace-nowrap">
+      {/* Стан — the material phase chip; a deleted material's cell is empty (Г2). */}
+      <td className="px-4 py-3">
+        {!item.material_deleted && <PhaseChip phase={item.processing_phase} />}
+      </td>
+      {/* Остання робота — kind + state word (wraps, no forced width, Г8 п.6). */}
+      <td className="px-4 py-3">
         <span className="text-ink-light">{JOB_KIND_LABEL[last.job_type]}</span>
         <span
           className={clsx('ml-2 font-medium', jobStateWordClass(last.job_state))}
@@ -138,9 +138,7 @@ export function MaterialHistoryRow({
         </span>
       </td>
       <td className="px-4 py-3 text-ink-light">{item.jobs_count}</td>
-      <td className="px-4 py-3 text-ink-muted text-sm whitespace-nowrap">
-        {when}
-      </td>
+      <td className="px-4 py-3 text-ink-muted text-sm">{when}</td>
     </tr>
   )
 }
