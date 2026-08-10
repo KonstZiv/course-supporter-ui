@@ -101,8 +101,10 @@ export function RunStatePanel({ job, nodeTitle, onDismiss }: Props) {
   const errors = runState?.errors ?? []
 
   return (
+    // Д4: `max-w-[90vw]` bounds the fixed 360px to a window share, mirroring
+    // ActivityStripPanel; without it the panel ran off the left edge at 320.
     <div
-      className="fixed bottom-4 right-4 z-40 w-[360px] bg-white rounded-xl
+      className="fixed bottom-4 right-4 z-40 w-[360px] max-w-[90vw] bg-white rounded-xl
                  shadow-card-lg border border-canvas-dark/40 overflow-hidden"
     >
       {/* Header */}
