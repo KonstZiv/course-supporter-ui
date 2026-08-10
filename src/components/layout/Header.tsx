@@ -35,7 +35,9 @@ export function Header({
 
   const linkClass = (active: boolean) =>
     clsx(
-      'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors',
+      // Д2: only below `sm` (the 320 floor) the nav icons need tighter padding to
+      // fit; from `sm`+ the original px-4 returns, so 768/1000/1440 are unchanged.
+      'flex items-center gap-2 px-2 sm:px-4 py-2 rounded-xl text-sm font-medium transition-colors',
       active
         ? 'bg-navy-pale text-navy'
         : 'text-ink-light hover:bg-canvas-dark hover:text-ink',
@@ -43,14 +45,17 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-canvas-dark/40">
-      <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center gap-4">
+      <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center gap-2 sm:gap-4">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-3 group shrink-0">
           <div className="w-9 h-9 rounded-lg bg-navy flex items-center justify-center
                           group-hover:bg-navy-light transition-colors">
             <BookOpen size={18} className="text-amber-light" />
           </div>
-          <span className="font-display text-xl text-ink tracking-tight">
+          {/* Д2: below `sm` the wordmark hides so the six nav icons + logout +
+              the activity strip fit the 320 floor; the logo mark stays as the
+              reachable brand/home control. At `sm`+ the wordmark returns. */}
+          <span className="hidden sm:inline font-display text-xl text-ink tracking-tight">
             Course Supporter
           </span>
         </Link>
@@ -88,8 +93,8 @@ export function Header({
             onClick={logout}
             aria-label="Вийти"
             title="Вийти"
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
-                       text-ink-muted hover:bg-coral-pale hover:text-coral transition-colors ml-2"
+            className="flex items-center gap-2 px-2 sm:px-4 py-2 rounded-xl text-sm font-medium
+                       text-ink-muted hover:bg-coral-pale hover:text-coral transition-colors ml-1 sm:ml-2"
           >
             <LogOut size={16} />
             <span className="hidden lg:inline">Вийти</span>
