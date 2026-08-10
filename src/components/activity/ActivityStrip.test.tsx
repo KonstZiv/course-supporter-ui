@@ -85,4 +85,64 @@ describe('ActivityStrip', () => {
     expect(word.className).toContain('text-coral')
     expect(word.className).not.toContain('bg-')
   })
+
+  // The server scrubs a deleted material's name to a marker with a machine time;
+  // the strip must not surface it — it reads the short label, not display_name.
+  const SCRUB = 'інформація видалена автором 08-08-2026 14:30:00'
+
+  it('shows a deleted material as the short label, never the server scrub marker (Г3)', () => {
+    render(
+      <ActivityStrip
+        items={[
+          job('ready', {
+            display_deleted: true,
+            display_deleted_at: ago(MIN),
+            display_name: SCRUB,
+          }),
+        ]}
+      />,
+    )
+    expect(screen.getByText('Матеріал видалено')).toBeInTheDocument()
+    expect(screen.queryByText(/інформація видалена/)).toBeNull()
+  })
+
+  it('gives the short deleted label on BOTH surfaces — headline and detailed row (Р2/Г3)', () => {
+    render(
+      <ActivityStrip
+        items={[
+          job('ready', {
+            display_deleted: true,
+            display_deleted_at: ago(MIN),
+            display_name: SCRUB,
+          }),
+        ]}
+      />,
+    )
+    // Collapsed headline only, before opening.
+    expect(screen.getAllByText('Матеріал видалено')).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button'))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    // Now the detailed row (ActivityStripRow) renders the same short label too.
+    expect(screen.getAllByText('Матеріал видалено')).toHaveLength(2)
+    expect(screen.queryByText(/інформація видалена/)).toBeNull()
+  })
+
+  it('a live material shows its name, never the deleted label', () => {
+    render(<ActivityStrip items={[job('processing', { display_name: 'live.mp4' })]} />)
+    expect(screen.getByText('live.mp4')).toBeInTheDocument()
+    expect(screen.queryByText('Матеріал видалено')).toBeNull()
+  })
+
+  it('collapses to a named icon below the breakpoint, opening the same panel (Г8)', () => {
+    render(<ActivityStrip items={[job('processing', { display_name: 'a.mp4' })]} />)
+    // One trigger, named for screen readers like the collapsed nav items.
+    const btn = screen.getByRole('button', { name: 'Останні роботи' })
+    // Below `lg` it is an icon; the full headline is gated to `lg`+. jsdom applies
+    // no CSS, so we assert the breakpoint classes, not computed visibility.
+    expect(btn.querySelector('.lg\\:hidden')).toBeTruthy() // the icon
+    expect(btn.querySelector('.hidden.lg\\:flex')).toBeTruthy() // the full floor
+    // The collapsed trigger opens the same detailed panel.
+    fireEvent.click(btn)
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
 })

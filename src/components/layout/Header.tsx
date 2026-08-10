@@ -2,15 +2,28 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../stores/auth'
 import {
   BookOpen,
+  ClipboardCheck,
   DollarSign,
+  History,
   LayoutDashboard,
   LogOut,
-  Receipt,
   Users,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { JobListItemResponse } from '../../types/api'
 import { ActivityStrip } from '../activity/ActivityStrip'
+
+// Header nav items, in product order. The history item is last; its place is the
+// operator's call — one line to move (§3 c7 / Г1).
+const NAV = [
+  { to: '/', label: 'Курси', icon: LayoutDashboard },
+  { to: '/students', label: 'Студенти', icon: Users },
+  { to: '/cost', label: 'Витрати', icon: DollarSign },
+  // Витрати ДЗ = homework-review cost. ClipboardCheck (not a $-shaped icon) so it
+  // never reads the same as "Витрати" (DollarSign) once labels collapse (Г8 п.4).
+  { to: '/cost/homework', label: 'Витрати ДЗ', icon: ClipboardCheck },
+  { to: '/history', label: 'Історія матеріалів', icon: History },
+] as const
 
 export function Header({
   stripItems = [],
@@ -19,10 +32,14 @@ export function Header({
 }) {
   const logout = useAuthStore((s) => s.logout)
   const location = useLocation()
-  const isHome = location.pathname === '/'
-  const isStudents = location.pathname === '/students'
-  const isCost = location.pathname === '/cost'
-  const isHomeworkCost = location.pathname === '/cost/homework'
+
+  const linkClass = (active: boolean) =>
+    clsx(
+      'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors',
+      active
+        ? 'bg-navy-pale text-navy'
+        : 'text-ink-light hover:bg-canvas-dark hover:text-ink',
+    )
 
   return (
     <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-canvas-dark/40">
@@ -44,63 +61,38 @@ export function Header({
           <ActivityStrip items={stripItems} />
         </div>
 
-        {/* Nav */}
+        {/* A persistent divider between the central zone and the nav (Г8 п.3): the
+            zones must not read as one stream once the flex whitespace collapses on
+            a narrow window. Independent of the remaining width. */}
+        <div className="w-px h-6 bg-canvas-dark/60 shrink-0" aria-hidden />
+
+        {/* Nav. ONE switching point for the whole header (§3 c7): below `lg` every
+            label collapses to its icon so the strip keeps its width (В4) — a single
+            breakpoint, so the labels never vanish at a different width than the one
+            the strip flexes at. The name lives on in aria-label + title, so screen
+            readers and hover survive the collapse (the c4 source-type-icon rule). */}
         <nav className="flex items-center gap-1 shrink-0">
-          <Link
-            to="/"
-            className={clsx(
-              'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors',
-              isHome
-                ? 'bg-navy-pale text-navy'
-                : 'text-ink-light hover:bg-canvas-dark hover:text-ink',
-            )}
-          >
-            <LayoutDashboard size={16} />
-            Курси
-          </Link>
-          <Link
-            to="/students"
-            className={clsx(
-              'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors',
-              isStudents
-                ? 'bg-navy-pale text-navy'
-                : 'text-ink-light hover:bg-canvas-dark hover:text-ink',
-            )}
-          >
-            <Users size={16} />
-            Студенти
-          </Link>
-          <Link
-            to="/cost"
-            className={clsx(
-              'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors',
-              isCost
-                ? 'bg-navy-pale text-navy'
-                : 'text-ink-light hover:bg-canvas-dark hover:text-ink',
-            )}
-          >
-            <DollarSign size={16} />
-            Витрати
-          </Link>
-          <Link
-            to="/cost/homework"
-            className={clsx(
-              'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors',
-              isHomeworkCost
-                ? 'bg-navy-pale text-navy'
-                : 'text-ink-light hover:bg-canvas-dark hover:text-ink',
-            )}
-          >
-            <Receipt size={16} />
-            Витрати ДЗ
-          </Link>
+          {NAV.map(({ to, label, icon: Icon }) => (
+            <Link
+              key={to}
+              to={to}
+              aria-label={label}
+              title={label}
+              className={linkClass(location.pathname === to)}
+            >
+              <Icon size={16} />
+              <span className="hidden lg:inline">{label}</span>
+            </Link>
+          ))}
           <button
             onClick={logout}
+            aria-label="Вийти"
+            title="Вийти"
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
                        text-ink-muted hover:bg-coral-pale hover:text-coral transition-colors ml-2"
           >
             <LogOut size={16} />
-            Вийти
+            <span className="hidden lg:inline">Вийти</span>
           </button>
         </nav>
       </div>

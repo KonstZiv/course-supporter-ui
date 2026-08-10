@@ -61,3 +61,43 @@ describe('jobsApi.list (door 1)', () => {
     expect(q.get('offset')).toBe('40')
   })
 })
+
+describe('jobsApi.list (door 1) — material_id filter (step Г c3)', () => {
+  beforeEach(() => getMock.mockReset())
+
+  it('includes material_id in the query when provided', () => {
+    getMock.mockResolvedValue({})
+    jobsApi.list({ material_id: 'mat-7', limit: 200 })
+    const q = queryOf(calledUrl())
+    expect(q.get('material_id')).toBe('mat-7')
+    expect(q.get('limit')).toBe('200')
+  })
+
+  it('omits material_id when absent — no effect on a call that does not pass it', () => {
+    getMock.mockResolvedValue({})
+    jobsApi.list({ completed_after: '2026-07-31T00:00:00.000Z' })
+    const q = queryOf(calledUrl())
+    expect(q.has('material_id')).toBe(false)
+    // strip-shape invariant preserved (limit/offset still the door defaults)
+    expect(q.get('limit')).toBe('50')
+    expect(q.get('offset')).toBe('0')
+  })
+})
+
+describe('jobsApi.history (door 2)', () => {
+  beforeEach(() => getMock.mockReset())
+
+  it('GETs the history route with the caller-supplied page bounds', () => {
+    getMock.mockResolvedValue({})
+    jobsApi.history(25, 50)
+    expect(calledUrl()).toBe('/api/v1/jobs/history?limit=25&offset=50')
+  })
+
+  it('bakes no size of its own — passes exactly what the call asks', () => {
+    getMock.mockResolvedValue({})
+    jobsApi.history(200, 0)
+    const q = queryOf(calledUrl())
+    expect(q.get('limit')).toBe('200')
+    expect(q.get('offset')).toBe('0')
+  })
+})

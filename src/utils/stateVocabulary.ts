@@ -1,15 +1,17 @@
 import { clsx } from 'clsx'
-import type { ProcessingPhase, JobState } from '../types/api'
+import type { ProcessingPhase, JobState, AuthorJobType } from '../types/api'
 
-// Single source of the author-facing state vocabulary — one map per axis
-// (TASK-B §2). Every surface that shows a state axis reads its word (and, for
-// the phase axis, its colour) from here; no surface hard-codes a status word or
+// Single source of the author-facing vocabulary — one map per axis (TASK-B §2,
+// step Г Г4). Every surface that shows an axis reads its word (and, for the
+// phase axis, its colour) from here; no surface hard-codes a status word or
 // re-derives the colour ladder inline.
 //
-// Two axes, deliberately separate (PROBE-B / ARC.md §1 Р8):
-//   * ProcessingPhase — the canonical axis of a MATERIAL (five values).
-//   * JobState        — the work-state of a Job ROW (six values); never carries
+// Three axes, deliberately separate (PROBE-B / ARC.md §1 Р8, §7 Г4):
+//   * ProcessingPhase — the STATE axis of a MATERIAL (five values).
+//   * JobState        — the work-STATE of a Job ROW (six values); never carries
 //                       ``awaiting_author`` (that is material-only).
+//   * AuthorJobType   — the KIND of a Job ROW (four author-facing values): not
+//                       "in what state" but "what kind of work" (§7 Г4).
 
 // Semantic colour identity of a phase, shared across every phase surface (badge
 // + section pill + root pill). Each surface owns its visual density; the tone +
@@ -52,6 +54,19 @@ export const JOB_STATE_LABEL: Record<JobState, string> = {
   error: 'Помилка',
   cancelled: 'Скасовано',
   obsolete: 'Застаріло',
+}
+
+// Work-kind axis — the four author-facing job kinds (AuthorJobType), one word
+// each (§7 Г4). Not "in what state" but "what kind of work". History needs it:
+// a deleted material is told apart only by its date and the KIND of work over it
+// (Р7), so a missing kind word makes two deleted materials indistinguishable.
+// Total over AuthorJobType — homework/cleanup never reach the author doors and
+// are not in the union.
+export const JOB_KIND_LABEL: Record<AuthorJobType, string> = {
+  document_processing: 'Обробка матеріалу',
+  document_preparation: 'Підготовка матеріалу',
+  base_normalize: 'Підготовка проєкту',
+  node_summary_regeneration: 'Оновлення підсумку теми',
 }
 
 // ── Phase colour resolvers (tone → surface classes) ──
