@@ -83,7 +83,12 @@ export function HistoryPage() {
         />
       ) : (
         <>
-          <div className="card overflow-hidden">
+          {/* Below `md` (768) the fixed columns clip past the card with no way
+              to scroll to them (PROBE-NARROW Б1: clip from 752, whole columns
+              from 568, page never drags). Above the ratified 768 threshold the
+              table is byte-for-byte unchanged; below it, the notice sibling shows
+              instead. Threshold is pure CSS (`md`), no JS width measurement (Р2). */}
+          <div className="card overflow-hidden hidden md:block">
             {/* ``table-fixed`` + an explicit colgroup (Г9, ratified). The table
                 still fills the card like the students sample — the natural content
                 is narrower than the card, and that difference has to land somewhere;
@@ -132,11 +137,26 @@ export function HistoryPage() {
             </table>
           </div>
 
+          {/* Honest limit shown only below `md` (Р3/Р4). Reuses the product's
+              EmptyState (no new pattern) and the page's own empty-state icon (no
+              apt monitor icon is already in use). ``hidden`` = display:none, so
+              assistive tech never reads the table and this at once. Verbatim text
+              from RATIFIED Р4 — do not edit without re-ratification. */}
+          <div className="md:hidden">
+            <EmptyState
+              icon={History}
+              title="Історія матеріалів потребує ширшого екрана"
+              description="Записи на місці — тут просто замало місця, щоб їх показати. Відкрийте цю сторінку на комп'ютері або розгорніть вікно ширше."
+            />
+          </div>
+
           <div className="flex items-center justify-between mt-4 text-sm text-ink-muted">
             {/* Count straight from the response — never a client-computed number
                 (Р4: the number the author eye-checks must reconcile). */}
             <span>Матеріалів: {total}</span>
-            <div className="flex gap-2">
+            {/* Count stays at every width (Р3); Назад/Далі would page an unseen
+                list below the threshold, so they hide there. */}
+            <div className="hidden md:flex gap-2">
               <button
                 className="btn-ghost btn-sm"
                 disabled={!canPrev}
