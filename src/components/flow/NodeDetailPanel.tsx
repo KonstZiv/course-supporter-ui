@@ -388,7 +388,12 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                   type="file"
                   multiple
                   accept={UPLOAD_ACCEPT_ATTR}
-                  className="text-sm text-ink-muted file:mr-2 file:py-1 file:px-3 file:rounded-lg
+                  // Д9: below `sm` bound the native file-picker's intrinsic width
+                  // to its container (measured 349px at 320, clipped both edges).
+                  // Width limit only — the system control is not replaced, hidden
+                  // or wrapped (the ratified cheap bound). Gated to `<sm` so the
+                  // wide panel (where 380px holds it) is unchanged.
+                  className="max-sm:max-w-full text-sm text-ink-muted file:mr-2 file:py-1 file:px-3 file:rounded-lg
                              file:border-0 file:text-sm file:font-medium file:bg-navy file:text-white
                              file:cursor-pointer cursor-pointer"
                   onChange={(e) => {
@@ -451,7 +456,11 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                   <p className="text-sm font-medium text-ink truncate">
                     {mat.filename || mat.source_url || mat.source_type}
                   </p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
+                  {/* Д9: below the panel's narrow width the status badge, the
+                      role toggle and the confirm-roles button overran the right
+                      edge (measured 327 at 320); flex-wrap lets the trailing
+                      control drop to the next line instead of clipping. */}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                     <StatusBadge phase={mat.processing_phase} />
                     <button
                       onClick={() => handleToggleRole(mat)}
