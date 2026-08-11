@@ -142,7 +142,14 @@ export function StudentsPage() {
         />
       ) : (
         <>
-          <div className="card overflow-hidden">
+          {/* Below 896 the roster clips past the card with no way to scroll to
+              it (PROBE-NARROW Б1: clip from 872, both action buttons unreachable
+              from ~856; page never drags). The threshold is 896 — higher than
+              history's 768 because this table is data-driven and breaks earlier,
+              and 896 stays under 960 (half a wide monitor, where it works and must
+              show). Pure CSS via the `min-[896px]` arbitrary variant, no JS width
+              measurement (Р2). Above 896 the table is byte-for-byte unchanged. */}
+          <div className="card overflow-hidden hidden min-[896px]:block">
             <table className="w-full text-sm">
               <thead className="bg-canvas text-ink-muted text-xs uppercase">
                 <tr>
@@ -166,11 +173,27 @@ export function StudentsPage() {
             </table>
           </div>
 
+          {/* Honest limit shown only below 896 (Р3/Р4). Reuses EmptyState and the
+              page's own empty-state icon (no apt monitor icon is already in use).
+              ``hidden`` = display:none, so assistive tech never reads the table and
+              this at once. The sentence names "керувати доступом" because revoke /
+              reset-password / enrollment all live inside the hidden table. Verbatim
+              text from RATIFIED Р4 — do not edit without re-ratification. */}
+          <div className="min-[896px]:hidden">
+            <EmptyState
+              icon={Users}
+              title="Перелік студентів потребує ширшого екрана"
+              description="Ваші студенти на місці — тут просто замало місця, щоб показати їх і керувати доступом. Відкрийте цю сторінку на комп'ютері або розгорніть вікно ширше."
+            />
+          </div>
+
           <div className="flex items-center justify-between mt-4 text-sm text-ink-muted">
             <span>
               Показано {from}–{to} з {total}
             </span>
-            <div className="flex gap-2">
+            {/* Count stays at every width (Р3); Назад/Далі hide below the threshold
+                so we never page a list the author cannot see. */}
+            <div className="hidden min-[896px]:flex gap-2">
               <button
                 className="btn-ghost btn-sm"
                 disabled={!canPrev}
