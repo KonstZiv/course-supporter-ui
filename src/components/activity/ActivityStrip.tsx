@@ -25,7 +25,13 @@ export function ActivityStrip({ items }: { items: JobListItemResponse[] }) {
   if (!headline) return null
 
   return (
-    <div className="relative">
+    // ``min-w-0 max-w-full`` closes the shrink-chain from the header's bounded
+    // central zone (Header.tsx :60 `flex-1 min-w-0`) down to the truncating
+    // subject. This relative wrapper is the flex item in that zone; its default
+    // `min-width:auto` (no min-w-0) let a non-breaking name grow past the
+    // viewport — the button's `max-w-full` resolved against an already-grown
+    // parent, so `truncate` never received a bounded width to clip (Д1).
+    <div className="relative min-w-0 max-w-full">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

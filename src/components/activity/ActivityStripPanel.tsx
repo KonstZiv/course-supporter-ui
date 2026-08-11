@@ -22,7 +22,15 @@ export function ActivityStripPanel({
       <div
         role="dialog"
         aria-label="Останні роботи"
-        className="absolute left-1/2 -translate-x-1/2 mt-2 w-[380px] max-w-[90vw]
+        // Д5: below `sm` the header is compact and the strip sits near the left
+        // edge, so centering the panel on the strip pushed its left off-screen
+        // (measured left −76 at 320). Below `sm` only, re-anchor the same
+        // dropdown to the viewport (fixed, centered under the header) so it stays
+        // in-window; at `sm`+ it keeps the original strip-anchored `absolute`
+        // placement, so 640/768/1000/1440 are unchanged.
+        className="absolute left-1/2 -translate-x-1/2 mt-2
+                   max-sm:fixed max-sm:top-[4.5rem] max-sm:mt-0
+                   w-[380px] max-w-[90vw]
                    max-h-[70vh] overflow-y-auto z-40 bg-white rounded-xl
                    shadow-card-lg border border-canvas-dark/40 p-2"
       >

@@ -84,14 +84,17 @@ export function StudentsPage() {
 
   return (
     <div className="max-w-[1600px] mx-auto px-6 py-8">
-      <div className="flex items-center justify-between mb-8">
+      {/* Д3: below `sm` the title and the two actions stack instead of sharing
+          one justify-between row, where they collided with the subtitle and ran
+          off the 320 floor; from `sm`+ the original single-row layout returns. */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
           <h1 className="page-title">Студенти</h1>
           <p className="page-subtitle">
             Доступ студентів до порталу та зарахування на курси
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap sm:flex-nowrap gap-2">
           <button
             className="btn-ghost"
             disabled={!portalLink}
