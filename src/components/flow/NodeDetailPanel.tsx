@@ -1,10 +1,12 @@
 import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCourseStore } from '../../stores/course'
+import { useWorkListStore } from '../../stores/workList'
 import { documentsApi } from '../../api/documents'
 import { nodesApi } from '../../api/nodes'
 import { ApiError } from '../../api/client'
 import { StatusBadge } from '../ui/StatusBadge'
+import { MaterialProgressDetail } from './MaterialProgressDetail'
 import { UploadConfirmDialog } from '../ui/UploadConfirmDialog'
 import { formatAudioDuration } from '../ui/uploadConfirmMeta'
 import { ProjectBaseSection } from './ProjectBaseSection'
@@ -110,6 +112,11 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
   const selectedNodeId = useCourseStore((s) => s.selectedNodeId)
   const setSelectedNodeId = useCourseStore((s) => s.setSelectedNodeId)
   const setTree = useCourseStore((s) => s.setTree)
+  // Д1: progress detail reads the shared work-list store — no own poll. ``now``
+  // refreshes each store update (the shell poll), so the duration advances with
+  // the poll cycle, never a separate browser clock (Д4).
+  const workItems = useWorkListStore((s) => s.items)
+  const now = Date.now()
   const navigate = useNavigate()
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 })
@@ -443,6 +450,11 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
             const meta = sourceTypeMeta(mat.source_type)
             const Icon = iconMap[meta.icon] || FileIcon
             const isMethodological = mat.material_role === 'methodological'
+            // Д1: the live job of THIS material from the shared store (anchor =
+            // material_id). Its movement/duration is the same the strip shows.
+            const liveJob = workItems.find(
+              (j) => j.material_id === mat.id && j.job_state === 'processing',
+            )
             return (
               <div key={mat.id} className="space-y-1.5">
                 <div
@@ -494,6 +506,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                       {ingestErrorMessage(mat.error_category, mat.error_message)}
                     </p>
                   )}
+                  <MaterialProgressDetail job={liveJob} now={now} />
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   {(mat.state === 'error' || mat.state === 'ready') && (
