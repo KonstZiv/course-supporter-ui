@@ -83,7 +83,9 @@ export function useActivityStrip(): ActivityStripData {
   // to a minute. Skipped on mount (nonce 0) — usePolling already fires the first
   // read; a live row then flips the cadence to fast on its own.
   useEffect(() => {
-    if (refreshNonce > 0) void tick()
+    // Best-effort like the scheduled poll: swallow a failed woken read so it
+    // never surfaces as an unhandled rejection (usePolling try/catches its own).
+    if (refreshNonce > 0) void tick().catch(() => {})
   }, [refreshNonce, tick])
 
   return { items }
