@@ -80,7 +80,7 @@ describe('useActivityStrip', () => {
   beforeEach(() => {
     listMock.mockReset()
     usePollingMock.mockReset()
-    useWorkListStore.setState({ items: [] })
+    useWorkListStore.setState({ items: [], refreshNonce: 0 })
   })
 
   it('mounts exactly one enabled poll, slow while idle', () => {
@@ -152,6 +152,17 @@ describe('useActivityStrip', () => {
       await lastPoll().tick()
     })
     expect(lastPoll().intervalMs).toBe(SLOW_MS)
+  })
+
+  it('reads immediately, off-schedule, when a trigger wakes the loop (Д10)', async () => {
+    listMock.mockResolvedValue(page([]))
+    renderHook(() => useActivityStrip())
+    // usePolling is mocked → no mount read; only the wake fires a real tick, and
+    // it is the same two-read cycle (Д9), just off the schedule.
+    await act(async () => {
+      useWorkListStore.getState().requestRefresh()
+    })
+    expect(listMock).toHaveBeenCalledTimes(2)
   })
 
   it('keeps the last successful cadence when a read fails (В2 invariant)', async () => {

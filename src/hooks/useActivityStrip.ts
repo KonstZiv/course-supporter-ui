@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { usePolling } from './usePolling'
 import { jobsApi } from '../api/jobs'
 import { useWorkListStore } from '../stores/workList'
@@ -53,6 +53,7 @@ export interface ActivityStripData {
 export function useActivityStrip(): ActivityStripData {
   const items = useWorkListStore((s) => s.items)
   const setItems = useWorkListStore((s) => s.setItems)
+  const refreshNonce = useWorkListStore((s) => s.refreshNonce)
 
   // Cadence derives from the stored list only — set on success alone, so a
   // failed read leaves it (and thus the speed) unchanged.
@@ -76,6 +77,14 @@ export function useActivityStrip(): ActivityStripData {
   }, [setItems])
 
   usePolling(tick, intervalMs, true)
+
+  // Д10 — a trigger woke the loop: read once NOW, off-schedule, so a run started
+  // from the idle cadence surfaces within one request round-trip instead of up
+  // to a minute. Skipped on mount (nonce 0) — usePolling already fires the first
+  // read; a live row then flips the cadence to fast on its own.
+  useEffect(() => {
+    if (refreshNonce > 0) void tick()
+  }, [refreshNonce, tick])
 
   return { items }
 }

@@ -1,107 +1,53 @@
-import { AlertTriangle, Info, Loader2, X } from 'lucide-react'
+import { AlertTriangle, Info, X } from 'lucide-react'
 import { clsx } from 'clsx'
-import type {
-  JobResponse,
-  JobState,
-  JobStatus,
-  NodeSummaryNodeStatus,
-  NodeSummaryRunState,
-} from '../../types/api'
+import type { JobListItemResponse, NodeSummaryRunError } from '../../types/api'
 import { JOB_STATE_LABEL, jobStateWordClass } from '../../utils/stateVocabulary'
+import { workProgressBar } from '../../utils/workProgress'
+import { ProgressMeter } from '../activity/ProgressMeter'
 
-// Raw ``JobStatus`` → the derived work-state axis (mirrors backend
-// ``derive_job_state``). This card is the only surface holding a raw JobStatus;
-// strip rows already carry ``job_state``. The word and its treatment then come
-// from the shared vocabulary, so the card speaks the two-axis formula (В1/В4)
-// like every other work surface — a word, never a filled chip.
-const STATUS_TO_STATE: Record<JobStatus, JobState> = {
-  queued: 'queued',
-  active: 'processing',
-  complete: 'ready',
-  failed: 'error',
-  cancelled: 'cancelled',
-  // L2 "subject vanished" — a benign terminal.
-  obsolete: 'obsolete',
+// The card reads a work-list row (Д1/В2 fold), whose stage_progress is the
+// untyped run-state JSONB. Narrow only the two pieces this card needs — the run
+// label and the append-only errors[]; the movement comes from the shared
+// progress util (Д3), the same "вузол N з M" the strip shows (Р2).
+function vertexIdOf(sp: Record<string, unknown> | null): string | null {
+  return sp && typeof sp.vertex_node_id === 'string' ? sp.vertex_node_id : null
 }
-
-// Pass labels for the optional progress tally (Task 3.2.5a §5).
-const PASS_BUCKET_LABEL: Record<NodeSummaryNodeStatus, string> = {
-  done: 'готово',
-  skipped_memo: 'пропущено',
-  not_applicable: 'не застосовно',
-  pending: 'очікує',
-  error: 'помилка',
-}
-
-const PASS_BUCKET_ORDER: NodeSummaryNodeStatus[] = [
-  'done',
-  'skipped_memo',
-  'not_applicable',
-  'pending',
-  'error',
-]
-
-function stageLabel(stage: string | null): string | null {
-  if (stage === 'bottomup') return 'знизу-вгору'
-  if (stage === 'topdown') return 'згори-вниз'
-  return null
-}
-
-/** Aggregate pass1+pass2 per-node status maps into a compact one-liner. */
-function tallyPasses(state: NodeSummaryRunState | null): string | null {
-  if (!state) return null
-  const counts = new Map<NodeSummaryNodeStatus, number>()
-  for (const s of [
-    ...Object.values(state.pass1),
-    ...Object.values(state.pass2),
-  ]) {
-    counts.set(s, (counts.get(s) ?? 0) + 1)
-  }
-  if (counts.size === 0) return null
-  const parts = PASS_BUCKET_ORDER.filter((k) => counts.get(k)).map(
-    (k) => `${counts.get(k)} ${PASS_BUCKET_LABEL[k]}`,
-  )
-  return parts.length > 0 ? parts.join(' · ') : null
+function errorsOf(sp: Record<string, unknown> | null): NodeSummaryRunError[] {
+  return sp && Array.isArray(sp.errors) ? (sp.errors as NodeSummaryRunError[]) : []
 }
 
 interface Props {
-  job: JobResponse
+  job: JobListItemResponse
   /** Human node title from the trigger; falls back to a vertex-id slice. */
   nodeTitle: string | null
   onDismiss: () => void
 }
 
 /**
- * Floating bottom-right run-state card for a node-summary generation job
- * (Task 3.2.5a, KD-A). Pure presentational — driven by the polled
- * ``JobResponse``; the trigger + 422 rejection live elsewhere (c4).
+ * Floating bottom-right run-state card for a node-summary generation job.
+ * Reads its row from the shared work-list store (Д1/В2 fold) — no own poll; the
+ * shell loop is woken on trigger (Д10) so a fresh run surfaces at once.
  *
- * severity rule (Інваріант 3 / DD-3.2.2-B): each ``errors[]`` entry is
- * styled EXCLUSIVELY by ``severity`` — ``ERROR`` is an alert, ``WARNING``
- * is muted. ``error_class`` is never interpreted or shown; ``reason`` is
- * rendered verbatim (the "Очікувано:" prefix is a UI frame, kept as a
- * separate element so it never reads as backend text).
+ * Movement is the derived node bar (Д3), the same the strip shows (Р2); the
+ * internal "прохід"/pass word is never shown to the author (Д5). errors[] stay
+ * visible until dismissed, styled EXCLUSIVELY by severity (Інваріант 3 /
+ * DD-3.2.2-B): ``reason`` verbatim, ``error_class`` never interpreted.
  */
 export function RunStatePanel({ job, nodeTitle, onDismiss }: Props) {
-  const runState = job.stage_progress
-  const state = STATUS_TO_STATE[job.status] ?? 'queued'
-  const runLabel =
-    nodeTitle?.trim() || runState?.vertex_node_id.slice(0, 8) || '—'
+  const sp = job.stage_progress
+  const state = job.job_state
+  const runLabel = nodeTitle?.trim() || vertexIdOf(sp)?.slice(0, 8) || '—'
 
   // Manual dismiss only once the run is no longer in flight — never
   // auto-dismiss (errors[] must stay visible until the author acts).
   const isDone =
-    job.status === 'complete' ||
-    job.status === 'failed' ||
-    job.status === 'cancelled' ||
-    job.status === 'obsolete'
+    state === 'ready' || state === 'error' || state === 'cancelled' || state === 'obsolete'
 
-  const stage = job.status === 'active' ? stageLabel(job.current_stage) : null
-  const passTally = tallyPasses(runState)
-  const errors = runState?.errors ?? []
+  const bar = workProgressBar(job)
+  const errors = errorsOf(sp)
 
   return (
-    // Д4: `max-w-[90vw]` bounds the fixed 360px to a window share, mirroring
+    // `max-w-[90vw]` bounds the fixed 360px to a window share, mirroring
     // ActivityStripPanel; without it the panel ran off the left edge at 320.
     <div
       className="fixed bottom-4 right-4 z-40 w-[360px] max-w-[90vw] bg-white rounded-xl
@@ -134,16 +80,7 @@ export function RunStatePanel({ job, nodeTitle, onDismiss }: Props) {
 
       {/* Body */}
       <div className="p-4 space-y-2">
-        {stage && (
-          <p className="text-xs text-ink-muted flex items-center gap-1.5">
-            <Loader2 size={12} className="animate-spin" />
-            Прохід: {stage}
-          </p>
-        )}
-
-        {passTally && (
-          <p className="text-xs text-ink-muted">Вузли: {passTally}</p>
-        )}
+        {bar && <ProgressMeter {...bar} />}
 
         {errors.length > 0 && (
           <ul className="space-y-1.5">
