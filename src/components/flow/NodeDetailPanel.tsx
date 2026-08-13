@@ -116,6 +116,12 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
   // refreshes each store update (the shell poll), so the duration advances with
   // the poll cycle, never a separate browser clock (Д4).
   const workItems = useWorkListStore((s) => s.items)
+  // Д10 — every action that enqueues work (upload, link, retry) wakes the shell
+  // poll, not just node-summary generation: a short ingest (~10 s) finishes
+  // before the idle 60 s cadence would notice it, so without this the strip and
+  // card would miss the author's most frequent action entirely (live acceptance
+  // 2026-08-13).
+  const requestRefresh = useWorkListStore((s) => s.requestRefresh)
   const now = Date.now()
   const navigate = useNavigate()
   const [uploading, setUploading] = useState(false)
@@ -240,6 +246,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
           }
         } finally {
           await refresh()
+          requestRefresh() // Д10 — wake the shell poll for the just-queued ingest
           setUploading(false)
         }
         if (rejected.length) alert(rejected.join('\n'))
@@ -259,12 +266,13 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
           )
           setLinkUrl('')
           await refresh()
+          requestRefresh() // Д10 — wake the shell poll for the just-queued link
         } finally {
           setAddingLink(false)
         }
       }
     },
-    [node, pendingFiles, pendingLink, refresh],
+    [node, pendingFiles, pendingLink, refresh, requestRefresh],
   )
 
   const handleCancelUpload = useCallback(() => {
@@ -306,8 +314,9 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
       }
       await documentsApi.retry(mat.id, force)
       await refresh()
+      requestRefresh() // Д10 — wake the shell poll for the re-queued job
     },
-    [refresh],
+    [refresh, requestRefresh],
   )
 
   // Toggle material role on existing material (clickable badge)
