@@ -118,20 +118,46 @@ describe('workProgressBar (Д2 appearance rule)', () => {
   })
 })
 
-describe('nodeVisitTally (Д3 — one place, both passes)', () => {
-  it('counts non-pending across pass1 + pass2, not per pass', () => {
-    // Pass 1 fully resolved, pass 2 untouched: the bar reads half, not full —
-    // it must not fill on pass 1 and restart on pass 2.
+describe('nodeVisitTally (Д3 — stable denominator, both passes)', () => {
+  const nine = (v: string): Record<string, string> =>
+    Object.fromEntries('123456789'.split('').map((k) => [k, v]))
+  const scope9 = { in_scope_node_ids: '123456789'.split(''), uncovered_stale_node_ids: [] }
+
+  it('keeps the denominator stable during bottomup — pass2 empty, no jump-back', () => {
+    // Defect caught in live acceptance (2026-08-13): mid-bottomup pass1 holds all
+    // 9 nodes (8 resolved), pass2 is still empty. The denominator must already be
+    // 2×9 = 18 from the scope — NOT 9 (len pass1+pass2) — else it grows to 18 when
+    // topdown starts and the bar fills to 8/9 then jumps back to 8/18 (Д3 forbids).
     const tally = nodeVisitTally({
-      pass1: { a: 'done', b: 'skipped_memo', c: 'not_applicable' },
-      pass2: { a: 'pending', b: 'pending', c: 'pending' },
+      scope: scope9,
+      pass1: { ...nine('done'), '9': 'pending' },
+      pass2: {},
     })
-    expect(tally).toEqual({ done: 3, total: 6 })
+    expect(tally).toEqual({ done: 8, total: 18 })
   })
 
-  it('errors count as resolved visits', () => {
+  it('the same run at completion reads full — denominator unchanged (18)', () => {
+    const tally = nodeVisitTally({
+      scope: scope9,
+      pass1: nine('done'),
+      pass2: { ...nine('done'), '1': 'not_applicable' },
+    })
+    expect(tally).toEqual({ done: 18, total: 18 })
+  })
+
+  it('counts non-pending across both passes; not_applicable/skipped/error all resolve', () => {
+    const tally = nodeVisitTally({
+      scope: { in_scope_node_ids: ['a', 'b', 'c'], uncovered_stale_node_ids: [] },
+      pass1: { a: 'done', b: 'skipped_memo', c: 'not_applicable' },
+      pass2: { a: 'error', b: 'pending', c: 'pending' },
+    })
+    expect(tally).toEqual({ done: 4, total: 6 })
+  })
+
+  it('falls back to 2× the larger pre-populated pass map when scope is absent', () => {
+    // pass1 pre-populated (2 nodes), pass2 empty → 2×2 = 4, still stable.
     const tally = nodeVisitTally({ pass1: { a: 'error', b: 'done' }, pass2: {} })
-    expect(tally).toEqual({ done: 2, total: 2 })
+    expect(tally).toEqual({ done: 2, total: 4 })
   })
 
   it('missing pass maps → null', () => {
