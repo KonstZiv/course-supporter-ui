@@ -1,6 +1,8 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import { usePolling } from './usePolling'
 import { jobsApi } from '../api/jobs'
+import { useWorkListStore } from '../stores/workList'
+import { stitchWorkList } from '../utils/stitchWorkList'
 import type { JobListItemResponse } from '../types/api'
 
 // Poll cadences (В2, ratified 2026-08-07). Fast matches the tree loop so a live
@@ -11,15 +13,13 @@ const FAST_MS = 4000
 const SLOW_MS = 60000
 
 // The one window both floors read (Р3, narrowed 2026-08-07): live work plus
-// completed within three days. One read per cycle with this lower bound feeds
-// both floors — the collapsed floor summarises exactly what the detailed floor
-// opens, so "і ще N" reconciles by row count (§2). Work older than three days
-// is not in the strip; the author finds it on the history page (Р6, step Г).
+// completed within three days. Work older than three days is not in the strip;
+// the author finds it on the history page (Р6, step Г).
 const WINDOW_MS = 3 * 24 * 60 * 60 * 1000
 
-// One page per cycle. "І ще N" counts loaded rows beyond the visible ones (Р4),
-// never the response's total — so this cap is also the ceiling of what the strip
-// can enumerate. No infinite scroll / "show more" in step В.
+// One page per read. "І ще N" counts loaded rows beyond the visible ones (Р4),
+// so this cap is the ceiling of what the strip can enumerate. No infinite
+// scroll / "show more" in step В.
 const PAGE_LIMIT = 50
 
 /**
@@ -39,31 +39,54 @@ export interface ActivityStripData {
 
 /**
  * Session-long poll of the flat work-list door, mounted in the shell so it
- * survives child-route changes (В3). Holds the last successful page; a failed
- * poll keeps the previous content and cadence (§2 silent failure — the primitive
- * swallows the error and retries). This hook only fetches and holds; the two
- * display floors are driven by consumers (В3).
+ * survives child-route changes (В3). The ONE writer of the shared work-list
+ * store (Д8): every progress surface reads the store, not this hook's return.
+ *
+ * Д9 — two reads per cycle: the three-day window plus a narrow "currently
+ * working" read with no time bound, stitched with dedup so a long-lived live
+ * job past the window page's fifty-row cap is never lost. A failed read leaves
+ * the store (and thus the cadence) unchanged — ``Promise.all`` rejects before
+ * ``setItems`` runs, and the primitive swallows the error and retries (§2
+ * silent failure). The strip still receives ``items`` for its existing prop
+ * chain; new consumers subscribe to the store directly.
  */
 export function useActivityStrip(): ActivityStripData {
-  const [items, setItems] = useState<JobListItemResponse[]>([])
+  const items = useWorkListStore((s) => s.items)
+  const setItems = useWorkListStore((s) => s.setItems)
+  const refreshNonce = useWorkListStore((s) => s.refreshNonce)
 
-  // Cadence derives from the last successful list only — items is set on
-  // success alone, so a failed poll leaves it (and thus the speed) unchanged.
+  // Cadence derives from the stored list only — set on success alone, so a
+  // failed read leaves it (and thus the speed) unchanged.
   const intervalMs = useMemo(
     () => (hasLiveWork(items) ? FAST_MS : SLOW_MS),
     [items],
   )
 
   const tick = useCallback(async (): Promise<boolean> => {
-    // Absolute lower bound computed client-side (§2 / probe cross-check 1): the
-    // door bounds only finished work by it; live work always passes.
+    // Absolute lower bound computed client-side: the door bounds only finished
+    // work by it; live work always passes. The second read (state = in flight,
+    // no time bound) guarantees a long-lived live job survives the fifty-row
+    // cap; the two are stitched with dedup by job id (Д9).
     const completed_after = new Date(Date.now() - WINDOW_MS).toISOString()
-    const page = await jobsApi.list({ completed_after, limit: PAGE_LIMIT })
-    setItems(page.items)
+    const [windowPage, livePage] = await Promise.all([
+      jobsApi.list({ completed_after, limit: PAGE_LIMIT }),
+      jobsApi.list({ state_class: 'in_flight', limit: PAGE_LIMIT }),
+    ])
+    setItems(stitchWorkList(windowPage.items, livePage.items))
     return false // never self-terminates — polls for the whole session
-  }, [])
+  }, [setItems])
 
   usePolling(tick, intervalMs, true)
+
+  // Д10 — a trigger woke the loop: read once NOW, off-schedule, so a run started
+  // from the idle cadence surfaces within one request round-trip instead of up
+  // to a minute. Skipped on mount (nonce 0) — usePolling already fires the first
+  // read; a live row then flips the cadence to fast on its own.
+  useEffect(() => {
+    // Best-effort like the scheduled poll: swallow a failed woken read so it
+    // never surfaces as an unhandled rejection (usePolling try/catches its own).
+    if (refreshNonce > 0) void tick().catch(() => {})
+  }, [refreshNonce, tick])
 
   return { items }
 }

@@ -4,7 +4,7 @@ import { nodesApi } from '../api/nodes'
 import { summaryApi, uncoveredStaleDetail } from '../api/node-summary'
 import { ApiError } from '../api/client'
 import { useCourseStore } from '../stores/course'
-import { useJobPolling } from '../hooks/useJobPolling'
+import { useWorkListStore } from '../stores/workList'
 import { CourseCanvas } from '../components/flow/CourseCanvas'
 import { NodeDetailPanel } from '../components/flow/NodeDetailPanel'
 import { RunStatePanel } from '../components/flow/RunStatePanel'
@@ -13,14 +13,14 @@ import { SummaryModal } from '../components/flow/SummaryModal'
 import { ArrowLeft, Loader2, AlertTriangle, Pencil, Check, X } from 'lucide-react'
 import { LanguageSelect, LanguageBadge } from '../components/ui/LanguageSelect'
 import { findNode } from '../utils/tree'
-import type { JobResponse, UncoveredStaleNodesDetail } from '../types/api'
+import type { UncoveredStaleNodesDetail } from '../types/api'
 
 // One bottom-right slot, mutually exclusive: a polled run, OR a 422 rejection
 // (returned before any job exists). Local to the page — never Zustand
 // (Інваріант 1). Does not survive node navigation / reload by design
 // (DD-3.2.5a-A).
 type GenerationSlot =
-  | { kind: 'run'; jobId: string; job: JobResponse; nodeTitle: string }
+  | { kind: 'run'; jobId: string; nodeTitle: string }
   | {
       kind: 'rejection'
       detail: UncoveredStaleNodesDetail
@@ -48,6 +48,11 @@ export function CoursePage() {
   // Generation run-state slot (Task 3.2.5a).
   const [slot, setSlot] = useState<GenerationSlot | null>(null)
 
+  // Д1/В2 — the run card reads the shared work-list store; Д10 — the trigger
+  // wakes the shell poll so a fresh run surfaces at once.
+  const workItems = useWorkListStore((s) => s.items)
+  const requestRefresh = useWorkListStore((s) => s.requestRefresh)
+
   // Final review/edit modal open-state (Task 3.2.5b). The affordance in
   // NodeDetailPanel lifts the node id + title; the wide SummaryModal consumes
   // both (title for its header — the node name, not the Final's draft title).
@@ -68,7 +73,11 @@ export function CoursePage() {
     async (nodeId: string, nodeTitle: string, force: boolean) => {
       try {
         const job = await summaryApi.generate(nodeId, force)
-        setSlot({ kind: 'run', jobId: job.id, job, nodeTitle })
+        setSlot({ kind: 'run', jobId: job.id, nodeTitle })
+        // Д10 — wake the shell poll so this run surfaces within one round-trip,
+        // even from the idle cadence; the loop's own read is the one truth (no
+        // store seed from the 202, Д10).
+        requestRefresh()
       } catch (err) {
         // Unwrap the FastAPI ``{detail: ...}`` envelope, then narrow by the
         // EXACT reason — ``not_yet_generated`` (sibling routes) must NOT land
@@ -83,7 +92,7 @@ export function CoursePage() {
         throw err
       }
     },
-    [],
+    [requestRefresh],
   )
 
   const handleGenerate = useCallback(
@@ -93,11 +102,12 @@ export function CoursePage() {
     [runGeneration],
   )
 
-  // Poll only when the slot holds an active run. Hook is called
-  // unconditionally with derived args (no conditional hooks).
-  const runJobId = slot?.kind === 'run' ? slot.jobId : null
-  const runInitialJob = slot?.kind === 'run' ? slot.job : null
-  const polledJob = useJobPolling(runJobId, runInitialJob)
+  // The run row from the shared store (Д1/В2 fold) — no own poll. Undefined
+  // until the woken loop's read lands (one round-trip, Д10); the card then
+  // renders. It stays for the store's three-day window, so a finished run keeps
+  // showing its outcome until dismissed.
+  const runJob =
+    slot?.kind === 'run' ? workItems.find((j) => j.id === slot.jobId) : undefined
 
   const startEditLang = () => {
     setDraftLang(tree?.default_language ?? null)
@@ -260,9 +270,9 @@ export function CoursePage() {
       </div>
 
       {/* Generation run-state slot (bottom-right, mutually exclusive) */}
-      {slot?.kind === 'run' && polledJob && (
+      {slot?.kind === 'run' && runJob && (
         <RunStatePanel
-          job={polledJob}
+          job={runJob}
           nodeTitle={slot.nodeTitle}
           onDismiss={() => setSlot(null)}
         />

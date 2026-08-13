@@ -5,12 +5,11 @@ import type { NodeWithDocuments } from '../types/api'
 import { useCourseStore } from '../stores/course'
 import { CoursePage } from './CoursePage'
 
-// The flow canvas and its panels pull in @xyflow/react (needs a provider) and a
-// polling hook — irrelevant to the ?selected preselect. Stub them; the panel is
-// a marker so its presence == "detail panel open". The real store drives it.
+// The flow canvas and its panels pull in @xyflow/react (needs a provider) —
+// irrelevant to the ?selected preselect. Stub them; the panel is a marker so its
+// presence == "detail panel open". The real course + work-list stores drive it.
 const { getDetailMock } = vi.hoisted(() => ({ getDetailMock: vi.fn() }))
 vi.mock('../api/nodes', () => ({ nodesApi: { getDetail: getDetailMock } }))
-vi.mock('../hooks/useJobPolling', () => ({ useJobPolling: () => null }))
 vi.mock('../components/flow/CourseCanvas', () => ({ CourseCanvas: () => null }))
 vi.mock('../components/flow/NodeDetailPanel', () => ({
   NodeDetailPanel: () => <div data-testid="node-detail-panel" />,

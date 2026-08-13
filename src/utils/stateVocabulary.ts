@@ -45,8 +45,9 @@ export function phaseVocab(phase: ProcessingPhase): PhaseVocabEntry {
   return PHASE_VOCAB[phase] ?? UNKNOWN_PHASE
 }
 
-// Work-state axis — six values, words only. Its single surface (RunStatePanel)
-// keeps its own colours (§2 job table carries no colour column).
+// Work-state axis — six values, words only. Read by every work-state surface
+// (strip rows, history, the run-state card); each carries colour/motion on the
+// WORD, never a filled chip (§2 job table carries no colour column).
 export const JOB_STATE_LABEL: Record<JobState, string> = {
   queued: 'У черзі',
   processing: 'Обробляється',
