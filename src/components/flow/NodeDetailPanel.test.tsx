@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { NodeDetailPanel } from './NodeDetailPanel'
 import { useCourseStore } from '../../stores/course'
+import { documentsApi } from '../../api/documents'
+import { ApiError } from '../../api/client'
 import type { AuthoredDocumentSummary, NodeWithDocuments } from '../../types/api'
 
 // NodeDetailPanel now calls useNavigate for the awaiting_author confirm entry —
@@ -11,6 +13,24 @@ vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router-dom')>()
   return { ...actual, useNavigate: () => navigateMock }
 })
+
+// The link door calls ``documentsApi.uploadUrl``; mock the module so the
+// rejection path is drivable. Other methods are unused no-ops here.
+vi.mock('../../api/documents', () => ({
+  documentsApi: {
+    upload: vi.fn(),
+    uploadUrl: vi.fn(),
+    list: vi.fn(),
+    get: vi.fn(),
+    delete: vi.fn(),
+    retry: vi.fn(),
+    update: vi.fn(),
+    confirmFileRoles: vi.fn(),
+    attachBase: vi.fn(),
+    getBaseState: vi.fn(),
+    getBaseManifest: vi.fn(),
+  },
+}))
 
 function makeNode(overrides: Partial<NodeWithDocuments> = {}): NodeWithDocuments {
   return {
@@ -128,5 +148,61 @@ describe('NodeDetailPanel — awaiting_author entry (№21 UI2)', () => {
     render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
     expect(screen.getByText('Готово')).toBeInTheDocument()
     expect(screen.queryByText('Підтвердити ролі')).not.toBeInTheDocument()
+  })
+})
+
+describe('NodeDetailPanel — link rejection is shown, never swallowed', () => {
+  beforeEach(() => {
+    useCourseStore.getState().reset()
+    vi.clearAllMocks()
+  })
+
+  // Drive the URL door end to end: type a link, open the «Тип документа»
+  // dialog, pick a role, confirm — the same steps the author performs.
+  function addLinkThroughDialog(url: string): void {
+    seed(makeNode())
+    render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
+    fireEvent.change(
+      screen.getByPlaceholderText('https://youtu.be/... або URL'),
+      { target: { value: url } },
+    )
+    fireEvent.click(screen.getByText('Додати'))
+    fireEvent.click(screen.getByText('Учбовий'))
+    fireEvent.click(screen.getByText('Завантажити'))
+  }
+
+  it('surfaces the server reason (video past the duration cap)', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+    vi.mocked(documentsApi.uploadUrl).mockRejectedValue(
+      new ApiError(400, 'API error 400', {
+        detail: {
+          code: 'INTAKE_DURATION_EXCEEDED',
+          category: 'duration_limit',
+          details:
+            'Система обробляє відео тривалістю до 150 хвилин; це відео — 180 хв.',
+        },
+      }),
+    )
+    addLinkThroughDialog('https://youtu.be/long')
+    await waitFor(() =>
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Система обробляє відео тривалістю до 150 хвилин; це відео — 180 хв.',
+      ),
+    )
+    alertSpy.mockRestore()
+  })
+
+  it('falls back to a product-language message when no reason is given', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+    vi.mocked(documentsApi.uploadUrl).mockRejectedValue(
+      new ApiError(400, 'API error 400', null),
+    )
+    addLinkThroughDialog('https://youtu.be/x')
+    await waitFor(() =>
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Не вдалося додати матеріал за посиланням. Спробуйте ще раз.',
+      ),
+    )
+    alertSpy.mockRestore()
   })
 })

@@ -267,6 +267,16 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
           setLinkUrl('')
           await refresh()
           requestRefresh() // Д10 — wake the shell poll for the just-queued link
+        } catch (err) {
+          // Mirror the file path three lines above: surface the server's
+          // reason via the shared ``rejectionDetail`` reader, else a
+          // product-language fallback. Without this the link door swallowed
+          // every rejection silently (e.g. a 400 for a video past the
+          // duration cap) — no spinner-only dead end. No internal code leaks.
+          alert(
+            rejectionDetail(err) ??
+              'Не вдалося додати матеріал за посиланням. Спробуйте ще раз.',
+          )
         } finally {
           setAddingLink(false)
         }
