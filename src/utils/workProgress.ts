@@ -1,8 +1,12 @@
 import type { JobListItemResponse } from '../types/api'
 
-// The unit kind is INTERNAL (Д5): the token never leaves. The render composes
-// the product-language phrase "кадр N з M" / "вузол N з M" via progressUnitWord.
-export type ProgressUnit = 'frame' | 'node'
+// The unit kind is INTERNAL (Д5/Е6): the token never leaves. The render composes
+// the product-language caption via progressCaption — "кадр N з M" / "вузол N з M"
+// for processing, "45 МБ з 320 МБ" for the upload bar (Е6, same primitive).
+export type ProgressUnit = 'frame' | 'node' | 'byte'
+
+// The word-bearing units; 'byte' has no word — it reads as an MB amount (Е6).
+type WordUnit = Exclude<ProgressUnit, 'byte'>
 
 export interface WorkProgressBar {
   current: number
@@ -10,14 +14,41 @@ export interface WorkProgressBar {
   unit: ProgressUnit
 }
 
-const PROGRESS_UNIT_WORD: Record<ProgressUnit, string> = {
+const PROGRESS_UNIT_WORD: Record<WordUnit, string> = {
   frame: 'кадр',
   node: 'вузол',
 }
 
-/** Product-language unit word for the bar caption (Д5). */
-export function progressUnitWord(unit: ProgressUnit): string {
+/** Product-language unit word for the frame/node caption (Д5). */
+export function progressUnitWord(unit: WordUnit): string {
   return PROGRESS_UNIT_WORD[unit]
+}
+
+const BYTES_PER_MB = 1024 * 1024
+
+/**
+ * Upload-bar caption in MB (Е6/Е8): "45 МБ з 320 МБ". The unit is always MB —
+ * the upload cap is a gigabyte, so the numbers stay readable — and a file under
+ * a megabyte reads "менше 1 МБ" (no meaningful MB split).
+ */
+export function formatUploadCaption(
+  loadedBytes: number,
+  totalBytes: number,
+): string {
+  if (totalBytes < BYTES_PER_MB) return 'менше 1 МБ'
+  return `${Math.round(loadedBytes / BYTES_PER_MB)} МБ з ${Math.round(
+    totalBytes / BYTES_PER_MB,
+  )} МБ`
+}
+
+/** Caption for the shared meter: MB for bytes, "{word} N з M" for frame/node. */
+export function progressCaption({
+  current,
+  total,
+  unit,
+}: WorkProgressBar): string {
+  if (unit === 'byte') return formatUploadCaption(current, total)
+  return `${progressUnitWord(unit)} ${current} з ${total}`
 }
 
 // Д3 — the ONE place the node-summary denominator is derived (invariant #5).
