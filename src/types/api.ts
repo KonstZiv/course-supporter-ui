@@ -8,6 +8,13 @@ export type SourceType = 'video' | 'presentation' | 'text' | 'web' | 'audio' | '
 export type DocumentState = 'pending' | 'ready' | 'error'
 export type MaterialRole = 'educational' | 'methodological'
 export type AssignmentType = 'test' | 'short_task' | 'task' | 'project'
+
+// Informational queue-wait hint on a successful intake (DD-3.3c-I-B). The UI
+// localizes the surrounding copy; this carries only the numbers.
+export interface ProcessingEstimate {
+  max_hours: number
+  check_after_hours: number
+}
 // ``cancelled`` is a valid ``queued → cancelled`` transition in the backend
 // Job state machine (Task 3.2.5a; the pre-3.2.4 UI type was missing it).
 // ``obsolete`` is the L2 execution-seam terminal for "subject vanished" (the

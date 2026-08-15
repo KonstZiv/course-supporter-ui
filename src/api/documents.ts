@@ -5,18 +5,33 @@ import type {
   AuthoredDocumentResponse,
   ConfirmFileRolesRequest,
   MaterialRole,
+  ProcessingEstimate,
   ProjectBaseAttachResponse,
   ProjectBaseManifest,
   ProjectBaseStateResponse,
 } from '../types/api'
 
+// Mirrors the server ``AuthoredDocumentCreateResponse`` (schemas.py at BE
+// ``75feeab``). The type previously omitted most of the wire; widened for
+// honesty (vision-rules#18). No surface reads the body via this response today —
+// the phase shows from the tree re-read and the woken poll — the type simply
+// stops lying about the shape.
 export interface AuthoredDocumentCreateResponse {
   id: string
   course_node_id: string
   source_type: string
+  material_role: MaterialRole
+  task_type: AssignmentType | null
+  source_url: string
   filename: string | null
+  language: string | null
+  order: number
   state: string
+  processing_phase: string
   job_id: string | null
+  warnings: string[]
+  processing_estimate: ProcessingEstimate | null
+  created_at: string
 }
 
 export const documentsApi = {
