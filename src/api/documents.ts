@@ -1,21 +1,37 @@
 import { api } from './client'
+import { uploadWithProgress, type UploadProgress } from './upload'
 import type {
   AssignmentType,
   AuthoredDocumentResponse,
   ConfirmFileRolesRequest,
   MaterialRole,
+  ProcessingEstimate,
   ProjectBaseAttachResponse,
   ProjectBaseManifest,
   ProjectBaseStateResponse,
 } from '../types/api'
 
+// Mirrors the server ``AuthoredDocumentCreateResponse`` (schemas.py at BE
+// ``75feeab``). The type previously omitted most of the wire; widened for
+// honesty (vision-rules#18). No surface reads the body via this response today —
+// the phase shows from the tree re-read and the woken poll — the type simply
+// stops lying about the shape.
 export interface AuthoredDocumentCreateResponse {
   id: string
   course_node_id: string
   source_type: string
+  material_role: MaterialRole
+  task_type: AssignmentType | null
+  source_url: string
   filename: string | null
+  language: string | null
+  order: number
   state: string
+  processing_phase: string
   job_id: string | null
+  warnings: string[]
+  processing_estimate: ProcessingEstimate | null
+  created_at: string
 }
 
 export const documentsApi = {
@@ -26,6 +42,7 @@ export const documentsApi = {
     materialRole: string = 'educational',
     language?: string | null,
     taskType?: AssignmentType | null,
+    onProgress?: (progress: UploadProgress) => void,
   ) => {
     const formData = new FormData()
     formData.append('file', file)
@@ -33,9 +50,10 @@ export const documentsApi = {
     formData.append('material_role', materialRole)
     if (language) formData.append('language', language)
     if (taskType) formData.append('task_type', taskType)
-    return api.post<AuthoredDocumentCreateResponse>(
+    return uploadWithProgress<AuthoredDocumentCreateResponse>(
       `/api/v1/nodes/${nodeId}/documents`,
       formData,
+      onProgress,
     )
   },
 
@@ -99,12 +117,17 @@ export const documentsApi = {
 
   // Attach / re-upload a base archive → 202, a new append-only version starts
   // ``pending`` and normalizes asynchronously (no job_id — poll getBaseState).
-  attachBase: (documentId: string, file: File) => {
+  attachBase: (
+    documentId: string,
+    file: File,
+    onProgress?: (progress: UploadProgress) => void,
+  ) => {
     const formData = new FormData()
     formData.append('file', file)
-    return api.post<ProjectBaseAttachResponse>(
+    return uploadWithProgress<ProjectBaseAttachResponse>(
       `/api/v1/documents/${documentId}/base`,
       formData,
+      onProgress,
     )
   },
 

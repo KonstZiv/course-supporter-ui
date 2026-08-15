@@ -3,7 +3,11 @@ import { FileArchive, Upload, AlertTriangle, ListTree } from 'lucide-react'
 import { documentsApi } from '../../api/documents'
 import { ApiError } from '../../api/client'
 import { usePolling } from '../../hooks/usePolling'
+import { useWorkListStore } from '../../stores/workList'
 import { Modal } from '../ui/Modal'
+import type { UploadProgress } from '../../api/upload'
+import type { UploadBatchState } from '../../hooks/useUploadBatch'
+import { UploadProgressView } from '../activity/UploadProgressView'
 import type {
   ProjectBaseManifest,
   ProjectBaseStateResponse,
@@ -35,8 +39,10 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
   const [base, setBase] = useState<ProjectBaseStateResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [uploadBytes, setUploadBytes] = useState<UploadProgress | null>(null)
   const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const requestRefresh = useWorkListStore((s) => s.requestRefresh)
 
   // Manifest modal (fetched lazily on open — the route is READY-only).
   const [manifestOpen, setManifestOpen] = useState(false)
@@ -81,8 +87,13 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
       if (!file) return
       setError('')
       setUploading(true)
+      setUploadBytes(null)
       try {
-        const res = await documentsApi.attachBase(documentId, file)
+        // Е2 — same send primitive and byte display as the file surfaces; the
+        // base's own state axis (below) is untouched.
+        const res = await documentsApi.attachBase(documentId, file, (p) =>
+          setUploadBytes(p),
+        )
         // Optimistic: the attach response is the fresh pending version; the
         // poller (enabled by state='pending') drives it to ready | failed.
         setBase({
@@ -92,13 +103,16 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
           snapshot_hash: null,
         })
         setManifest(null) // the previous version's manifest is now stale
+        // Е9/pkt 2 — a base_normalize job enters the work-list; wake the strip.
+        requestRefresh()
       } catch (err) {
         setError(baseErrorMessage(err))
       } finally {
         setUploading(false)
+        setUploadBytes(null)
       }
     },
-    [documentId],
+    [documentId, requestRefresh],
   )
 
   const openManifest = useCallback(async () => {
@@ -114,6 +128,21 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
 
   const busy = uploading || base?.state === 'pending'
 
+  // The base upload reuses the shared byte display (Е6/Е5); a single file, so no
+  // file counter (count = 1).
+  const uploadView: UploadBatchState | null = uploading
+    ? {
+        active: true,
+        index: 1,
+        count: 1,
+        bytes: uploadBytes,
+        awaitingServer:
+          uploadBytes !== null &&
+          uploadBytes.total > 0 &&
+          uploadBytes.loaded >= uploadBytes.total,
+      }
+    : null
+
   return (
     <div className="text-sm">
       <input
@@ -123,6 +152,12 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
         className="hidden"
         onChange={onFile}
       />
+
+      {uploadView && (
+        <div className="mb-1.5">
+          <UploadProgressView state={uploadView} />
+        </div>
+      )}
 
       {loading ? (
         <p className="text-ink-muted text-xs">Завантаження стану base…</p>

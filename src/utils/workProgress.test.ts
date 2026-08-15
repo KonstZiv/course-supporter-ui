@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { workProgressBar, nodeVisitTally, progressUnitWord } from './workProgress'
+import {
+  workProgressBar,
+  nodeVisitTally,
+  progressUnitWord,
+  formatUploadCaption,
+  progressCaption,
+} from './workProgress'
 import type { JobListItemResponse, JobState, AuthorJobType } from '../types/api'
 
 function job(
@@ -170,5 +176,40 @@ describe('progressUnitWord (Д5 product language)', () => {
   it('maps the internal token to a product word', () => {
     expect(progressUnitWord('frame')).toBe('кадр')
     expect(progressUnitWord('node')).toBe('вузол')
+  })
+})
+
+describe('formatUploadCaption (Е6/Е8 MB caption)', () => {
+  const MB = 1024 * 1024
+  it('renders sent / total in whole MB', () => {
+    expect(formatUploadCaption(45 * MB, 320 * MB)).toBe('45 МБ з 320 МБ')
+  })
+  it('rounds to the nearest MB', () => {
+    // 45.6 MB → 46, 319.4 MB → 319
+    expect(formatUploadCaption(45.6 * MB, 319.4 * MB)).toBe('46 МБ з 319 МБ')
+  })
+  it('shows "менше 1 МБ" for a sub-megabyte file', () => {
+    expect(formatUploadCaption(0, 500 * 1024)).toBe('менше 1 МБ')
+    expect(formatUploadCaption(200 * 1024, 900 * 1024)).toBe('менше 1 МБ')
+  })
+  it('a full 1 MB file crosses into the MB caption', () => {
+    expect(formatUploadCaption(MB, MB)).toBe('1 МБ з 1 МБ')
+  })
+})
+
+describe('progressCaption (Е6 shared caption)', () => {
+  it('bytes → MB caption', () => {
+    const MB = 1024 * 1024
+    expect(
+      progressCaption({ current: 45 * MB, total: 320 * MB, unit: 'byte' }),
+    ).toBe('45 МБ з 320 МБ')
+  })
+  it('frame/node → the "{word} N з M" phrase, unchanged', () => {
+    expect(progressCaption({ current: 240, total: 1800, unit: 'frame' })).toBe(
+      'кадр 240 з 1800',
+    )
+    expect(progressCaption({ current: 12, total: 37, unit: 'node' })).toBe(
+      'вузол 12 з 37',
+    )
   })
 })

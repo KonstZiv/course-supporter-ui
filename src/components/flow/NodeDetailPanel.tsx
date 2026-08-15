@@ -4,14 +4,15 @@ import { useCourseStore } from '../../stores/course'
 import { useWorkListStore } from '../../stores/workList'
 import { documentsApi } from '../../api/documents'
 import { nodesApi } from '../../api/nodes'
-import { ApiError } from '../../api/client'
 import { StatusBadge } from '../ui/StatusBadge'
 import { MaterialProgressDetail } from './MaterialProgressDetail'
+import { UploadProgressView } from '../activity/UploadProgressView'
 import { UploadConfirmDialog } from '../ui/UploadConfirmDialog'
-import { formatAudioDuration } from '../ui/uploadConfirmMeta'
 import { ProjectBaseSection } from './ProjectBaseSection'
 import { sourceTypeMeta } from '../../utils/sourceTypeIcon'
 import { rejectionDetail } from '../../utils/apiError'
+import { validateUploadFiles } from '../../utils/uploadValidation'
+import { useUploadBatch, type UploadTask } from '../../hooks/useUploadBatch'
 import { ingestErrorMessage } from '../../utils/ingestErrors'
 import {
   CODE_ELIGIBLE_TEXT_EXTENSIONS,
@@ -46,55 +47,6 @@ const iconMap: Record<string, typeof FileText> = {
   FileText, Video, FileImage, Globe, AudioLines, File: FileIcon,
 }
 
-// Phase 2.2 UI sub-area item #2/#3 — audio duration preview + hybrid hard-reject.
-// Backend authoritative reject lands у AudioProcessor.process_raw (PR #420).
-const MAX_AUDIO_DURATION_SEC = 150 * 60
-const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'm4a', 'ogg', 'flac'])
-
-function isAudioFile(file: File): boolean {
-  const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
-  return AUDIO_EXTENSIONS.has(ext)
-}
-
-// Reads audio file duration via HTMLAudioElement loadedmetadata event.
-// Returns seconds or null when browser cannot determine duration (VBR
-// MP3 / damaged headers → Infinity / NaN / error). Null signals
-// fail-open path — upload proceeds, backend reject у worker per PR #420.
-function readAudioDuration(file: File): Promise<number | null> {
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(file)
-    const audioEl = document.createElement('audio')
-    audioEl.preload = 'metadata'
-    let settled = false
-    const cleanup = () => {
-      if (settled) return
-      settled = true
-      URL.revokeObjectURL(url)
-      audioEl.removeEventListener('loadedmetadata', onLoad)
-      audioEl.removeEventListener('error', onError)
-      clearTimeout(timer)
-    }
-    const onLoad = () => {
-      const d = audioEl.duration
-      const valid = Number.isFinite(d) && d > 0
-      cleanup()
-      resolve(valid ? d : null)
-    }
-    const onError = () => {
-      cleanup()
-      resolve(null)
-    }
-    // Safety timeout for browsers that fire neither event on bad media.
-    const timer = setTimeout(() => {
-      cleanup()
-      resolve(null)
-    }, 5000)
-    audioEl.addEventListener('loadedmetadata', onLoad)
-    audioEl.addEventListener('error', onError)
-    audioEl.src = url
-  })
-}
-
 /* ── Main panel ── */
 
 interface NodeDetailPanelProps {
@@ -124,8 +76,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
   const requestRefresh = useWorkListStore((s) => s.requestRefresh)
   const now = Date.now()
   const navigate = useNavigate()
-  const [uploading, setUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 })
+  const { state: uploadState, run: runUpload } = useUploadBatch()
   const [linkUrl, setLinkUrl] = useState('')
   const [addingLink, setAddingLink] = useState(false)
 
@@ -145,53 +96,12 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
     setTree(fresh)
   }, [tree, setTree])
 
-  // File drop → audio duration check (Phase 2.2 UI item #2/#3) → confirmation.
-  // Audio files with valid metadata + duration > 150 min are rejected
-  // client-side. Files with Infinity/NaN duration proceed (fail-open;
-  // backend AudioProcessor.process_raw catches via PR #420).
+  // File drop → shared pre-send checks (Е2: size + duration) → confirmation.
   const onDrop = useCallback(async (files: File[]) => {
     if (files.length === 0) return
-
-    const accepted: File[] = []
-    const durations = new Map<string, number | null>()
-    const rejected: string[] = []
-    const oversized: string[] = []
-
-    for (const file of files) {
-      const ext = file.name.split('.').pop()?.toLowerCase() || ''
-      // Phase 2.3 Item #3 — client-side SIZE pre-check for presentations.
-      // 50 MB inlined; backend AUTHORED_POLICY.max_presentation_size_bytes is
-      // the source of truth (UI mirrors). FORBIDDEN_TYPE / SLIDE_COUNT_LIMIT
-      // stay server-authoritative via the sync-400 catch path.
-      if (['pdf', 'pptx', 'ppt'].includes(ext) && file.size > 50 * 1024 * 1024) {
-        oversized.push(`${file.name} перевищує ліміт 50 МБ для презентацій`)
-        continue
-      }
-      if (!isAudioFile(file)) {
-        accepted.push(file)
-        continue
-      }
-      const duration = await readAudioDuration(file)
-      durations.set(file.name, duration)
-      if (duration !== null && duration > MAX_AUDIO_DURATION_SEC) {
-        rejected.push(`«${file.name}» — ${formatAudioDuration(duration)}`)
-        continue
-      }
-      accepted.push(file)
-    }
-
-    if (rejected.length > 0) {
-      alert(
-        'Система зараз обробляє аудіо до 150 хвилин. ' +
-          'Будь ласка, розділіть на коротші частини:\n\n' +
-          rejected.join('\n'),
-      )
-    }
-
-    if (oversized.length > 0) {
-      alert(oversized.join('\n'))
-    }
-
+    const { accepted, durations, rejectionMessage } =
+      await validateUploadFiles(files)
+    if (rejectionMessage) alert(rejectionMessage)
     if (accepted.length > 0) {
       setPendingFiles(accepted)
       setPendingFileDurations(durations)
@@ -221,35 +131,34 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
       setPendingLink(null)
 
       if (filesToUpload.length > 0) {
-        setUploading(true)
-        setUploadProgress({ done: 0, total: filesToUpload.length })
-        const rejected: string[] = []
-        try {
-          for (let i = 0; i < filesToUpload.length; i++) {
-            const file = filesToUpload[i]!
-            const ext = file.name.split('.').pop()?.toLowerCase() || ''
-            // Code axis (R6): the author's explicit «Це код» declaration
-            // overrides the text default for code-eligible files only.
-            const type =
-              asCode && CODE_ELIGIBLE_TEXT_EXTENSIONS.includes(ext)
-                ? 'code'
-                : sourceTypeForExtension(ext)
-            try {
-              await documentsApi.upload(node.id, file, type, role, null, taskType)
-            } catch (err) {
-              rejected.push(
-                rejectionDetail(err) ??
-                  `${file.name}: помилка завантаження (${err instanceof ApiError ? err.status : 'unknown'})`,
-              )
-            }
-            setUploadProgress({ done: i + 1, total: filesToUpload.length })
+        const tasks: UploadTask[] = filesToUpload.map((file) => {
+          const ext = file.name.split('.').pop()?.toLowerCase() || ''
+          // Code axis (R6): the author's explicit «Це код» declaration overrides
+          // the text default for code-eligible files only.
+          const type =
+            asCode && CODE_ELIGIBLE_TEXT_EXTENSIONS.includes(ext)
+              ? 'code'
+              : sourceTypeForExtension(ext)
+          return {
+            label: file.name,
+            send: (onProgress) =>
+              documentsApi.upload(
+                node.id,
+                file,
+                type,
+                role,
+                null,
+                taskType,
+                onProgress,
+              ),
           }
-        } finally {
-          await refresh()
-          requestRefresh() // Д10 — wake the shell poll for the just-queued ingest
-          setUploading(false)
-        }
-        if (rejected.length) alert(rejected.join('\n'))
+        })
+        // Е9 — wake the poll after each successful file (a row appears after the
+        // first, not the last); re-read the tree once after the batch (point-1).
+        await runUpload(tasks, {
+          onFileQueued: requestRefresh,
+          onComplete: refresh,
+        })
       }
 
       if (linkToUpload) {
@@ -282,7 +191,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
         }
       }
     },
-    [node, pendingFiles, pendingLink, refresh, requestRefresh],
+    [node, pendingFiles, pendingLink, refresh, requestRefresh, runUpload],
   )
 
   const handleCancelUpload = useCallback(() => {
@@ -379,19 +288,8 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
 
       {/* Upload zone */}
       <div className="p-4 border-b border-canvas-dark/30">
-        {uploading ? (
-          <div className="border-2 border-dashed border-navy/30 bg-navy-pale rounded-xl p-4">
-            <Loader2 size={20} className="mx-auto mb-2 text-navy animate-spin" />
-            <p className="text-sm text-navy text-center font-medium">
-              Завантаження {uploadProgress.done}/{uploadProgress.total}
-            </p>
-            <div className="mt-2 h-1.5 bg-white rounded-full overflow-hidden">
-              <div
-                className="h-full bg-navy rounded-full transition-all duration-300"
-                style={{ width: `${uploadProgress.total ? (uploadProgress.done / uploadProgress.total) * 100 : 0}%` }}
-              />
-            </div>
-          </div>
+        {uploadState.active ? (
+          <UploadProgressView state={uploadState} />
         ) : (
           <div
             {...getRootProps()}

@@ -9,14 +9,53 @@ class ApiError extends Error {
   }
 }
 
+// ── Shared transport helpers ──
+// Both the read client (fetch, below) and the file-send primitive
+// (``upload.ts``, XMLHttpRequest) go through these, so the send path is not a
+// second copy of the key precondition, the URL prefix, or — the load-bearing
+// one — the error-body normalization the rejection readers depend on (Е1).
+
+/** Resolve the API key or throw the same 401 both transports use. */
+export function resolveApiKeyOrThrow(): string {
+  const apiKey = useAuthStore.getState().apiKey
+  if (!apiKey) throw new ApiError(401, 'No API key')
+  return apiKey
+}
+
+/** Absolute request URL. */
+export function apiUrl(path: string): string {
+  return `${BASE_URL}${path}`
+}
+
+/**
+ * Single source of the rejection shape for BOTH transports: HTTP status plus
+ * the response body parsed as JSON (null when empty or not JSON). ``rawBody``
+ * is the raw response text — fetch reads it via ``res.text()``, XHR via
+ * ``responseText`` — so the parsed ``ApiError.body`` is identical whichever
+ * path failed. A copy of this would be a second truth about the error shape.
+ */
+export function apiErrorFromBody(
+  status: number,
+  rawBody: string | null,
+): ApiError {
+  let body: unknown = null
+  if (rawBody) {
+    try {
+      body = JSON.parse(rawBody)
+    } catch {
+      body = null
+    }
+  }
+  return new ApiError(status, `API error ${status}`, body)
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
-  const apiKey = useAuthStore.getState().apiKey
-  if (!apiKey) throw new ApiError(401, 'No API key')
+  const apiKey = resolveApiKeyOrThrow()
 
-  const url = `${BASE_URL}${path}`
+  const url = apiUrl(path)
   const headers: Record<string, string> = {
     'X-API-Key': apiKey,
     ...((options.headers as Record<string, string>) || {}),
@@ -30,8 +69,7 @@ async function request<T>(
   const res = await fetch(url, { ...options, headers })
 
   if (!res.ok) {
-    const body = await res.json().catch(() => null)
-    throw new ApiError(res.status, `API error ${res.status}`, body)
+    throw apiErrorFromBody(res.status, await res.text().catch(() => null))
   }
 
   if (res.status === 204) return undefined as T
