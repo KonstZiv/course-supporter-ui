@@ -9,6 +9,11 @@ const { postMock, getMock } = vi.hoisted(() => ({
 vi.mock('./client', () => ({
   api: { post: postMock, get: getMock },
 }))
+// File sends go through the XHR progress transport, not the fetch client.
+const { uploadMock } = vi.hoisted(() => ({ uploadMock: vi.fn() }))
+vi.mock('./upload', () => ({
+  uploadWithProgress: uploadMock,
+}))
 
 import { documentsApi } from './documents'
 
@@ -16,17 +21,18 @@ describe('documentsApi project-base methods (KD18 P6)', () => {
   beforeEach(() => {
     postMock.mockReset()
     getMock.mockReset()
+    uploadMock.mockReset()
   })
 
-  it('attachBase POSTs multipart FormData with the file to /base', () => {
-    postMock.mockResolvedValue({})
+  it('attachBase sends multipart FormData with the file to /base via the progress transport', () => {
+    uploadMock.mockResolvedValue({})
     const file = new File(['zip-bytes'], 'project.zip', {
       type: 'application/zip',
     })
     documentsApi.attachBase('doc-1', file)
 
-    expect(postMock).toHaveBeenCalledTimes(1)
-    const [url, body] = postMock.mock.calls[0] as [string, FormData]
+    expect(uploadMock).toHaveBeenCalledTimes(1)
+    const [url, body] = uploadMock.mock.calls[0] as [string, FormData]
     expect(url).toBe('/api/v1/documents/doc-1/base')
     expect(body).toBeInstanceOf(FormData)
     expect(body.get('file')).toBe(file)

@@ -1,4 +1,5 @@
 import { api } from './client'
+import { uploadWithProgress, type UploadProgress } from './upload'
 import type {
   AssignmentType,
   AuthoredDocumentResponse,
@@ -26,6 +27,7 @@ export const documentsApi = {
     materialRole: string = 'educational',
     language?: string | null,
     taskType?: AssignmentType | null,
+    onProgress?: (progress: UploadProgress) => void,
   ) => {
     const formData = new FormData()
     formData.append('file', file)
@@ -33,9 +35,10 @@ export const documentsApi = {
     formData.append('material_role', materialRole)
     if (language) formData.append('language', language)
     if (taskType) formData.append('task_type', taskType)
-    return api.post<AuthoredDocumentCreateResponse>(
+    return uploadWithProgress<AuthoredDocumentCreateResponse>(
       `/api/v1/nodes/${nodeId}/documents`,
       formData,
+      onProgress,
     )
   },
 
@@ -99,12 +102,17 @@ export const documentsApi = {
 
   // Attach / re-upload a base archive → 202, a new append-only version starts
   // ``pending`` and normalizes asynchronously (no job_id — poll getBaseState).
-  attachBase: (documentId: string, file: File) => {
+  attachBase: (
+    documentId: string,
+    file: File,
+    onProgress?: (progress: UploadProgress) => void,
+  ) => {
     const formData = new FormData()
     formData.append('file', file)
-    return api.post<ProjectBaseAttachResponse>(
+    return uploadWithProgress<ProjectBaseAttachResponse>(
       `/api/v1/documents/${documentId}/base`,
       formData,
+      onProgress,
     )
   },
 
