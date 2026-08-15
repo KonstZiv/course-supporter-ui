@@ -11,17 +11,19 @@ import {
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { nodesApi } from '../../api/nodes'
-import { ApiError } from '../../api/client'
-import { rejectionDetail } from '../../utils/apiError'
 import {
   CODE_ELIGIBLE_TEXT_EXTENSIONS,
   sourceTypeForExtension,
   UPLOAD_ACCEPT_ATTR,
 } from '../../utils/uploadRouting'
+import { validateUploadFiles } from '../../utils/uploadValidation'
 import { useCourseStore } from '../../stores/course'
+import { useWorkListStore } from '../../stores/workList'
+import { useUploadBatch, type UploadTask } from '../../hooks/useUploadBatch'
 import { documentsApi } from '../../api/documents'
 import { Modal } from '../ui/Modal'
 import { UploadConfirmDialog } from '../ui/UploadConfirmDialog'
+import { UploadProgressView } from '../activity/UploadProgressView'
 import type { AssignmentType, MaterialRole } from '../../types/api'
 
 export interface MenuPosition {
@@ -77,17 +79,34 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
   const [hoveredInfo, setHoveredInfo] = useState<string | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const refreshTree = useRefreshTree()
+  const requestRefresh = useWorkListStore((s) => s.requestRefresh)
+  const { state: uploadState, run: runUpload } = useUploadBatch()
   const navigate = useNavigate()
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (showAdd || showRename || showPipelineInfo || pendingUpload.length)
+      // Keep the menu open while an upload is in flight — it holds the two-floor
+      // progress view (Е7); closing it mid-send would drop the view.
+      if (
+        showAdd ||
+        showRename ||
+        showPipelineInfo ||
+        pendingUpload.length ||
+        uploadState.active
+      )
         return
       if (ref.current && !ref.current.contains(e.target as HTMLElement)) onClose()
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
-  }, [onClose, showAdd, showRename, showPipelineInfo, pendingUpload.length])
+  }, [
+    onClose,
+    showAdd,
+    showRename,
+    showPipelineInfo,
+    pendingUpload.length,
+    uploadState.active,
+  ])
 
   // Cleanup hover timer
   useEffect(() => {
@@ -177,8 +196,14 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
     input.type = 'file'
     input.multiple = true
     input.accept = UPLOAD_ACCEPT_ATTR
-    input.onchange = () => {
-      if (input.files?.length) setPendingUpload(Array.from(input.files))
+    input.onchange = async () => {
+      if (!input.files?.length) return
+      // Same pre-send checks as the side panel (Е2 parity — the canvas ran none).
+      const { accepted, rejectionMessage } = await validateUploadFiles(
+        Array.from(input.files),
+      )
+      if (rejectionMessage) alert(rejectionMessage)
+      if (accepted.length > 0) setPendingUpload(accepted)
     }
     input.click()
   }, [])
@@ -191,39 +216,35 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
     ) => {
       const files = pendingUpload
       setPendingUpload([])
-      setBusy(true)
-      const rejected: string[] = []
-      try {
-        for (const file of files) {
-          const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
-          const type =
-            asCode && CODE_ELIGIBLE_TEXT_EXTENSIONS.includes(ext)
-              ? 'code'
-              : sourceTypeForExtension(ext)
-          try {
-            await documentsApi.upload(
+      const tasks: UploadTask[] = files.map((file) => {
+        const ext = file.name.split('.').pop()?.toLowerCase() ?? ''
+        const type =
+          asCode && CODE_ELIGIBLE_TEXT_EXTENSIONS.includes(ext)
+            ? 'code'
+            : sourceTypeForExtension(ext)
+        return {
+          label: file.name,
+          send: (onProgress) =>
+            documentsApi.upload(
               position.nodeId,
               file,
               type,
               role,
               null,
               taskType,
-            )
-          } catch (err) {
-            rejected.push(
-              rejectionDetail(err) ??
-                `${file.name}: помилка завантаження (${err instanceof ApiError ? err.status : 'unknown'})`,
-            )
-          }
+              onProgress,
+            ),
         }
-      } finally {
-        await refreshTree()
-        setBusy(false)
-        onClose()
-      }
-      if (rejected.length) alert(rejected.join('\n'))
+      })
+      // Е9 — wake per successful file, re-read the tree once (canvas parity with
+      // the panel; §Q6 gap — the canvas never woke the poll before).
+      await runUpload(tasks, {
+        onFileQueued: requestRefresh,
+        onComplete: refreshTree,
+      })
+      onClose()
     },
-    [pendingUpload, position.nodeId, refreshTree, onClose],
+    [pendingUpload, position.nodeId, refreshTree, onClose, requestRefresh, runUpload],
   )
 
   const handleInfoHover = (key: string) => {
@@ -296,7 +317,13 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
             {position.nodeTitle}
           </span>
         </div>
-        {items.map((item) => (
+        {uploadState.active && (
+          <div className="px-3 py-2">
+            <UploadProgressView state={uploadState} />
+          </div>
+        )}
+        {!uploadState.active &&
+          items.map((item) => (
           <div key={item.label}>
             {item.dividerBefore && (
               <div className="h-px bg-canvas-dark/30 my-1" />
