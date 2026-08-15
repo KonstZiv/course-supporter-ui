@@ -90,7 +90,7 @@ describe('ProjectBaseSection', () => {
     fireEvent.change(input, { target: { files: [file] } })
 
     await waitFor(() =>
-      expect(attachBase).toHaveBeenCalledWith('doc-9', file),
+      expect(attachBase).toHaveBeenCalledWith('doc-9', file, expect.any(Function)),
     )
     expect(await screen.findByText('Нормалізація…')).toBeInTheDocument()
   })
