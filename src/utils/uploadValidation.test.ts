@@ -1,8 +1,10 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { validateUploadFiles } from './uploadValidation'
 
 function file(name: string, size = 16): File {
-  return new File([new Uint8Array(size)], name)
+  const f = new File(['x'], name)
+  Object.defineProperty(f, 'size', { value: size })
+  return f
 }
 
 describe('validateUploadFiles (Е2 pre-send checks)', () => {
@@ -24,6 +26,72 @@ describe('validateUploadFiles (Е2 pre-send checks)', () => {
   it('a presentation at the limit is accepted (boundary)', async () => {
     const r = await validateUploadFiles([file('deck.pdf', 50 * 1024 * 1024)])
     expect(r.accepted.map((f) => f.name)).toEqual(['deck.pdf'])
+    expect(r.rejectionMessage).toBeNull()
+  })
+})
+
+describe('validateUploadFiles — video mirrors (Е10)', () => {
+  // jsdom decodes no media and has no object URLs. Fake both: a media element
+  // that fires loadedmetadata (or error) with a chosen duration on ``src`` set.
+  let reportDuration: number
+  let fireError = false
+
+  beforeEach(() => {
+    reportDuration = 60
+    fireError = false
+    URL.createObjectURL = vi.fn(() => 'blob:fake')
+    URL.revokeObjectURL = vi.fn()
+    const realCreate = document.createElement.bind(document)
+    vi.spyOn(document, 'createElement').mockImplementation(((tag: string) => {
+      const el = realCreate(tag)
+      if (tag === 'video' || tag === 'audio') {
+        Object.defineProperty(el, 'duration', {
+          get: () => reportDuration,
+          configurable: true,
+        })
+        Object.defineProperty(el, 'src', {
+          set: () => {
+            queueMicrotask(() =>
+              el.dispatchEvent(new Event(fireError ? 'error' : 'loadedmetadata')),
+            )
+          },
+          configurable: true,
+        })
+      }
+      return el
+    }) as typeof document.createElement)
+  })
+  afterEach(() => vi.restoreAllMocks())
+
+  it('rejects a video over 1 GiB with the ratified text', async () => {
+    const r = await validateUploadFiles([file('big.mp4', 1024 * 1024 * 1024 + 1)])
+    expect(r.accepted).toEqual([])
+    expect(r.rejectionMessage).toContain(
+      'big.mp4: відео завелике для надсилання з браузера — до 1 ГБ',
+    )
+  })
+
+  it('rejects a video over 150 minutes with the ratified text', async () => {
+    reportDuration = 151 * 60
+    const r = await validateUploadFiles([file('long.mp4', 10 * 1024 * 1024)])
+    expect(r.accepted).toEqual([])
+    expect(r.rejectionMessage).toContain(
+      'Система зараз обробляє відео до 150 хвилин. Будь ласка, розділіть на коротші частини:',
+    )
+    expect(r.rejectionMessage).toContain('«long.mp4»')
+  })
+
+  it('accepts a normal-length video', async () => {
+    reportDuration = 10 * 60
+    const r = await validateUploadFiles([file('ok.mp4', 10 * 1024 * 1024)])
+    expect(r.accepted.map((f) => f.name)).toEqual(['ok.mp4'])
+    expect(r.rejectionMessage).toBeNull()
+  })
+
+  it('fails open when the metadata is unreadable (skip, not block)', async () => {
+    fireError = true
+    const r = await validateUploadFiles([file('weird.mkv', 10 * 1024 * 1024)])
+    expect(r.accepted.map((f) => f.name)).toEqual(['weird.mkv'])
     expect(r.rejectionMessage).toBeNull()
   })
 })

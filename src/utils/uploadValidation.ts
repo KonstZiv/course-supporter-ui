@@ -1,4 +1,5 @@
 import { formatAudioDuration } from '../components/ui/uploadConfirmMeta'
+import { VIDEO_EXTENSIONS } from './uploadRouting'
 
 // Client-side pre-send mirrors of the backend author policy, shared by both
 // file surfaces (Е2). A fast courtesy only — the server's synchronous rejection
@@ -8,6 +9,9 @@ import { formatAudioDuration } from '../components/ui/uploadConfirmMeta'
 
 /** Mirrors ``AUTHORED_POLICY.max_presentation_size_bytes`` (50 MB). */
 const MAX_PRESENTATION_SIZE_BYTES = 50 * 1024 * 1024
+
+/** Mirrors ``AUTHORED_POLICY.max_video_upload_bytes`` (1 GiB, the browser cap). */
+const MAX_VIDEO_UPLOAD_BYTES = 1024 * 1024 * 1024
 
 /** Mirrors ``settings.max_media_duration_sec`` (150 min) — audio and video. */
 export const MAX_MEDIA_DURATION_SEC = 150 * 60
@@ -90,7 +94,9 @@ export async function validateUploadFiles(
   const accepted: File[] = []
   const durations = new Map<string, number | null>()
   const oversized: string[] = []
+  const tooBigVideo: string[] = []
   const tooLongAudio: string[] = []
+  const tooLongVideo: string[] = []
 
   for (const file of files) {
     const ext = extOf(file)
@@ -99,6 +105,23 @@ export async function validateUploadFiles(
       file.size > MAX_PRESENTATION_SIZE_BYTES
     ) {
       oversized.push(`${file.name} перевищує ліміт 50 МБ для презентацій`)
+      continue
+    }
+    if (VIDEO_EXTENSIONS.includes(ext)) {
+      // Е10 — size first (no byte flies for an over-limit video), then duration.
+      if (file.size > MAX_VIDEO_UPLOAD_BYTES) {
+        tooBigVideo.push(
+          `${file.name}: відео завелике для надсилання з браузера — до 1 ГБ`,
+        )
+        continue
+      }
+      const duration = await readMediaDuration(file, 'video')
+      durations.set(file.name, duration)
+      if (duration !== null && duration > MAX_MEDIA_DURATION_SEC) {
+        tooLongVideo.push(`«${file.name}» — ${formatAudioDuration(duration)}`)
+        continue
+      }
+      accepted.push(file)
       continue
     }
     if (isAudioFile(file)) {
@@ -114,11 +137,19 @@ export async function validateUploadFiles(
 
   const blocks: string[] = []
   if (oversized.length > 0) blocks.push(oversized.join('\n'))
+  if (tooBigVideo.length > 0) blocks.push(tooBigVideo.join('\n'))
   if (tooLongAudio.length > 0) {
     blocks.push(
       'Система зараз обробляє аудіо до 150 хвилин. ' +
         'Будь ласка, розділіть на коротші частини:\n\n' +
         tooLongAudio.join('\n'),
+    )
+  }
+  if (tooLongVideo.length > 0) {
+    blocks.push(
+      'Система зараз обробляє відео до 150 хвилин. ' +
+        'Будь ласка, розділіть на коротші частини:\n\n' +
+        tooLongVideo.join('\n'),
     )
   }
 
