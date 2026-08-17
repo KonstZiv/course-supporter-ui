@@ -18,17 +18,43 @@ describe('Header — history nav item (§3 c7, Г1)', () => {
     expect(link).toHaveAttribute('href', '/history')
   })
 
-  it('places it last among the nav links (before the logout button)', () => {
+  it('now sits second-to-last, after Довідка took the last slot (Є1)', () => {
     renderHeader()
     const nav = screen.getByRole('link', { name: 'Історія матеріалів' }).closest('nav')!
     const links = Array.from(nav.querySelectorAll('a'))
-    expect(links[links.length - 1]).toHaveAttribute('href', '/history')
+    expect(links[links.length - 1]).toHaveAttribute('href', '/help')
+    expect(links[links.length - 2]).toHaveAttribute('href', '/history')
   })
 
   it('marks the history item active on /history', () => {
     renderHeader('/history')
     expect(
       screen.getByRole('link', { name: 'Історія матеріалів' }).className,
+    ).toContain('bg-navy-pale')
+  })
+})
+
+describe('Header — help nav item (Є1)', () => {
+  it('shows the "Довідка" link, pointing at /help', () => {
+    renderHeader()
+    const link = screen.getByRole('link', { name: 'Довідка' })
+    expect(link).toHaveAttribute('href', '/help')
+  })
+
+  it('collapses to the icon below lg, keeping the name in aria-label + title', () => {
+    renderHeader()
+    const link = screen.getByRole('link', { name: 'Довідка' })
+    expect(link).toHaveAttribute('aria-label', 'Довідка')
+    expect(link).toHaveAttribute('title', 'Довідка')
+    const label = screen.getByText('Довідка')
+    expect(label.className).toContain('hidden')
+    expect(label.className).toContain('lg:inline')
+  })
+
+  it('marks the help item active on /help (same active style as siblings)', () => {
+    renderHeader('/help')
+    expect(
+      screen.getByRole('link', { name: 'Довідка' }).className,
     ).toContain('bg-navy-pale')
   })
 })
@@ -48,7 +74,7 @@ describe('Header — nav compaction keeps the accessible name (§3 c7, clar.1/2)
     renderHeader()
     const nav = screen.getByRole('link', { name: 'Курси' }).closest('nav')!
     const labelSpans = Array.from(nav.querySelectorAll('span'))
-    expect(labelSpans.length).toBe(6) // five links + logout
+    expect(labelSpans.length).toBe(7) // six links + logout
     labelSpans.forEach((s) => {
       expect(s.className).toContain('hidden')
       expect(s.className).toContain('lg:inline')

@@ -49,3 +49,22 @@ describe('App — /history under the shared auth guard (§3 c7, clar.3)', () => 
     expect(screen.queryByText(HISTORY_MARK)).toBeNull()
   })
 })
+
+describe('App — /help route renders the seam stub (Є3, Р10)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    useAuthStore.setState({ apiKey: null, connected: false })
+  })
+
+  it('renders the help stub — heading and the verbatim sentence — at /help', async () => {
+    useAuthStore.setState({ apiKey: 'cs_live_key' })
+    renderAt('/help')
+    // The heading role disambiguates the page title from the header nav item,
+    // which also carries the accessible name "Довідка".
+    expect(
+      await screen.findByRole('heading', { name: 'Довідка' }),
+    ).toBeInTheDocument()
+    // Р10: the stub is exactly this sentence — no help content.
+    expect(screen.getByText('Цей розділ ще готується.')).toBeInTheDocument()
+  })
+})
