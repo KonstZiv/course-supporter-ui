@@ -4,6 +4,7 @@ import {
   BookOpen,
   ClipboardCheck,
   DollarSign,
+  HelpCircle,
   History,
   LayoutDashboard,
   LogOut,
@@ -13,8 +14,8 @@ import { clsx } from 'clsx'
 import type { JobListItemResponse } from '../../types/api'
 import { ActivityStrip } from '../activity/ActivityStrip'
 
-// Header nav items, in product order. The history item is last; its place is the
-// operator's call — one line to move (§3 c7 / Г1).
+// Header nav items, in product order. Довідка is last, before the logout action
+// (Є1); the history item precedes it — its place is the operator's call (§3 c7 / Г1).
 const NAV = [
   { to: '/', label: 'Курси', icon: LayoutDashboard },
   { to: '/students', label: 'Студенти', icon: Users },
@@ -23,6 +24,7 @@ const NAV = [
   // never reads the same as "Витрати" (DollarSign) once labels collapse (Г8 п.4).
   { to: '/cost/homework', label: 'Витрати ДЗ', icon: ClipboardCheck },
   { to: '/history', label: 'Історія матеріалів', icon: History },
+  { to: '/help', label: 'Довідка', icon: HelpCircle },
 ] as const
 
 export function Header({
@@ -45,14 +47,17 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-canvas-dark/40">
-      <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center gap-2 sm:gap-4">
+      {/* О5 (see the nav rationale below): below `sm` the inter-zone gap tightens
+          (gap-1, from gap-2), reclaiming part of the 17px the seventh control
+          (Довідка) overran the 320 floor by; `sm`+ keeps gap-4 unchanged. */}
+      <div className="max-w-[1600px] mx-auto px-6 h-16 flex items-center gap-1 sm:gap-4">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-3 group shrink-0">
           <div className="w-9 h-9 rounded-lg bg-navy flex items-center justify-center
                           group-hover:bg-navy-light transition-colors">
             <BookOpen size={18} className="text-amber-light" />
           </div>
-          {/* Д2: below `sm` the wordmark hides so the six nav icons + logout +
+          {/* Д2: below `sm` the wordmark hides so the six nav items + logout +
               the activity strip fit the 320 floor; the logo mark stays as the
               reachable brand/home control. At `sm`+ the wordmark returns. */}
           <span className="hidden sm:inline font-display text-xl text-ink tracking-tight">
@@ -75,8 +80,14 @@ export function Header({
             label collapses to its icon so the strip keeps its width (В4) — a single
             breakpoint, so the labels never vanish at a different width than the one
             the strip flexes at. The name lives on in aria-label + title, so screen
-            readers and hover survive the collapse (the c4 source-type-icon rule). */}
-        <nav className="flex items-center gap-1 shrink-0">
+            readers and hover survive the collapse (the c4 source-type-icon rule).
+            О5 (ratified 2026-08-17): with Довідка the row is seven controls. The
+            baseline six filled the 320 floor exactly, so the seventh overran it by
+            17px (measured). The inter-item gap tightens on the narrow tier only
+            (gap-0.5, from gap-1); together with the container gap (gap-1, above) that
+            reclaims the 17px, so seven controls clear 320 — the ratified envelope
+            (О5): gaps only, no new breakpoint, no glyph shrink, no hidden item. */}
+        <nav className="flex items-center gap-0.5 sm:gap-1 shrink-0">
           {NAV.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
