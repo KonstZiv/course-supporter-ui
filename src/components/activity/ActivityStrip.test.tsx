@@ -133,14 +133,24 @@ describe('ActivityStrip', () => {
     expect(screen.queryByText('Матеріал видалено')).toBeNull()
   })
 
-  it('collapses to a named icon below the breakpoint, opening the same panel (Г8)', () => {
+  it('gates the icon below xl and the headline from xl, off the lg nav breakpoint (Г8, collision fix)', () => {
     render(<ActivityStrip items={[job('processing', { display_name: 'a.mp4' })]} />)
     // One trigger, named for screen readers like the collapsed nav items.
     const btn = screen.getByRole('button', { name: 'Останні роботи' })
-    // Below `lg` it is an icon; the full headline is gated to `lg`+. jsdom applies
-    // no CSS, so we assert the breakpoint classes, not computed visibility.
-    expect(btn.querySelector('.lg\\:hidden')).toBeTruthy() // the icon
-    expect(btn.querySelector('.hidden.lg\\:flex')).toBeTruthy() // the full floor
+    const icon = btn.querySelector('.xl\\:hidden')
+    const headline = btn.querySelector('.hidden.xl\\:flex')
+    // jsdom applies no CSS, so we assert the breakpoint CONTRACT (the Tailwind
+    // classes), not computed visibility — the visual boundary at 1280 is checked
+    // by the manual gate. The strip flexes at xl, one step above the lg nav-label
+    // compaction, so the headline no longer overflows the first nav item.
+    // Icon side (below xl → shown): present, hides only at xl+, and NOT on lg.
+    expect(icon).toBeTruthy()
+    expect(icon).not.toHaveClass('hidden') // visible below xl
+    expect(icon).not.toHaveClass('lg:hidden') // moved off the lg breakpoint
+    // Headline side (from xl → shown): base-hidden, flex only at xl+, NOT on lg.
+    expect(headline).toBeTruthy()
+    expect(headline).toHaveClass('hidden') // hidden below xl
+    expect(headline).not.toHaveClass('lg:flex') // moved off the lg breakpoint
     // The collapsed trigger opens the same detailed panel.
     fireEvent.click(btn)
     expect(screen.getByRole('dialog')).toBeInTheDocument()
