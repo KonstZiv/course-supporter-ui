@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import Markdown from 'react-markdown'
+import { MarkdownContent } from './MarkdownContent'
 import { Loader2 } from 'lucide-react'
 import { portalApi, PortalApiError } from '../api/portalClient'
 import type { PortalDeltaReceipt, PortalSubmissionDetail } from '../types'
@@ -31,9 +31,10 @@ function DeltaReceipt({ delta }: { delta: PortalDeltaReceipt }) {
 
 // Inline review detail for one attempt (Phase 6 / T4b, c3b; Q1 — expanded row,
 // not a route). Rendered by state (Q6):
-//   reviewed  → fetch the detail, render review_markdown (react-markdown, plain
-//               CommonMark, NO rehype-raw → safe by default) + score + verdict;
-//               the markdown is shown EVEN when not passed (it explains why).
+//   reviewed  → fetch the detail, render review_markdown via the shared
+//               MarkdownContent (react-markdown + GFM, NO rehype-raw) + score
+//               + verdict; the markdown is shown EVEN when not passed (it
+//               explains why).
 //   error     → the curated terminal-status phrase (terminalStatus); NO markdown,
 //               NO fetch — the "why" is FE-derived from the status, never the
 //               backend error_message (not on the contract).
@@ -117,14 +118,7 @@ export function PortalReviewDetail({
       )}
       {detail.delta && <DeltaReceipt delta={detail.delta} />}
       {detail.review_markdown ? (
-        <div
-          className="text-sm text-ink space-y-2 [&_h1]:font-display [&_h1]:text-lg
-                     [&_h2]:font-display [&_h2]:text-base [&_ul]:list-disc [&_ul]:pl-5
-                     [&_ol]:list-decimal [&_ol]:pl-5 [&_code]:bg-canvas-dark
-                     [&_code]:px-1 [&_code]:rounded [&_a]:text-navy [&_a]:underline"
-        >
-          <Markdown>{detail.review_markdown}</Markdown>
-        </div>
+        <MarkdownContent markdown={detail.review_markdown} />
       ) : (
         <div className="text-sm text-ink-muted">Рецензію ще не сформовано.</div>
       )}
