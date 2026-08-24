@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { PortalMaterialView } from './PortalMaterialView'
+import { PortalMaterialView, extOf } from './PortalMaterialView'
 import type {
   PortalMaterialItem,
   PortalMediaResponse,
@@ -96,5 +96,28 @@ describe('PortalMaterialView render matrix', () => {
     expect(
       screen.getByText('Неможливо відобразити цей матеріал.'),
     ).toBeInTheDocument()
+  })
+})
+
+describe('extOf — format signal from the signed key path', () => {
+  it('reads the extension, lower-cased', () => {
+    expect(extOf('https://cdn/x/lecture.md')).toBe('md')
+    expect(extOf('https://cdn/x/DECK.MARKDOWN')).toBe('markdown')
+    expect(extOf('https://cdn/x/notes.PDF')).toBe('pdf')
+    expect(extOf('https://cdn/x/report.docx')).toBe('docx')
+  })
+
+  it('ignores the query string (signature rides after ?)', () => {
+    expect(extOf('https://cdn/x/lecture.md?X-Amz-Expires=18000&sig=abc')).toBe(
+      'md',
+    )
+  })
+
+  it('a path without a dot returns the full name (no allowlist match)', () => {
+    const result = extOf('https://cdn/x/lecture')
+    expect(result).toBe('lecture')
+    // Behavioral contract (ratify Р2): an unknown result matches no renderable
+    // extension, so it routes to the no-preview branch.
+    expect(['pdf', 'md', 'markdown', 'txt', 'html', 'htm']).not.toContain(result)
   })
 })

@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { Download, ExternalLink } from 'lucide-react'
 import type { PortalMaterialItem, PortalMediaResponse } from '../types'
+import { MarkdownContent } from './MarkdownContent'
 import { SlidesCarousel } from './SlidesCarousel'
 import { youtubeEmbedUrl } from './youtube'
 
@@ -11,6 +13,11 @@ import { youtubeEmbedUrl } from './youtube'
 // panel (corrective 2). ``item.source_type`` comes from the tree item because
 // the media descriptor is source_type-blind (probe B) — it carries only
 // ``kind`` + ``url`` / ``slide_urls``.
+//
+// Text-family file branches select by an extension allowlist over the signed
+// key's path (``extOf``; ratify Р1/Р2, крок Б): pdf → built-in viewer, md/
+// markdown → rendered Markdown, txt/html/htm → sandboxed iframe, anything else
+// (docx and any future extension) → an honest no-preview notice.
 
 function OpenLink({ url, primary }: { url: string; primary?: boolean }) {
   return (
@@ -31,6 +38,66 @@ function Unrenderable() {
     <p className="text-ink-muted py-8 text-center">
       Неможливо відобразити цей матеріал.
     </p>
+  )
+}
+
+// Format signal (ratify Р1): the extension in the signed key's path (the path
+// precedes the query string) — the mechanism the pdf branch already used, now
+// the single signal for every text-family branch. Exported for a unit test.
+// For a name without a dot it returns the full lower-cased name (matches no
+// allowlist extension → the no-preview branch); empty only for a trailing-slash
+// path (post-ratified clarification 2026-08-24, step-b/TASK.md).
+// eslint-disable-next-line react-refresh/only-export-components -- extOf експортовано лише для юніт-тестів (TASK кроку Б)
+export const extOf = (url: string): string =>
+  ((url.split('?')[0] ?? '').split('/').pop() ?? '').split('.').pop()?.toLowerCase() ?? ''
+
+// A .md material rendered as formatted Markdown (student-path step Б, ratify Р6):
+// the client fetches the signed URL's text (CORS opened by the portalMediaFetch
+// B2 rule) and renders it through the shared MarkdownContent (GFM + mermaid). A
+// guaranteed "Відкрити / Завантажити" affordance backs it (corrective 2).
+function MarkdownMaterial({ url }: { url: string }) {
+  const [state, setState] = useState<
+    | { status: 'loading' }
+    | { status: 'ready'; text: string }
+    | { status: 'error' }
+  >({ status: 'loading' })
+
+  useEffect(() => {
+    const controller = new AbortController()
+    setState({ status: 'loading' })
+    fetch(url, { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error(`fetch failed: ${res.status}`)
+        return res.text()
+      })
+      .then((text) => setState({ status: 'ready', text }))
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        setState({ status: 'error' })
+      })
+    return () => controller.abort()
+  }, [url])
+
+  if (state.status === 'loading') {
+    return (
+      <p className="text-ink-muted py-8 text-center">Завантаження конспекту…</p>
+    )
+  }
+  if (state.status === 'error') {
+    return (
+      <>
+        <p className="text-ink-muted py-8 text-center">
+          Не вдалося завантажити конспект.
+        </p>
+        <OpenLink url={url} primary />
+      </>
+    )
+  }
+  return (
+    <div>
+      <MarkdownContent markdown={state.text} />
+      <OpenLink url={url} />
+    </div>
   )
 }
 
@@ -116,22 +183,51 @@ export function PortalMaterialView({
         </div>
       )
     }
-    // text / document / any other → best-effort inline, guaranteed affordance.
-    // F5 (task-code-materials): the served-file iframe is sandboxed (no
-    // scripts, no same-origin) for every type EXCEPT pdf — the built-in pdf
-    // viewer breaks under sandbox, and the spoofed-pdf-MIME risk is accepted
-    // (author→student trust boundary). Detection is by the signed key's
-    // extension (the path precedes the query string).
-    const isPdf = /\.pdf(\?|$)/i.test(url)
+    // Text-family allowlist by the signed key's extension (ratify Р1/Р2, крок Б).
+    // Total: every branch returns; the final else covers docx and any future
+    // extension with an honest no-preview notice, never a broken iframe.
+    const ext = extOf(url)
+    if (ext === 'pdf') {
+      // F5 (task-code-materials): the served-file iframe is sandboxed (no
+      // scripts, no same-origin) for every type EXCEPT pdf — the built-in pdf
+      // viewer breaks under sandbox, and the spoofed-pdf-MIME risk is accepted
+      // (author→student trust boundary).
+      return (
+        <div>
+          <iframe
+            src={url}
+            title={item.label}
+            className="w-full h-[60vh] rounded-lg border border-canvas-dark/40 bg-white"
+          />
+          <OpenLink url={url} />
+        </div>
+      )
+    }
+    if (ext === 'md' || ext === 'markdown') {
+      return <MarkdownMaterial url={url} />
+    }
+    if (ext === 'txt' || ext === 'html' || ext === 'htm') {
+      // Best-effort inline; sandboxed (no scripts, no same-origin).
+      return (
+        <div>
+          <iframe
+            src={url}
+            title={item.label}
+            sandbox=""
+            className="w-full h-[60vh] rounded-lg border border-canvas-dark/40 bg-white"
+          />
+          <OpenLink url={url} />
+        </div>
+      )
+    }
+    // docx and any future/unknown extension → no inline preview, honest notice.
     return (
-      <div>
-        <iframe
-          src={url}
-          title={item.label}
-          {...(isPdf ? {} : { sandbox: '' })}
-          className="w-full h-[60vh] rounded-lg border border-canvas-dark/40 bg-white"
-        />
-        <OpenLink url={url} />
+      <div className="py-8 text-center">
+        <p className="text-ink-muted">
+          Попередній перегляд для цього формату недоступний. Завантажте файл, щоб
+          переглянути його на своєму пристрої.
+        </p>
+        <OpenLink url={url} primary />
       </div>
     )
   }
