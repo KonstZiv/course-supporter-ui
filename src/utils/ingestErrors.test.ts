@@ -2,23 +2,35 @@ import { describe, it, expect } from 'vitest'
 import { ingestErrorMessage } from './ingestErrors'
 
 describe('ingestErrorMessage', () => {
-  it('resolves a known category to the stable message', () => {
-    expect(ingestErrorMessage('empty_document', 'raw backend text')).toContain(
+  it('resolves a known async category to the stable message', () => {
+    expect(ingestErrorMessage('empty_document')).toContain(
       'не містить видобувного вмісту',
     )
   })
 
-  it('falls back to the raw error_message for unknown categories', () => {
-    expect(ingestErrorMessage('mystery_code', 'raw backend text')).toBe(
-      'raw backend text',
+  it('resolves a known sync (upload) category to the stable message', () => {
+    expect(ingestErrorMessage('suspicious_unicode')).toContain(
+      'невидимі службові символи',
     )
   })
 
-  it('falls back to the raw error_message when category is null', () => {
-    expect(ingestErrorMessage(null, 'legacy failure')).toBe('legacy failure')
+  it('resolves the external-source class', () => {
+    expect(ingestErrorMessage('external_source_unavailable')).toContain(
+      'джерело недоступне',
+    )
+  })
+
+  it('degrades an unknown category to the generic phrase, never a raw string', () => {
+    expect(ingestErrorMessage('mystery_code')).toBe(
+      ingestErrorMessage('pipeline_failure'),
+    )
+  })
+
+  it('degrades a null category to the generic phrase', () => {
+    expect(ingestErrorMessage(null)).toBe(ingestErrorMessage('pipeline_failure'))
   })
 
   it('never renders blank', () => {
-    expect(ingestErrorMessage(null, null)).toBe('Обробка завершилася помилкою.')
+    expect(ingestErrorMessage(null).length).toBeGreaterThan(0)
   })
 })

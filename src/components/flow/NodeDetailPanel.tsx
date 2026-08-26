@@ -420,7 +420,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                   </div>
                   {mat.processing_phase === 'error' && (mat.error_category || mat.error_message) && (
                     <p className="text-xs text-coral mt-1 line-clamp-2">
-                      {ingestErrorMessage(mat.error_category, mat.error_message)}
+                      {ingestErrorMessage(mat.error_category)}
                     </p>
                   )}
                   <MaterialProgressDetail job={liveJob} now={now} />
