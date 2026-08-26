@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { ApiError } from '../api/client'
-import { rejectionDetail, validationMessage } from './apiError'
+import {
+  authoredRejectionMessage,
+  rejectionDetail,
+  validationMessage,
+} from './apiError'
+import { ingestErrorMessage } from './ingestErrors'
 
 describe('rejectionDetail', () => {
   it('extracts inner details from a SECURITY_REJECTED-shape ApiError body', () => {
@@ -31,6 +36,69 @@ describe('rejectionDetail', () => {
     expect(rejectionDetail(new Error('plain'))).toBeNull()
     expect(rejectionDetail('string error')).toBeNull()
     expect(rejectionDetail(null)).toBeNull()
+  })
+})
+
+describe('authoredRejectionMessage', () => {
+  const security = (category: string) =>
+    new ApiError(400, 'x', {
+      detail: {
+        code: 'SECURITY_REJECTED',
+        category,
+        details: 'raw stage-1 text',
+      },
+    })
+
+  it('maps a SECURITY_REJECTED to the human dictionary by category', () => {
+    expect(authoredRejectionMessage(security('suspicious_unicode'))).toBe(
+      ingestErrorMessage('suspicious_unicode'),
+    )
+  })
+
+  it('degrades an unknown security category to the generic phrase, never raw', () => {
+    const msg = authoredRejectionMessage(security('brand_new_category'))
+    expect(msg).toBe(ingestErrorMessage(null))
+    expect(msg).not.toContain('raw stage-1 text')
+  })
+
+  it('passes an INTAKE_* product-language details through verbatim', () => {
+    const err = new ApiError(400, 'x', {
+      detail: {
+        code: 'INTAKE_DURATION_EXCEEDED',
+        category: 'duration_limit',
+        details:
+          'Система обробляє відео тривалістю до 150 хвилин; це відео — 180 хв.',
+      },
+    })
+    expect(authoredRejectionMessage(err)).toBe(
+      'Система обробляє відео тривалістю до 150 хвилин; це відео — 180 хв.',
+    )
+  })
+
+  it('degrades an unfamiliar recognised code to the generic phrase, never raw', () => {
+    const err = new ApiError(422, 'x', {
+      detail: {
+        code: 'ARCHIVE_REQUIRES_CODE',
+        details: 'archive uploads are accepted only as source_type=code',
+      },
+    })
+    const msg = authoredRejectionMessage(err)
+    expect(msg).toBe(ingestErrorMessage(null))
+    expect(msg).not.toContain('archive uploads')
+  })
+
+  it('returns null for a code-less envelope (the caller fallback takes over)', () => {
+    expect(
+      authoredRejectionMessage(
+        new ApiError(400, 'x', { detail: { details: 'x' } }),
+      ),
+    ).toBeNull()
+  })
+
+  it('returns null for non-server errors', () => {
+    expect(authoredRejectionMessage(new ApiError(500, 'x', null))).toBeNull()
+    expect(authoredRejectionMessage(new Error('net'))).toBeNull()
+    expect(authoredRejectionMessage(null)).toBeNull()
   })
 })
 

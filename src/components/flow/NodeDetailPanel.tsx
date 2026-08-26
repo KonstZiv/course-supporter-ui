@@ -10,7 +10,7 @@ import { UploadProgressView } from '../activity/UploadProgressView'
 import { UploadConfirmDialog } from '../ui/UploadConfirmDialog'
 import { ProjectBaseSection } from './ProjectBaseSection'
 import { sourceTypeMeta } from '../../utils/sourceTypeIcon'
-import { rejectionDetail } from '../../utils/apiError'
+import { authoredRejectionMessage } from '../../utils/apiError'
 import { validateUploadFiles } from '../../utils/uploadValidation'
 import { useUploadBatch, type UploadTask } from '../../hooks/useUploadBatch'
 import { ingestErrorMessage } from '../../utils/ingestErrors'
@@ -177,13 +177,14 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
           await refresh()
           requestRefresh() // Д10 — wake the shell poll for the just-queued link
         } catch (err) {
-          // Mirror the file path three lines above: surface the server's
-          // reason via the shared ``rejectionDetail`` reader, else a
-          // product-language fallback. Without this the link door swallowed
-          // every rejection silently (e.g. a 400 for a video past the
-          // duration cap) — no spinner-only dead end. No internal code leaks.
+          // Mirror the file path: surface the server's reason via the single
+          // authored resolver, else a product-language fallback. The resolver
+          // maps a SECURITY_REJECTED to the human dictionary and passes an
+          // INTAKE_* video-duration reason through as-is; without this the link
+          // door swallowed every rejection silently — no spinner-only dead end.
+          // No raw / internal text ever reaches the author.
           alert(
-            rejectionDetail(err) ??
+            authoredRejectionMessage(err) ??
               'Не вдалося додати матеріал за посиланням. Спробуйте ще раз.',
           )
         } finally {
@@ -420,7 +421,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                   </div>
                   {mat.processing_phase === 'error' && (mat.error_category || mat.error_message) && (
                     <p className="text-xs text-coral mt-1 line-clamp-2">
-                      {ingestErrorMessage(mat.error_category, mat.error_message)}
+                      {ingestErrorMessage(mat.error_category)}
                     </p>
                   )}
                   <MaterialProgressDetail job={liveJob} now={now} />
