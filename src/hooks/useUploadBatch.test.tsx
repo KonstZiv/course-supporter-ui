@@ -99,7 +99,7 @@ describe('useUploadBatch (the one upload cycle, Е2/Е9)', () => {
     expect(result.current.state.active).toBe(false)
   })
 
-  it('collects a failure, continues the batch, alerts the server reason', async () => {
+  it('collects a failure, continues the batch, alerts the human reason', async () => {
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
     const onFileQueued = vi.fn()
     const tasks: UploadTask[] = [
@@ -107,7 +107,16 @@ describe('useUploadBatch (the one upload cycle, Е2/Е9)', () => {
         label: 'bad.mp4',
         send: () =>
           Promise.reject(
-            new ApiError(400, 'x', { detail: { details: 'відео завелике' } }),
+            // A real Stage-1 reject carries { code, category, details }; the
+            // author sees the human dictionary text, never the raw ``details``
+            // (DD-SP-D). Every production rejection carries a code.
+            new ApiError(400, 'x', {
+              detail: {
+                code: 'SECURITY_REJECTED',
+                category: 'size_limit',
+                details: 'file size 6000000000 bytes exceeds cap',
+              },
+            }),
           ),
       },
       { label: 'good.mp4', send: () => Promise.resolve({}) },
@@ -118,7 +127,9 @@ describe('useUploadBatch (the one upload cycle, Е2/Е9)', () => {
     })
     // bad rejected → NOT woken; good succeeded → woken once (batch continued).
     expect(onFileQueued).toHaveBeenCalledTimes(1)
-    expect(alertSpy).toHaveBeenCalledWith('відео завелике')
+    expect(alertSpy).toHaveBeenCalledWith(
+      'Файл завеликий. Зменште його або розділіть на частини.',
+    )
     expect(result.current.state.active).toBe(false)
   })
 

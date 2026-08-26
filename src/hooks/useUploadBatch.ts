@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 import { ApiError } from '../api/client'
 import type { UploadProgress } from '../api/upload'
-import { rejectionDetail } from '../utils/apiError'
+import { authoredRejectionMessage } from '../utils/apiError'
 
 // The ONE upload cycle both file surfaces use (Е2, invariant #3): sequential
 // send (one request per file, no concurrency), a file counter, the current
@@ -78,7 +78,7 @@ export function useUploadBatch() {
             hooks.onFileQueued?.() // Е9 — a visible row after the FIRST file, not the last
           } catch (err) {
             failures.push(
-              rejectionDetail(err) ??
+              authoredRejectionMessage(err) ??
                 `${task.label}: не вдалося надіслати файл (код ${
                   err instanceof ApiError ? err.status : 'unknown'
                 })`,

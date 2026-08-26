@@ -1,4 +1,5 @@
 import { ApiError } from '../api/client'
+import { ingestErrorMessage } from './ingestErrors'
 
 /**
  * Extracts the human-readable rejection message from a backend
@@ -19,6 +20,48 @@ export function rejectionDetail(err: unknown): string | null {
     }
   }
   return null
+}
+
+/**
+ * The single author-facing door for a document upload / link-add rejection
+ * (DD-SP-D). Both authored callers (file upload, link add) route here; it maps
+ * the ``{ detail: { code, category, details } }`` envelope by CODE FAMILY:
+ *
+ *   * ``SECURITY_REJECTED`` → the human dictionary by ``category`` — a raw
+ *     Stage-1 ``details`` (e.g. "zero_width U+FEFF at index 0") never reaches
+ *     the author;
+ *   * ``INTAKE_*`` (video duration / probe) → the backend's ready
+ *     product-language ``details`` verbatim (that family already speaks uk);
+ *   * any OTHER recognised-code rejection → the generic phrase, so an
+ *     unfamiliar family degrades to a polite sentence, never a raw / technical
+ *     ``details`` (e.g. the English ``ARCHIVE_REQUIRES_CODE`` text). This is
+ *     the same structural guard as the dictionary's own fallback — no branch
+ *     leaks raw text.
+ *
+ * Returns ``null`` only when the error is NOT a coded server rejection (a
+ * transport failure, or a bare ``detail`` string / no envelope), so the
+ * caller's own context fallback (file label / link message) takes over. It is
+ * therefore the sole door for rejection TEXTS; it never returns raw.
+ */
+export function authoredRejectionMessage(err: unknown): string | null {
+  if (!(err instanceof ApiError)) return null
+  const detail = (err.body as { detail?: unknown } | null)?.detail
+  if (!detail || typeof detail !== 'object') return null
+  const code = 'code' in detail ? (detail as { code?: unknown }).code : undefined
+  if (typeof code !== 'string') return null
+  if (code === 'SECURITY_REJECTED') {
+    const category =
+      'category' in detail ? (detail as { category?: unknown }).category : null
+    return ingestErrorMessage(typeof category === 'string' ? category : null)
+  }
+  if (code.startsWith('INTAKE_')) {
+    const details =
+      'details' in detail ? (detail as { details?: unknown }).details : null
+    return typeof details === 'string' ? details : ingestErrorMessage(null)
+  }
+  // A recognised envelope with a code we have no specific text for degrades to
+  // the generic phrase — never the raw ``details``.
+  return ingestErrorMessage(null)
 }
 
 /**
