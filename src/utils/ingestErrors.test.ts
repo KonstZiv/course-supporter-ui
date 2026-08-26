@@ -16,7 +16,7 @@ describe('ingestErrorMessage', () => {
 
   it('resolves the external-source class', () => {
     expect(ingestErrorMessage('external_source_unavailable')).toContain(
-      'джерело недоступне',
+      'Не вдалося відкрити посилання',
     )
   })
 

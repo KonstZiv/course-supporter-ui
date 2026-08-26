@@ -16,8 +16,8 @@
 // (a cross-store test is not technically possible).
 
 const PIPELINE_FAILURE_MESSAGE =
-  'Не вдалося обробити цей матеріал. Спробуйте додати його ще раз; ' +
-  'якщо повториться — напишіть нам, ми розберемося.'
+  'Не вдалося обробити цей матеріал — спробуйте ще раз. ' +
+  'Якщо повториться, напишіть нам, ми розберемося.'
 
 const INGEST_ERROR_MESSAGES: Record<string, string> = {
   // ── async ingestion classes ──
@@ -29,8 +29,8 @@ const INGEST_ERROR_MESSAGES: Record<string, string> = {
     'презентацію не вдалося сегментувати.',
   stage2_rejected: 'Матеріал не пройшов перевірку безпеки вмісту.',
   external_source_unavailable:
-    'Не вдалося отримати матеріал за посиланням: джерело недоступне або ' +
-    'закрите для завантаження. Перевірте посилання й спробуйте ще раз.',
+    'Не вдалося відкрити посилання — перевірте його й спробуйте ще раз. ' +
+    'Можливо, джерело видалено або закрито для завантаження.',
   pipeline_failure: PIPELINE_FAILURE_MESSAGE,
   // ── synchronous upload-rejection classes (author sync door) ──
   suspicious_unicode:
