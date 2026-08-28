@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { FlowContextMenu } from './FlowContextMenu'
+import { nodesApi } from '../../api/nodes'
+import { useCourseStore } from '../../stores/course'
 
 describe('FlowContextMenu — generate trigger', () => {
   it('lifts onGenerate with node id + title and closes the menu', () => {
@@ -95,5 +97,68 @@ describe('FlowContextMenu — upload parity with the side panel (Е2)', () => {
     await waitFor(() =>
       expect(screen.getByText('Тип документа')).toBeInTheDocument(),
     )
+  })
+})
+
+describe('FlowContextMenu — rename failure is visible (pre-network / CORS)', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('shows a human message, keeps the modal open, and preserves the typed input on failure', async () => {
+    vi.spyOn(nodesApi, 'update').mockRejectedValue(
+      new TypeError('Failed to fetch'),
+    )
+    render(
+      <MemoryRouter>
+        <FlowContextMenu
+          position={{ x: 0, y: 0, nodeId: 'n1', nodeTitle: 'Стара назва', isRoot: false }}
+          onClose={vi.fn()}
+          onGenerate={vi.fn()}
+        />
+      </MemoryRouter>,
+    )
+    fireEvent.click(screen.getByText('Перейменувати'))
+    fireEvent.change(screen.getByDisplayValue('Стара назва'), {
+      target: { value: 'Нова назва' },
+    })
+    fireEvent.click(screen.getByText('Зберегти'))
+
+    await waitFor(() =>
+      expect(screen.getByText(/Не вдалося зберегти назву/)).toBeInTheDocument(),
+    )
+    // Modal stays open with the typed value preserved (no retype needed).
+    expect(screen.getByDisplayValue('Нова назва')).toBeInTheDocument()
+    expect(screen.getByText('Зберегти')).toBeInTheDocument()
+  })
+
+  it('shows the description-drift hint after a title change and closes only on dismiss', async () => {
+    useCourseStore.setState({ tree: null })
+    vi.spyOn(nodesApi, 'update').mockResolvedValue(
+      undefined as unknown as Awaited<ReturnType<typeof nodesApi.update>>,
+    )
+    const onClose = vi.fn()
+    render(
+      <MemoryRouter>
+        <FlowContextMenu
+          position={{ x: 0, y: 0, nodeId: 'n1', nodeTitle: 'Стара', isRoot: false }}
+          onClose={onClose}
+          onGenerate={vi.fn()}
+        />
+      </MemoryRouter>,
+    )
+    fireEvent.click(screen.getByText('Перейменувати'))
+    fireEvent.change(screen.getByDisplayValue('Стара'), {
+      target: { value: 'Нова' },
+    })
+    fireEvent.click(screen.getByText('Зберегти'))
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(/Опис вузла не оновиться автоматично/),
+      ).toBeInTheDocument(),
+    )
+    // The menu stays open until the author acknowledges the hint.
+    expect(onClose).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByText('Зрозуміло'))
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 })

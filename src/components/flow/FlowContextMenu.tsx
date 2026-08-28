@@ -76,6 +76,8 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
   const [newTitle, setNewTitle] = useState('')
   const [renameTitle, setRenameTitle] = useState(position.nodeTitle)
   const [busy, setBusy] = useState(false)
+  const [renameError, setRenameError] = useState<string | null>(null)
+  const [renameDone, setRenameDone] = useState(false)
   const [hoveredInfo, setHoveredInfo] = useState<string | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const refreshTree = useRefreshTree()
@@ -130,16 +132,40 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
 
   const rename = useCallback(async () => {
     if (!renameTitle.trim()) return
+    setRenameError(null)
     setBusy(true)
     try {
       await nodesApi.update(position.nodeId, { title: renameTitle.trim() })
       await refreshTree()
-      setShowRename(false)
-      onClose()
+      if (renameTitle.trim() !== position.nodeTitle) {
+        // Title changed: surface the description-drift hint in place and keep
+        // the modal open so the author reads it (there is no toast surface).
+        setRenameDone(true)
+      } else {
+        setShowRename(false)
+        onClose()
+      }
+    } catch {
+      // A cross-origin/offline failure rejects fetch() before any HTTP status,
+      // so no server error category exists to map — a local, human message.
+      setRenameError(
+        'Не вдалося зберегти назву — спробуйте ще раз. Якщо повториться, напишіть нам.',
+      )
     } finally {
       setBusy(false)
     }
-  }, [renameTitle, position.nodeId, refreshTree, onClose])
+  }, [renameTitle, position.nodeId, position.nodeTitle, refreshTree, onClose])
+
+  // Close the rename modal. If it closes after a successful rename (the hint
+  // was showing) also close the whole context menu, mirroring the pre-fix
+  // success path; from the input state it just dismisses the modal.
+  const dismissRename = useCallback(() => {
+    const wasDone = renameDone
+    setShowRename(false)
+    setRenameError(null)
+    setRenameDone(false)
+    if (wasDone) onClose()
+  }, [renameDone, onClose])
 
   const deleteNode = useCallback(async () => {
     if (!confirm(`Видалити «${position.nodeTitle}» та все вкладене?`)) return
@@ -433,22 +459,50 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
       </Modal>
 
       {/* Rename modal */}
-      <Modal open={showRename} onClose={() => setShowRename(false)} title="Перейменувати">
-        <input
-          className="input mb-4"
-          value={renameTitle}
-          onChange={(e) => setRenameTitle(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && rename()}
-          autoFocus
-        />
-        <div className="flex justify-end gap-2">
-          <button className="btn-secondary btn-sm" onClick={() => setShowRename(false)}>
-            Скасувати
-          </button>
-          <button className="btn-primary btn-sm" onClick={rename} disabled={busy || !renameTitle.trim()}>
-            Зберегти
-          </button>
-        </div>
+      <Modal open={showRename} onClose={dismissRename} title="Перейменувати">
+        {renameDone ? (
+          <>
+            <p className="text-sm mb-4">
+              Назву змінено. Опис вузла не оновиться автоматично — якщо
+              потрібно, поправте його вручну.
+            </p>
+            <div className="flex justify-end">
+              <button className="btn-primary btn-sm" onClick={dismissRename}>
+                Зрозуміло
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <input
+              className="input mb-4"
+              value={renameTitle}
+              onChange={(e) => {
+                setRenameTitle(e.target.value)
+                if (renameError) setRenameError(null)
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && rename()}
+              autoFocus
+            />
+            {renameError && (
+              <p className="text-coral text-sm mb-4" role="alert">
+                {renameError}
+              </p>
+            )}
+            <div className="flex justify-end gap-2">
+              <button className="btn-secondary btn-sm" onClick={dismissRename}>
+                Скасувати
+              </button>
+              <button
+                className="btn-primary btn-sm"
+                onClick={rename}
+                disabled={busy || !renameTitle.trim()}
+              >
+                Зберегти
+              </button>
+            </div>
+          </>
+        )}
       </Modal>
 
       {/* «Тип документа» — the SAME dialog as the side-zone path (R6). */}
