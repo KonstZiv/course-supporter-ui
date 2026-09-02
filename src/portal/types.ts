@@ -141,6 +141,33 @@ export interface PortalSubmitResponse {
 // ``statusBucket``. The internal trace (review_result beyond verdict /
 // safety_result / sanity_result / error_message) is NEVER in the contract.
 
+// Why an attempt was refused, and which of its files the checker did not read.
+// Both are new with the submission-doors pass: the read-path used to carry the
+// status alone, so the interface had to infer a "why" from it and could say
+// nothing at all about files it had skipped inside an archive.
+//
+// ``code`` and ``reason`` stay free ``string`` and are deliberately NOT narrowed
+// to a union of the codes known today. They are the backend's open vocabularies
+// (every ``ErrorCategory`` value, plus the ``mismatch`` status), the phrase
+// dictionaries are total by construction — an unknown key falls through to the
+// next layer — and a union here would break the build on each new backend code
+// while promising an exhaustiveness the wire does not actually have.
+export interface PortalRejection {
+  code: string
+  // The short curated specific the phrase cannot know by itself — today the
+  // original filename. NEVER the backend's internal message (DD-6-D).
+  details: string | null
+}
+
+export interface PortalNotOpened {
+  // Name of the file inside the archive.
+  path: string
+  // The same code vocabulary as ``PortalRejection``, so one dictionary serves
+  // both surfaces.
+  reason: string
+  size: number
+}
+
 export interface PortalSubmissionListItem {
   id: string
   status: string
@@ -148,6 +175,13 @@ export interface PortalSubmissionListItem {
   verdict: PortalVerdict | null
   created_at: string
   original_filename: string | null
+  // Carried on the LIST item as well as the detail, so a refused attempt
+  // explains itself from the row already in hand — the review detail's error
+  // branch stays fetch-free (DD-6-D). ``not_opened`` is filled on a PASSING
+  // attempt too: a review that quietly rested on part of the work is the thing
+  // it exists to prevent.
+  rejection: PortalRejection | null
+  not_opened: PortalNotOpened[]
 }
 
 // KD18 P5: I2 delta receipt — counters + staleness for a project submission,

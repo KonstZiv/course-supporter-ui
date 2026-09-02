@@ -22,6 +22,8 @@ const detail = (over: Partial<Parameters<typeof mockedSubmission.mockResolvedVal
   created_at: '2026-06-29T10:00:00Z',
   original_filename: 'a.py',
   delta: null,
+  rejection: null,
+  not_opened: [],
   ...over,
 })
 

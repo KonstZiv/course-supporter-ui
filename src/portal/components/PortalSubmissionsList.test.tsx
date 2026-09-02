@@ -22,6 +22,8 @@ const row = (over: Partial<PortalSubmissionListItem>): PortalSubmissionListItem 
   verdict: { passed: true, correctness: 'correct' },
   created_at: '2026-06-29T10:00:00Z',
   original_filename: 'a.py',
+  rejection: null,
+  not_opened: [],
   ...over,
 })
 
