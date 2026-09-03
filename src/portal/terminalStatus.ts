@@ -1,11 +1,18 @@
 // Submission lifecycle status → FE presentation (Phase 6 / T4b, c3b).
 //
 // This is the FE half of DD-6-D: the read-path serves the RAW lifecycle status
-// (9 milestones); the backend deliberately does NOT carry a human-readable
-// "why" field, and the internal trace (error_message / safety_result /
-// sanity_result) is never on the contract. So the curated, generic,
-// status-keyed phrases live HERE — shared (DRY) by the tree badge, the attempts
-// list, and the review detail.
+// (9 milestones), and the internal trace (error_message / safety_result /
+// sanity_result) is never on the contract. The curated, generic, status-keyed
+// phrases live HERE — shared (DRY) by the tree badge, the attempts list, and
+// the review detail.
+//
+// The submission-doors pass added a reason code to the read-path, so these are
+// no longer the only answer to "why": they are layer 2 of three.
+// rejectionReasons.ts answers first when it has an article for the code and
+// declines otherwise — which is exactly what keeps mismatch and stage2_rejected
+// on the phrases below, because they say more than an article keyed on those
+// codes would. What DD-6-D banned is untouched: a stable code is not the
+// developer string it forbade.
 //
 // Buckets mirror the backend overlay collapse (portal_courses._overlay_status):
 //   reviewed = completed / delivered

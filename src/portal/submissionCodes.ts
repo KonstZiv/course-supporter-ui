@@ -1,19 +1,40 @@
-// Code-keyed error phrases for the project-submission preflight (KD18 P5). A
-// SEPARATE axis from terminalStatus.ts: that maps the read-path delivery STATUS
-// (rejected / mismatch / failed) to a phrase; this maps the submit-time
-// preflight CODE (from the {code, details} 422 / 409 body) to a phrase.
+// Code-keyed phrases for the submit-time door — BOTH vocabularies the doors
+// speak. A refused upload comes back as ``{code, details}``, and the code
+// arrives in one of two shapes depending on which gate refused it:
 //
-// Covers EXACTLY the four structural preflight codes the backend emits
-// (submission_core.py project_preflight). Phrases are student-facing uk — the
-// student never sees or types the snapshot hash, so the echo-mismatch codes are
-// phrased as "the base changed, refresh" rather than "hash mismatch". An unknown
-// code (e.g. a future backend code the FE has not learned) falls back to the
-// backend's own ``details`` string via ``submissionCodePhrase``.
+//   lower_snake (ErrorCategory)  forbidden_type / size_limit — the ordinary
+//                                submission door (submission_core)
+//   UPPER_SNAKE (project)        ARCHIVE_ONLY / BASE_NOT_READY /
+//                                MISSING_BASE_ECHO / UNKNOWN_BASE_ECHO — the
+//                                project preflight (KD18 P5)
+//
+// Both reach the same handler, so both resolve through this one lookup. The key
+// spaces are disjoint by case, so the order of the two checks carries no
+// meaning.
+//
+// A SEPARATE axis from terminalStatus.ts (which maps the delivery STATUS) and
+// from rejectionReasons.ts (the reason code on a STORED attempt) — but the
+// lower_snake half takes its wording from that module rather than restating it:
+// the same refusal deserves the same sentence whether the student meets it at
+// the door or reads it later on the attempt.
+//
+// Phrases are student-facing uk — the student never sees or types the snapshot
+// hash, so the echo-mismatch codes are phrased as "the base changed, refresh"
+// rather than "hash mismatch".
+//
+// An unknown code falls to the ratified generic and NEVER to the backend's own
+// ``details``. That string is an English developer sentence ("File extension
+// '.exe' is not accepted. Send the work as text, a document, code, or an
+// archive."), and putting it in front of a student is exactly what DD-SP-D
+// forbids. The dictionary is total by construction instead.
 //
 // The normalizer read-path rejection (DD-6-Z) is intentionally NOT here: the
-// curated submission detail does not carry the normalizer source/reason, so a
-// normalizer rejection stays the generic status='rejected' phrase in
-// terminalStatus.ts — this dictionary is submit-time only.
+// curated detail does not carry the normalizer source/reason, so a normalizer
+// rejection stays on its status phrase in terminalStatus.ts — this dictionary
+// is submit-time only.
+
+import { PortalApiError } from './api/portalClient'
+import { articlePhrase, reasonArticle, UNKNOWN_REASON } from './rejectionReasons'
 
 const SUBMISSION_CODES: Record<string, string> = {
   ARCHIVE_ONLY:
@@ -31,8 +52,56 @@ const SUBMISSION_CODES: Record<string, string> = {
     'проєкт і спробуйте ще раз.',
 }
 
-// Resolve a submit-preflight code to a uk phrase. An unknown code falls back to
-// the backend's own ``details`` string when available, else a generic message.
-export function submissionCodePhrase(code: string, fallbackDetail?: string): string {
-  return SUBMISSION_CODES[code] ?? fallbackDetail ?? 'Файл не прийнято.'
+// Resolve a door code to a uk phrase. Total: an unknown code — a future backend
+// code this interface has not learned — yields the ratified generic.
+export function submissionCodePhrase(code: string): string {
+  const project = SUBMISSION_CODES[code]
+  if (project !== undefined) return project
+  return articlePhrase(reasonArticle(code) ?? UNKNOWN_REASON)
+}
+
+// Curated phrase per HTTP status, for a refusal that carried no code. These
+// replace the backend's own ``detail`` string, which for these statuses is an
+// English developer sentence — "Task is not ready for submissions yet (its
+// summary has not been generated)." — and showing it is the same DD-SP-D
+// mistake as showing ``details`` was, only through a different branch.
+//
+// 401 is unreachable today: the catch in the submit handler returns on it
+// before this function is called, because the client already cleared the
+// session and redirected. It is kept for the reason an unreachable dictionary
+// key is kept — the day that centralised handling moves, the student gets a
+// sentence rather than the generic.
+const STATUS_PHRASES: Record<number, string> = {
+  401: 'Сесія закінчилась — увійдіть знову.',
+  404: 'Завдання не знайдено.',
+  409: 'Завдання ще не готове до подачі. Спробуйте трохи згодом.',
+}
+
+// Map a submit failure to a uk message. FastAPI nests an HTTPException's detail
+// under the ``detail`` key, so a structured door refusal arrives as
+// ``body.detail = {code, details}`` (an OBJECT) — the code is body.detail.code,
+// NOT body.code. Order:
+//   • detail is an object with a string ``code`` → the code-keyed phrase, in
+//     either door vocabulary
+//   • no code → the curated phrase for the status
+//   • an unmapped status → the ratified generic
+//   • not an API error at all (network, parse) → the connection phrase, which
+//     is the one thing that IS specific about it
+//
+// The backend's own strings are read at NO point on any of these paths. A 422
+// with no code no longer gets a format lecture either: every door refusal now
+// carries a code, so a code-less 422 is a validation failure the student did
+// not cause and cannot fix by changing their file.
+export function submitErrorMessage(err: unknown): string {
+  if (err instanceof PortalApiError) {
+    const detail = (err.body as { detail?: unknown } | null)?.detail
+    if (detail !== null && typeof detail === 'object') {
+      const d = detail as { code?: unknown }
+      if (typeof d.code === 'string') {
+        return submissionCodePhrase(d.code)
+      }
+    }
+    return STATUS_PHRASES[err.status] ?? articlePhrase(UNKNOWN_REASON)
+  }
+  return 'Не вдалося надіслати. Перевірте зʼєднання та спробуйте ще раз.'
 }
