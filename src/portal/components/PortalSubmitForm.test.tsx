@@ -310,3 +310,38 @@ describe('submitErrorMessage — no server string ever reaches the student', () 
     expect(say(500)).toMatch(/сталася помилка/)
   })
 })
+
+describe('PortalSubmitForm — the file picker offers what the server accepts', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  const accept = () => {
+    renderForm()
+    return (screen.getByLabelText('Файл рішення') as HTMLInputElement).accept
+      .split(',')
+      .map((e) => e.trim())
+  }
+
+  it('offers all 41 accepted formats', () => {
+    expect(accept()).toHaveLength(41)
+  })
+
+  it('offers the formats this pass added — the ones a dialog used to hide', () => {
+    // .docx and .pdf are the point of the document conveyor; a student could
+    // not pick either while the list stood at the old fourteen.
+    expect(accept()).toEqual(
+      expect.arrayContaining(['.docx', '.pdf', '.tgz', '.json', '.yaml', '.tsx', '.go']),
+    )
+  })
+
+  it('offers no extension the server would refuse', () => {
+    // The set is a copy, so it can only be wrong in two directions; this pins
+    // the direction that would produce a 422 the student cannot understand.
+    const known = new Set([
+      'md', 'txt', 'py', 'ipynb', 'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', 'java',
+      'kt', 'kts', 'cs', 'go', 'rs', 'php', 'rb', 'c', 'h', 'cpp', 'hpp', 'cc',
+      'swift', 'dart', 'html', 'htm', 'css', 'scss', 'json', 'xml', 'yaml', 'yml',
+      'toml', 'sql', 'sh', 'docx', 'pdf', 'zip', 'gz', 'tgz',
+    ])
+    for (const ext of accept()) expect(known.has(ext.slice(1))).toBe(true)
+  })
+})

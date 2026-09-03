@@ -4,16 +4,32 @@ import { portalApi, PortalApiError } from '../api/portalClient'
 import type { PortalTaskBase } from '../types'
 import { submitErrorMessage } from '../submissionCodes'
 
-// Allowed homework extensions + max size MIRROR the backend
-// (submission_core.py:49 ALLOWED_HOMEWORK_EXTENSIONS / :47 MAX_HOMEWORK_SIZE).
-// This is a client-side convenience ONLY — the server is authoritative and
-// returns 422 even if this list drifts; keep it = (or a subset of) the backend.
-// Third FE-mirrors-backend case in T4b (cf. the c1 dev-routing comment and the
-// c2 source_type-blind-descriptor comment).
-const ALLOWED_EXT = [
-  '.py', '.js', '.ts', '.java', '.c', '.cpp', '.cs', '.sql',
-  '.md', '.txt', '.html', '.ipynb', '.zip', '.gz',
+// What the file picker offers, mirroring the backend's accepted set (gates
+// FORMATS.md — the same 41 the server derives as
+// _PROSE | CODE_EXTENSIONS | _ARCHIVES | _DOCUMENTS). Grouped the way the list
+// was ratified, by reason rather than alphabetically, so a future edit lands in
+// the group whose reason it shares.
+//
+// This is a COPY with no lock behind it: nothing fails when the server's set
+// moves and this one does not. Being short by one means the student cannot pick
+// a format the server would have accepted — which is exactly what happened
+// before this pass, when .docx and .pdf were added server-side and 27 of the 41
+// stayed unselectable in the dialog. The fix is a submission-policy endpoint
+// this form reads instead (recorded as debt; TASK §2), not more care here.
+const PROSE = ['md', 'txt']
+const CODE = [
+  'py', 'ipynb', 'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', 'java', 'kt', 'kts',
+  'cs', 'go', 'rs', 'php', 'rb', 'c', 'h', 'cpp', 'hpp', 'cc', 'swift', 'dart',
+  'html', 'htm', 'css', 'scss', 'json', 'xml', 'yaml', 'yml', 'toml', 'sql', 'sh',
 ]
+const DOCUMENTS = ['docx', 'pdf']
+const ARCHIVES = ['zip', 'gz', 'tgz']
+const ALLOWED_EXT = [...PROSE, ...CODE, ...DOCUMENTS, ...ARCHIVES].map((e) => `.${e}`)
+
+// The same copy problem as ALLOWED_EXT, and knowingly left alone: a project
+// submission is allowed 100 MB server-side, so this cuts off a legitimate one
+// before it is ever sent. Left for the policy endpoint to fix along with the
+// format list, rather than adding a second hand-maintained number here.
 const MAX_SIZE = 10 * 1024 * 1024 // 10 MB
 
 type SubmitState = 'idle' | 'submitting' | 'success' | 'duplicate' | 'error'

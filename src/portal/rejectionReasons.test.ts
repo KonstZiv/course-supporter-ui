@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   formatFileSize,
+  notOpenedCountLabel,
   notOpenedPhrase,
   rejectionPhrase,
   UNKNOWN_REASON,
@@ -163,5 +164,24 @@ describe('UNKNOWN_REASON', () => {
   it('is the ratified last resort, both halves', () => {
     expect(UNKNOWN_REASON.what).toBe('Під час обробки подачі сталася помилка.')
     expect(UNKNOWN_REASON.action).toBe('Спробуйте подати ще раз.')
+  })
+})
+
+describe('notOpenedCountLabel', () => {
+  it.each([
+    [1, '1 файл не прочитано'],
+    [2, '2 файли не прочитано'],
+    [4, '4 файли не прочитано'],
+    [5, '5 файлів не прочитано'],
+    [11, '11 файлів не прочитано'],
+    [12, '12 файлів не прочитано'],
+    [14, '14 файлів не прочитано'],
+    [21, '21 файл не прочитано'],
+    [22, '22 файли не прочитано'],
+    [25, '25 файлів не прочитано'],
+    [101, '101 файл не прочитано'],
+    [111, '111 файлів не прочитано'],
+  ])('%i → %s', (n, expected) => {
+    expect(notOpenedCountLabel(n)).toBe(expected)
   })
 })

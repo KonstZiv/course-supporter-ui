@@ -181,3 +181,19 @@ export function formatFileSize(bytes: number): string {
 function round(n: number): string {
   return (n < 10 ? n.toFixed(1) : String(Math.round(n))).replace('.', ',')
 }
+
+// "3 файли не прочитано" for the attempts list. Ukrainian needs three forms and
+// picking one would be visibly wrong two thirds of the time — the list is where
+// a student first sees that something was skipped, so the sentence has to read
+// like a sentence.
+export function notOpenedCountLabel(count: number): string {
+  const last = count % 10
+  const teens = count % 100
+  const noun =
+    last === 1 && teens !== 11
+      ? 'файл'
+      : last >= 2 && last <= 4 && (teens < 12 || teens > 14)
+        ? 'файли'
+        : 'файлів'
+  return `${count} ${noun} не прочитано`
+}

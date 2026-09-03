@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, Loader2, RotateCw } from 'lucide-react'
 import { portalApi, PortalApiError } from '../api/portalClient'
 import type { PortalSubmissionListItem, PortalVerdict } from '../types'
 import { statusBucket } from '../terminalStatus'
+import { notOpenedCountLabel } from '../rejectionReasons'
 import { PortalReviewDetail } from './PortalReviewDetail'
 
 // Compact per-attempt status chip (one attempt, not the overlay). Mirrors
@@ -118,6 +119,11 @@ export function PortalSubmissionsList({
                 >
                   {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                   <AttemptChip status={it.status} score={it.score} verdict={it.verdict} />
+                  {it.not_opened.length > 0 && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-pale text-amber-dark whitespace-nowrap">
+                      {notOpenedCountLabel(it.not_opened.length)}
+                    </span>
+                  )}
                   <span className="text-xs text-ink-muted ml-auto whitespace-nowrap">
                     {formatDate(it.created_at)}
                   </span>
@@ -129,7 +135,7 @@ export function PortalSubmissionsList({
                 )}
                 {open && (
                   <div className="px-3 pb-3 pt-1 border-t border-canvas-dark/30">
-                    <PortalReviewDetail submissionId={it.id} status={it.status} />
+                    <PortalReviewDetail row={it} />
                   </div>
                 )}
               </li>
