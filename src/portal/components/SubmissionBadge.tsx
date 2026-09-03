@@ -4,7 +4,9 @@ import type { PortalSubmissionOverlay } from '../types'
 // c3b "error"). Shows submission_status and — when reviewed — the best
 // attempt's score + passed flag. The backend de-collapse (DD-6-D) now surfaces
 // a distinct "error" bucket for the terminal errors (rejected / mismatch /
-// failed); the precise reason is in the attempts detail (terminalStatus).
+// failed); the precise reason is in the attempts detail — the article for the
+// rejection code where there is one, else the status phrase (rejectionReasons
+// falling back to terminalStatus).
 export function SubmissionBadge({ overlay }: { overlay: PortalSubmissionOverlay }) {
   const base = 'text-xs px-2 py-0.5 rounded-full whitespace-nowrap'
 
