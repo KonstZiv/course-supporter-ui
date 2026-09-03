@@ -212,15 +212,22 @@ describe('PortalSubmitForm — submit error-code dictionary (KD18 P5)', () => {
     await waitFor(() => expect(screen.getByText(/оновився/)).toBeInTheDocument())
   })
 
-  it('unknown code → falls back to the backend detail.details', async () => {
+  it('unknown code → the ratified generic, and NOT the backend string', async () => {
+    // Inverted deliberately (DD-SP-D). ``details`` is an English developer
+    // sentence — "File extension '.exe' is not accepted…" — and the old
+    // behaviour put it in front of the student. The phrase dictionary is total,
+    // so there is nothing left for the raw string to fall back to.
     submitWith(
       new PortalApiError(422, 'x', {
-        detail: { code: 'NEW_CODE', details: 'сервер сказав так' },
+        detail: { code: 'NEW_CODE', details: "File extension '.exe' is not accepted." },
       }),
     )
     await waitFor(() =>
-      expect(screen.getByText('сервер сказав так')).toBeInTheDocument(),
+      expect(
+        screen.getByText('Під час обробки подачі сталася помилка. Спробуйте подати ще раз.'),
+      ).toBeInTheDocument(),
     )
+    expect(screen.queryByText(/File extension/)).not.toBeInTheDocument()
   })
 
   it('plain string detail (other 4xx) → shown as-is', async () => {

@@ -22,8 +22,9 @@ type SubmitState = 'idle' | 'submitting' | 'success' | 'duplicate' | 'error'
 // under the ``detail`` key, so a structured project-preflight error arrives as
 // ``body.detail = {code, details}`` (an OBJECT) — the code is body.detail.code,
 // NOT body.code. Order:
-//   • detail is an object with a string ``code`` → the code-keyed phrase (KD18
-//     P5; an unknown code falls back to the backend ``details``).
+//   • detail is an object with a string ``code`` → the code-keyed phrase, in
+//     either door vocabulary. The backend's ``details`` is deliberately not
+//     read: it is an English developer sentence (DD-SP-D).
 //   • detail is a plain string (other 4xx) → show it as-is (graceful fallback).
 //   • no usable detail → the status-based curated fallback: a plain 422 is a
 //     file-type/size rejection, a plain 409 is the task-not-ready readiness gate
@@ -34,10 +35,7 @@ function submitErrorMessage(err: unknown): string {
     if (detail !== null && typeof detail === 'object') {
       const d = detail as { code?: unknown; details?: unknown }
       if (typeof d.code === 'string') {
-        return submissionCodePhrase(
-          d.code,
-          typeof d.details === 'string' ? d.details : undefined,
-        )
+        return submissionCodePhrase(d.code)
       }
     }
     if (typeof detail === 'string') {
