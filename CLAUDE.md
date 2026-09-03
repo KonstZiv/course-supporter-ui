@@ -12,26 +12,11 @@ React + TypeScript SPA for:
 
 **Target state is in `../refactoring-vision/vision.md` §5 Stage map** — specifically the `.UI` sub-stages in each Phase.
 
-## Stack
-
-- React 19 + TypeScript
-- Vite (build), Tailwind (styling)
-- Zustand (state), React Flow via `@xyflow/react` (course tree canvas)
-- React Router v7
-- API client: `fetch` wrapped in `src/api/client.ts`, auth via `X-API-Key` header
-
-## Commands
-
-```bash
-npm install
-npm run dev            # vite dev server
-npm run build          # tsc + vite build
-npm run lint           # eslint
-```
-
 ## Rules specific to frontend
 
 ### API contract is the integration point
+
+The client is `fetch` wrapped in `src/api/client.ts`; every request authenticates with an `X-API-Key` header.
 
 Every backend sub-stage that changes API surface triggers a matching UI sub-stage. The contract is **not** maintained as a hand-written file in the repository. The canonical source is the OpenAPI specification that FastAPI generates from the backend `app` object; the running server exposes it at `/openapi.json`.
 
