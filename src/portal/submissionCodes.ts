@@ -33,6 +33,7 @@
 // rejection stays on its status phrase in terminalStatus.ts — this dictionary
 // is submit-time only.
 
+import { PortalApiError } from './api/portalClient'
 import { articlePhrase, reasonArticle, UNKNOWN_REASON } from './rejectionReasons'
 
 const SUBMISSION_CODES: Record<string, string> = {
@@ -57,4 +58,50 @@ export function submissionCodePhrase(code: string): string {
   const project = SUBMISSION_CODES[code]
   if (project !== undefined) return project
   return articlePhrase(reasonArticle(code) ?? UNKNOWN_REASON)
+}
+
+// Curated phrase per HTTP status, for a refusal that carried no code. These
+// replace the backend's own ``detail`` string, which for these statuses is an
+// English developer sentence — "Task is not ready for submissions yet (its
+// summary has not been generated)." — and showing it is the same DD-SP-D
+// mistake as showing ``details`` was, only through a different branch.
+//
+// 401 is unreachable today: the catch in the submit handler returns on it
+// before this function is called, because the client already cleared the
+// session and redirected. It is kept for the reason an unreachable dictionary
+// key is kept — the day that centralised handling moves, the student gets a
+// sentence rather than the generic.
+const STATUS_PHRASES: Record<number, string> = {
+  401: 'Сесія закінчилась — увійдіть знову.',
+  404: 'Завдання не знайдено.',
+  409: 'Завдання ще не готове до подачі. Спробуйте трохи згодом.',
+}
+
+// Map a submit failure to a uk message. FastAPI nests an HTTPException's detail
+// under the ``detail`` key, so a structured door refusal arrives as
+// ``body.detail = {code, details}`` (an OBJECT) — the code is body.detail.code,
+// NOT body.code. Order:
+//   • detail is an object with a string ``code`` → the code-keyed phrase, in
+//     either door vocabulary
+//   • no code → the curated phrase for the status
+//   • an unmapped status → the ratified generic
+//   • not an API error at all (network, parse) → the connection phrase, which
+//     is the one thing that IS specific about it
+//
+// The backend's own strings are read at NO point on any of these paths. A 422
+// with no code no longer gets a format lecture either: every door refusal now
+// carries a code, so a code-less 422 is a validation failure the student did
+// not cause and cannot fix by changing their file.
+export function submitErrorMessage(err: unknown): string {
+  if (err instanceof PortalApiError) {
+    const detail = (err.body as { detail?: unknown } | null)?.detail
+    if (detail !== null && typeof detail === 'object') {
+      const d = detail as { code?: unknown }
+      if (typeof d.code === 'string') {
+        return submissionCodePhrase(d.code)
+      }
+    }
+    return STATUS_PHRASES[err.status] ?? articlePhrase(UNKNOWN_REASON)
+  }
+  return 'Не вдалося надіслати. Перевірте зʼєднання та спробуйте ще раз.'
 }

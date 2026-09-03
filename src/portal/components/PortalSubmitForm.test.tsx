@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { PortalSubmitForm } from './PortalSubmitForm'
+import { submitErrorMessage } from '../submissionCodes'
 import { portalApi, PortalApiError } from '../api/portalClient'
 import type { PortalTaskBase } from '../types'
 
@@ -59,13 +60,16 @@ describe('PortalSubmitForm', () => {
     expect(onSubmitted).not.toHaveBeenCalled()
   })
 
-  it('renders a 422 inline (server authoritative)', async () => {
+  it('renders a code-less 422 inline as the generic', async () => {
+    // Every door refusal now carries a code, so a 422 without one is a
+    // validation failure the student did not cause — a format lecture would
+    // point them at the wrong thing.
     mockedSubmit.mockRejectedValue(new PortalApiError(422, 'bad ext'))
     renderForm()
     pickFile('a.exe')
     fireEvent.click(submitBtn())
     await waitFor(() => {
-      expect(screen.getByText(/Файл не прийнято/)).toBeInTheDocument()
+      expect(screen.getByText(/сталася помилка/)).toBeInTheDocument()
     })
   })
 
@@ -230,16 +234,23 @@ describe('PortalSubmitForm — submit error-code dictionary (KD18 P5)', () => {
     expect(screen.queryByText(/File extension/)).not.toBeInTheDocument()
   })
 
-  it('plain string detail (other 4xx) → shown as-is', async () => {
-    submitWith(new PortalApiError(422, 'x', { detail: 'Розширення не дозволене' }))
-    await waitFor(() =>
-      expect(screen.getByText('Розширення не дозволене')).toBeInTheDocument(),
+  it('plain string detail → the status phrase, never the string (DD-SP-D)', async () => {
+    // The second door the raw server text used to come through. For these
+    // statuses ``detail`` is an English developer sentence.
+    submitWith(
+      new PortalApiError(409, 'x', {
+        detail: 'Task is not ready for submissions yet (its summary has not been generated).',
+      }),
     )
+    await waitFor(() =>
+      expect(screen.getByText(/ще не готове до подачі/)).toBeInTheDocument(),
+    )
+    expect(screen.queryByText(/summary has not been generated/)).not.toBeInTheDocument()
   })
 
-  it('detail-less 422 → the curated file-type fallback', async () => {
+  it('detail-less 422 → the generic (no code means no format verdict)', async () => {
     submitWith(new PortalApiError(422, 'x', null))
-    await waitFor(() => expect(screen.getByText(/Файл не прийнято/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(/сталася помилка/)).toBeInTheDocument())
   })
 
   it('detail-less 409 → the curated readiness fallback', async () => {
@@ -249,5 +260,53 @@ describe('PortalSubmitForm — submit error-code dictionary (KD18 P5)', () => {
         screen.getByText('Завдання ще не готове до подачі. Спробуйте трохи згодом.'),
       ).toBeInTheDocument(),
     )
+  })
+})
+
+describe('submitErrorMessage — no server string ever reaches the student', () => {
+  // The property, over every slot a backend string can occupy and every status
+  // that reaches this function. Checked directly rather than through a render
+  // so the whole surface is covered, not a sample of it.
+  const SERVER = 'File extension .exe is not accepted, said the server'
+
+  const bodies: unknown[] = [
+    { detail: SERVER },
+    { detail: { code: 'NEW_CODE', details: SERVER } },
+    { detail: { details: SERVER } },
+    { detail: [{ loc: ['body', 'file'], msg: SERVER, type: 'value_error' }] },
+    { detail: { code: 'forbidden_type', details: SERVER } },
+    { detail: { code: 'ARCHIVE_ONLY', details: SERVER } },
+    { message: SERVER },
+    SERVER,
+    null,
+  ]
+
+  it.each([400, 401, 403, 404, 409, 413, 422, 500, 503])(
+    'status %i — no body shape leaks the string',
+    (status) => {
+      for (const body of bodies) {
+        const phrase = submitErrorMessage(new PortalApiError(status, SERVER, body))
+        expect(phrase).not.toContain(SERVER)
+        expect(phrase).not.toContain('File extension')
+        expect(phrase.length).toBeGreaterThan(0)
+      }
+    },
+  )
+
+  it('a non-API failure keeps its own specific phrase', () => {
+    expect(submitErrorMessage(new TypeError('Failed to fetch'))).toMatch(
+      /Перевірте зʼєднання/,
+    )
+    expect(submitErrorMessage(new TypeError('Failed to fetch'))).not.toContain(
+      'Failed to fetch',
+    )
+  })
+
+  it('the three curated statuses answer with their own sentence', () => {
+    const say = (s: number) => submitErrorMessage(new PortalApiError(s, 'x', null))
+    expect(say(401)).toMatch(/Сесія закінчилась/)
+    expect(say(404)).toMatch(/Завдання не знайдено/)
+    expect(say(409)).toMatch(/ще не готове до подачі/)
+    expect(say(500)).toMatch(/сталася помилка/)
   })
 })
