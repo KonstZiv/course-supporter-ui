@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   STRUCTURE_BLOCK_ACTION,
   detailIsShowable,
+  notReadCountLabel,
   structureReasonPhrase,
 } from './codeStructureReasons'
+import { notOpenedCountLabel } from '../portal/rejectionReasons'
 
 // The twelve members of the backend's CodeStructureReason, verbatim. Written
 // out rather than imported (the enum lives in Python): if the server grows a
@@ -75,4 +77,36 @@ describe('detailIsShowable', () => {
       expect(detailIsShowable(token)).toBe(true)
     },
   )
+})
+
+describe('notReadCountLabel', () => {
+  it.each([
+    [1, '1 файл не прочитано'],
+    [2, '2 файли не прочитано'],
+    [3, '3 файли не прочитано'],
+    [4, '4 файли не прочитано'],
+    [5, '5 файлів не прочитано'],
+    [10, '10 файлів не прочитано'],
+    // The teens are the trap: 11 takes the plural 5 does, not the singular 1.
+    [11, '11 файлів не прочитано'],
+    [12, '12 файлів не прочитано'],
+    [13, '13 файлів не прочитано'],
+    [14, '14 файлів не прочитано'],
+    [21, '21 файл не прочитано'],
+    [22, '22 файли не прочитано'],
+    [25, '25 файлів не прочитано'],
+    [101, '101 файл не прочитано'],
+    [111, '111 файлів не прочитано'],
+    [201, '201 файл не прочитано'],
+  ])('%i → «%s»', (n, expected) => {
+    expect(notReadCountLabel(n)).toBe(expected)
+  })
+
+  it('agrees with the portal twin it was copied from', () => {
+    // Two bundles, one rule. If either is edited alone this fails, which is
+    // the only guard the boundary between them allows.
+    for (const n of [1, 2, 4, 5, 11, 14, 21, 22, 101, 201]) {
+      expect(notReadCountLabel(n)).toBe(notOpenedCountLabel(n))
+    }
+  })
 })

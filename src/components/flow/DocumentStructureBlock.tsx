@@ -1,11 +1,11 @@
-import { useCallback, useState } from 'react'
-import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
-import { ApiError } from '../../api/client'
+import { useCallback, useEffect, useState } from 'react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import { documentsApi } from '../../api/documents'
 import type { DocumentStructureEntry, DocumentStructureResponse } from '../../types/api'
 import {
   STRUCTURE_BLOCK_ACTION,
   detailIsShowable,
+  notReadCountLabel,
   structureReasonPhrase,
 } from '../../utils/codeStructureReasons'
 import { formatBytes } from '../../utils/formatBytes'
@@ -17,15 +17,20 @@ import { formatBytes } from '../../utils/formatBytes'
 // later, so until now the author had a warning and no answer. This is the
 // answer, and it lives on the card because that is where they come back to.
 //
-// Fetched on EXPAND, not on card open: the panel lists every document of a
-// node, and fetching per code material would fire N requests for a block most
-// of them will never be opened. One request per document, kept for the life of
-// the row.
+// Fetched on MOUNT, not on expand. The heading carries a count now, and a count
+// cannot be shown by a request that has not been made — an author who never
+// opens the block still has to learn there is something in it. The cost is
+// bounded: a node holds units of code materials, not the whole tree, and only
+// a ready one is asked at all.
 //
-// A 404 means the document has no such surface at all — a non-code material,
-// or code still being processed — which is not the same as "nothing was left
-// out". The block simply disappears; two empty lists, by contrast, are a real
-// answer and say the project was read whole.
+// Nothing renders until there is something to say. A 404 (no such surface — a
+// non-code material, or code still being processed) and two empty lists (read
+// in full) are DIFFERENT answers on the wire, and the server keeps them apart
+// on purpose; here they collapse to the same silence, deliberately. A heading
+// reading "0 файлів не прочитано" on every clean upload would be noise, and
+// "everything was read" is not news the author needs told. A failed fetch is
+// silent for the same reason — a block nobody promised is better absent than
+// announced as broken.
 
 function StructureGroup({
   title,
@@ -67,86 +72,57 @@ function StructureGroup({
 export function DocumentStructureBlock({ documentId }: { documentId: string }) {
   const [open, setOpen] = useState(false)
   const [data, setData] = useState<DocumentStructureResponse | null>(null)
-  const [loading, setLoading] = useState(false)
-  // Distinct from "loaded and empty": a document with no structure surface has
-  // no block at all, and the toggle that opened it goes away with it.
-  const [absent, setAbsent] = useState(false)
-  const [error, setError] = useState(false)
 
-  const toggle = useCallback(async () => {
-    if (open) {
-      setOpen(false)
-      return
+  useEffect(() => {
+    let active = true
+    documentsApi
+      .getStructure(documentId)
+      .then((d) => {
+        if (active) setData(d)
+      })
+      // Every failure is the same silence, 404 included — see the note above.
+      .catch(() => undefined)
+    return () => {
+      active = false
     }
-    setOpen(true)
-    if (data !== null || loading) return
-    setLoading(true)
-    setError(false)
-    try {
-      setData(await documentsApi.getStructure(documentId))
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 404) {
-        setAbsent(true)
-      } else {
-        setError(true)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }, [open, data, loading, documentId])
+  }, [documentId])
 
-  if (absent) return null
+  const toggle = useCallback(() => setOpen((o) => !o), [])
 
-  const nothingLeftOut =
-    data !== null &&
-    data.excluded.length === 0 &&
-    data.description_only.length === 0
+  const count =
+    data === null ? 0 : data.excluded.length + data.description_only.length
+  if (count === 0) return null
 
   return (
     <div className="mt-1">
       <button
         onClick={toggle}
         aria-expanded={open}
-        className="flex items-center gap-1 text-[11px] text-ink-muted
-                   hover:text-ink transition-colors cursor-pointer"
+        // The warning tone of the portal's own "not read" badge, and for the
+        // same reason: collapsed, this line is the ONLY notice the author gets
+        // that part of their material never reached the model. It read as
+        // muted chrome before, next to controls that are genuinely optional.
+        className="inline-flex items-center gap-1 text-[11px] font-medium
+                   px-1.5 py-0.5 rounded bg-amber-pale text-amber-dark
+                   hover:bg-amber-pale/70 transition-colors cursor-pointer"
       >
         {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-        Не прочитано під час обробки
+        {notReadCountLabel(count)}
       </button>
 
       {open && (
         <div className="mt-1 pl-4 space-y-1.5">
-          {loading && (
-            <p className="flex items-center gap-1.5 text-xs text-ink-muted">
-              <Loader2 size={12} className="animate-spin" />
-              Завантаження…
-            </p>
-          )}
-          {error && (
-            <p className="text-xs text-coral">
-              Не вдалося завантажити перелік. Спробуйте ще раз.
-            </p>
-          )}
-          {nothingLeftOut && (
-            <p className="text-xs text-ink-muted">
-              Усі файли матеріалу прочитано.
-            </p>
-          )}
-          {data !== null && !nothingLeftOut && (
-            <>
-              <StructureGroup
-                title="Не увійшли до матеріалу"
-                entries={data.excluded}
-              />
-              <StructureGroup
-                title="Увійшли лише назвою"
-                entries={data.description_only}
-              />
-              {/* One action for the block, never per row: a per-line
-                  instruction under a `.DS_Store` would be invented noise. */}
-              <p className="text-xs text-ink-muted">{STRUCTURE_BLOCK_ACTION}</p>
-            </>
-          )}
+          <StructureGroup
+            title="Не увійшли до матеріалу"
+            entries={data!.excluded}
+          />
+          <StructureGroup
+            title="Увійшли лише назвою"
+            entries={data!.description_only}
+          />
+          {/* One action for the block, never per row: a per-line instruction
+              under a `.DS_Store` would be invented noise. */}
+          <p className="text-xs text-ink-muted">{STRUCTURE_BLOCK_ACTION}</p>
         </div>
       )}
     </div>
