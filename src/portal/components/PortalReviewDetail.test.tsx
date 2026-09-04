@@ -313,8 +313,12 @@ describe('PortalReviewDetail — "Не прочитано під час пере
         })}
       />,
     )
-    expect(screen.getByText(/архів усередині архіву\./)).toBeInTheDocument()
+    expect(screen.getByText(/Архів усередині архіву\./)).toBeInTheDocument()
     expect(screen.getByText('(133 Б)')).toBeInTheDocument()
+    // Step Г2 §2.4: the block heading says "not read" once, and the line does
+    // not say it again. Asserted here as well as in the dictionary's own suite
+    // because this is the surface where the repetition was actually visible.
+    expect(screen.queryByText(/файл не прочитано/i)).not.toBeInTheDocument()
   })
 
   it('shows no service vocabulary — no codes, no separators, no layer names', () => {
