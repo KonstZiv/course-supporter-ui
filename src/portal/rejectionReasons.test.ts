@@ -96,11 +96,29 @@ describe('rejectionPhrase — the gzip discrimination', () => {
 
 describe('notOpenedPhrase — one file inside an archive', () => {
   it.each([
-    ['charset_violation', /кодування не розпізнано/],
-    ['nested_archive', /архів усередині архіву/],
-    ['over_budget', /завеликий для перевірки/],
-  ])('%s → its own line', (reason, re) => {
-    expect(notOpenedPhrase(skipped('a.txt', reason))).toMatch(re)
+    ['charset_violation', 'Кодування не розпізнано.'],
+    ['nested_archive', 'Архів усередині архіву.'],
+    ['over_budget', 'Завеликий для перевірки.'],
+  ])('%s → its own line', (reason, phrase) => {
+    expect(notOpenedPhrase(skipped('a.txt', reason))).toBe(phrase)
+  })
+
+  // Step Г2 §2.4: the block heading says "not read" once; no line repeats it.
+  // Asserted over EVERY branch of the function rather than the three that used
+  // to carry the prefix — the asymmetry existed because the branches were
+  // written apart, and a per-branch check is what keeps them together.
+  it.each([
+    ['a.txt', 'charset_violation'],
+    ['a.txt', 'nested_archive'],
+    ['a.txt', 'over_budget'],
+    ['a.py', 'magic_mismatch'],
+    ['shot.png', 'forbidden_type'],
+    ['Makefile', 'forbidden_type'],
+    ['.gitignore', 'forbidden_type'],
+    ['docs/report.docx', 'forbidden_type'],
+    ['a.py', 'reason_from_the_future'],
+  ])('%s / %s does not repeat the heading', (path, reason) => {
+    expect(notOpenedPhrase(skipped(path, reason))).not.toMatch(/не прочитано/i)
   })
 
   it('a document carries the action — it CAN be submitted on its own', () => {
@@ -141,7 +159,7 @@ describe('notOpenedPhrase — one file inside an archive', () => {
 
   it('is TOTAL — an unknown reason still yields a line, never undefined', () => {
     expect(notOpenedPhrase(skipped('a.py', 'reason_from_the_future'))).toBe(
-      'Файл не прочитано.',
+      'Причину не вказано.',
     )
   })
 })

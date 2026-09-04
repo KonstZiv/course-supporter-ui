@@ -1,12 +1,16 @@
 // Student-facing "why" keyed by the backend's reason CODE — the third
 // dictionary on this axis, and the home of the ratified wording (gates TASK §4).
 //
-// The three are distinct axes, not variants of one lookup:
+// The axes are distinct, not variants of one lookup:
 //   terminalStatus.ts   — delivery STATUS (rejected / mismatch / failed) → phrase
 //   submissionCodes.ts  — submit-time DOOR code, both vocabularies → phrase
 //   this module         — the reason code the read-path now carries, on a whole
 //                         submission (``rejection.code``) and on one file inside
 //                         an archive (``not_opened[].reason``)
+//   encodingNames.ts    — display name for the encoding a file was recovered
+//                         from (step Г2 §2.2). Not a reason at all: it names a
+//                         fact about a file that WAS read, which is why it sits
+//                         beside this module rather than inside it.
 //
 // Three layers answer a refused attempt, in this order (ratified):
 //   1. the §4 article for the code, when there is one
@@ -126,11 +130,17 @@ export function rejectionPhrase(rejection: PortalRejection): string | null {
 // accepted, so these lines say what was skipped, not what to fix. Most carry no
 // action — there is nothing to do about a .png in a code archive, and saying so
 // would be noise on a review that otherwise went fine.
+//
+// None of these repeats "not read". The block heading above them already says
+// it ("Не прочитано під час перевірки", PortalReviewDetail), and three of the
+// six lines used to carry it while the other three did not — an asymmetry that
+// came from the two branches below being written apart rather than from any
+// decision. Each line now says only the part the heading cannot: why.
 
 const IN_ARCHIVE: Record<string, ReasonArticle> = {
-  charset_violation: { what: 'Файл не прочитано: кодування не розпізнано.' },
-  nested_archive: { what: 'Файл не прочитано: архів усередині архіву.' },
-  over_budget: { what: 'Файл не прочитано: завеликий для перевірки.' },
+  charset_violation: { what: 'Кодування не розпізнано.' },
+  nested_archive: { what: 'Архів усередині архіву.' },
+  over_budget: { what: 'Завеликий для перевірки.' },
 }
 
 const DOCUMENT_IN_ARCHIVE: ReasonArticle = {
@@ -158,9 +168,14 @@ export function notOpenedArticle(entry: PortalNotOpened): ReasonArticle {
   // magic_mismatch inside an archive reuses the whole-file article: §4 marks
   // the encoding and budget rows as single-file-only but leaves this one
   // context-free, and it reads correctly either way.
+  //
+  // The last resort says the reason is missing rather than restating the
+  // heading. A code this dictionary has never seen still names a file the
+  // student lost, and "Причину не вказано" is the honest form of that — it
+  // does not pretend to an explanation, and it does not go blank.
   return (
     IN_ARCHIVE[entry.reason] ??
-    reasonArticle(entry.reason) ?? { what: 'Файл не прочитано.' }
+    reasonArticle(entry.reason) ?? { what: 'Причину не вказано.' }
   )
 }
 

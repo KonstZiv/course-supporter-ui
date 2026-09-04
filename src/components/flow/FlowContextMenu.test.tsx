@@ -79,17 +79,28 @@ describe('FlowContextMenu — upload parity with the side panel (Е2)', () => {
   }
 
   it('runs the shared pre-send checks — an oversized presentation is rejected before the dialog', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
     pickFiles([sized('deck.pptx', 51 * 1024 * 1024)])
+    // Step Г2 §2.5: shown on the canvas itself, where the author is standing,
+    // instead of a browser modal that blocks the page and forgets its text.
     await waitFor(() =>
-      expect(alertSpy).toHaveBeenCalledWith(
-        expect.stringContaining(
-          'deck.pptx перевищує ліміт 50 МБ для презентацій',
-        ),
-      ),
+      expect(
+        screen.getByText(/deck\.pptx перевищує ліміт 50 МБ для презентацій/),
+      ).toBeInTheDocument(),
     )
     // The «Тип документа» dialog never opens for the rejected file.
     expect(screen.queryByText('Тип документа')).not.toBeInTheDocument()
+  })
+
+  it('the refusal stays until the author closes it', async () => {
+    pickFiles([sized('deck.pptx', 51 * 1024 * 1024)])
+    const notice = await screen.findByText(
+      /deck\.pptx перевищує ліміт 50 МБ для презентацій/,
+    )
+    expect(notice).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Закрити' }))
+    expect(
+      screen.queryByText(/deck\.pptx перевищує ліміт/),
+    ).not.toBeInTheDocument()
   })
 
   it('opens the «Тип документа» dialog for an accepted file', async () => {

@@ -14,6 +14,7 @@ import {
   notOpenedPhrase,
   rejectionPhrase,
 } from '../rejectionReasons'
+import { encodingDisplayName, shouldReportEncoding } from '../encodingNames'
 
 // KD18 P5 (I2): the delta receipt for a project submission — how it diverged
 // from the base + whether the base has since moved on. Rendered ONLY in the
@@ -74,6 +75,34 @@ function NotOpenedBlock({ entries }: { entries: PortalNotOpened[] }) {
   )
 }
 
+// How the file was actually read, when that is not the ordinary answer (step
+// Г2 §2.2). Shown in ALL THREE buckets and read from the LIST ROW, exactly
+// like NotOpenedBlock: the error and pending branches never fetch (DD-6-D),
+// and a refused attempt is precisely where "your file was not UTF-8" explains
+// the most.
+//
+// Nothing renders on `utf-8` or on null. The first is every ordinary
+// submission and would train the eye past the place the caveat appears; the
+// second is not silence about a known fact but the absence of one — an
+// archive recovers its members individually, a document arrives decoded.
+//
+// The sentence ends with what to do, because there is something: the student
+// saves the next file differently. That is the one action available, and it
+// is not available from anywhere else in the interface.
+function RecoveredEncodingBlock({ encoding }: { encoding: string | null }) {
+  if (!shouldReportEncoding(encoding)) return null
+  return (
+    <div className="p-3 rounded-xl bg-amber-pale/60 text-sm text-ink-light">
+      Файл був збережений не в UTF-8 — кодування розпізнано як{' '}
+      <span className="font-medium text-ink">
+        {encodingDisplayName(encoding as string)}
+      </span>{' '}
+      і прочитано; рецензія складена за цим прочитанням. Щоб уникнути помилок
+      надалі, зберігайте файли в UTF-8.
+    </div>
+  )
+}
+
 // Inline review detail for one attempt (Phase 6 / T4b, c3b; Q1 — expanded row,
 // not a route). Rendered by state (Q6):
 //   reviewed  → fetch the detail, render review_markdown via the shared
@@ -83,10 +112,15 @@ function NotOpenedBlock({ entries }: { entries: PortalNotOpened[] }) {
 //   error     → the curated phrase; NO markdown, NO fetch.
 //   pending   → "На перевірці"; NO markdown, NO fetch.
 //
+// Two blocks ride above all three, drawn from the LIST ROW: how the file was
+// read (§2.2) and which of its files were not (c3b). Both are facts about the
+// submission rather than about the review, so neither waits on the fetch.
+//
 // Takes the LIST ROW rather than an id + status. The row already carries the
-// rejection code and the unread files, so the error branch explains itself
-// without a request — DD-6-D's "error and pending are fetch-free" survives the
-// arrival of a reason, which a second fetch here would have cost.
+// rejection code, the unread files and the encoding, so the error branch
+// explains itself without a request — DD-6-D's "error and pending are
+// fetch-free" survives the arrival of all three, which a second fetch here
+// would have cost.
 //
 // The "why" of a refusal resolves in three layers, in this order:
 //   1. the ratified article for the reason code (rejectionReasons)
@@ -127,6 +161,7 @@ export function PortalReviewDetail({ row }: { row: PortalSubmissionListItem }) {
     return (
       <div className="space-y-3">
         <div className="p-3 rounded-xl bg-coral-pale text-coral text-sm">{phrase}</div>
+        <RecoveredEncodingBlock encoding={row.recovered_encoding} />
         <NotOpenedBlock entries={row.not_opened} />
       </div>
     )
@@ -138,6 +173,7 @@ export function PortalReviewDetail({ row }: { row: PortalSubmissionListItem }) {
         <div className="p-3 rounded-xl bg-amber-pale text-amber-dark text-sm">
           {PENDING_LABEL} — рецензія зʼявиться, коли перевірка завершиться.
         </div>
+        <RecoveredEncodingBlock encoding={row.recovered_encoding} />
         <NotOpenedBlock entries={row.not_opened} />
       </div>
     )
@@ -149,6 +185,7 @@ export function PortalReviewDetail({ row }: { row: PortalSubmissionListItem }) {
   if (error) {
     return (
       <div className="space-y-3">
+        <RecoveredEncodingBlock encoding={row.recovered_encoding} />
         <NotOpenedBlock entries={row.not_opened} />
         <div className="p-3 rounded-xl bg-coral-pale text-coral text-sm">{error}</div>
       </div>
@@ -157,6 +194,7 @@ export function PortalReviewDetail({ row }: { row: PortalSubmissionListItem }) {
   if (detail === null) {
     return (
       <div className="space-y-3">
+        <RecoveredEncodingBlock encoding={row.recovered_encoding} />
         <NotOpenedBlock entries={row.not_opened} />
         <div className="flex items-center gap-2 text-ink-muted text-sm py-3">
           <Loader2 size={16} className="animate-spin" />
@@ -169,6 +207,7 @@ export function PortalReviewDetail({ row }: { row: PortalSubmissionListItem }) {
   const passed = detail.verdict?.passed ?? false
   return (
     <div className="space-y-3">
+      <RecoveredEncodingBlock encoding={row.recovered_encoding} />
       <NotOpenedBlock entries={row.not_opened} />
       {detail.score !== null && (
         <div className="flex items-center gap-2 text-sm">

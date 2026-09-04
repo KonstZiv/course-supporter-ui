@@ -23,6 +23,7 @@ function meWith(over: Partial<PortalMe>): PortalMe {
     display_name: 'Олена',
     recovery_email: null,
     recovery_email_confirmed: false,
+    preferred_language: null,
     ...over,
   }
 }

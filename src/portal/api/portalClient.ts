@@ -4,6 +4,7 @@ import type {
   ForgotPasswordRequest,
   PortalBaseDownload,
   PortalCourseListItem,
+  PortalLanguagesResponse,
   PortalLoginRequest,
   PortalLoginResponse,
   PortalMaterialTreeNode,
@@ -173,6 +174,11 @@ export const portalApi = {
       body,
     ),
   // c2 read-path. All inherit authGet's bearer + 401-clear-redirect contract.
+  // Step Г2 §2.1: the language whitelist the review-language field offers.
+  // The author's identical route is behind an API-key scope the portal session
+  // cannot pass, hence the portal twin server-side; this is its caller.
+  languages: () =>
+    authGet<PortalLanguagesResponse>('/api/v1/portal/languages'),
   courses: () => authGet<PortalCourseListItem[]>('/api/v1/portal/courses'),
   courseMaterials: (rootId: string) =>
     authGet<PortalMaterialTreeNode>(

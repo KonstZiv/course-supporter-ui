@@ -24,6 +24,7 @@ const row = (over: Partial<PortalSubmissionListItem>): PortalSubmissionListItem 
   original_filename: 'a.py',
   rejection: null,
   not_opened: [],
+  recovered_encoding: null,
   ...over,
 })
 
