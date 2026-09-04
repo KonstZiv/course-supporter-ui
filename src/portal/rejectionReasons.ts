@@ -67,7 +67,7 @@ const WHOLE_FILE: Record<string, ReasonArticle> = {
     action: 'Перевірте, що файл не пошкоджений і збережений у заявленому форматі.',
   },
   charset_violation: {
-    what: 'Файл збережено не в кодуванні UTF-8.',
+    what: 'Кодування файла не розпізнано: це не UTF-8.',
     action: 'Відкрийте його у редакторі та збережіть як UTF-8.',
   },
   size_limit: {
@@ -128,7 +128,7 @@ export function rejectionPhrase(rejection: PortalRejection): string | null {
 // would be noise on a review that otherwise went fine.
 
 const IN_ARCHIVE: Record<string, ReasonArticle> = {
-  charset_violation: { what: 'Файл не прочитано: кодування не UTF-8.' },
+  charset_violation: { what: 'Файл не прочитано: кодування не розпізнано.' },
   nested_archive: { what: 'Файл не прочитано: архів усередині архіву.' },
   over_budget: { what: 'Файл не прочитано: завеликий для перевірки.' },
 }

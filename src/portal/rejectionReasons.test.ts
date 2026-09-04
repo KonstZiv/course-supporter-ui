@@ -18,7 +18,7 @@ const skipped = (path: string, reason: string): PortalNotOpened => ({
 describe('rejectionPhrase — layer 1, the §4 article for a whole submission', () => {
   it.each([
     ['forbidden_type', /Цей формат файла не приймається\./],
-    ['charset_violation', /не в кодуванні UTF-8/],
+    ['charset_violation', /Кодування файла не розпізнано/],
     ['size_limit', /більший за дозволений розмір/],
     ['over_budget', /Робота завелика для перевірки/],
     ['empty_document', /немає тексту для перевірки/],
@@ -96,7 +96,7 @@ describe('rejectionPhrase — the gzip discrimination', () => {
 
 describe('notOpenedPhrase — one file inside an archive', () => {
   it.each([
-    ['charset_violation', /кодування не UTF-8/],
+    ['charset_violation', /кодування не розпізнано/],
     ['nested_archive', /архів усередині архіву/],
     ['over_budget', /завеликий для перевірки/],
   ])('%s → its own line', (reason, re) => {
