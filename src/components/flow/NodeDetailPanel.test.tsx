@@ -29,6 +29,14 @@ vi.mock('../../api/documents', () => ({
     attachBase: vi.fn(),
     getBaseState: vi.fn(),
     getBaseManifest: vi.fn(),
+    // Step Г2 §2.9: the structure block reads on MOUNT now, so every panel
+    // render with a ready code material reaches this. Resolved empty — these
+    // tests are about the card's other controls, and an empty answer draws no
+    // block at all.
+    getStructure: vi.fn().mockResolvedValue({
+      excluded: [],
+      description_only: [],
+    }),
   },
 }))
 

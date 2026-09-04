@@ -38,6 +38,30 @@ const NAME_ONLY: Record<string, string> = {
 
 const REASON_PHRASES: Record<string, string> = { ...NOT_INCLUDED, ...NAME_ONLY }
 
+/**
+ * "3 файли не прочитано" for the collapsed block heading.
+ *
+ * Counts BOTH groups: excluded files and description-only ones alike did not
+ * reach the model by content, which is the one thing the heading has room to
+ * say. The split into two reasons is what opening it is for.
+ *
+ * A twin of the portal's ``notOpenedCountLabel`` — same three Ukrainian forms,
+ * same rule — because the two bundles import nothing from each other (checked
+ * both directions). Picking one form would be visibly wrong two thirds of the
+ * time, and this is the line the author reads before deciding to open anything.
+ */
+export function notReadCountLabel(count: number): string {
+  const last = count % 10
+  const teens = count % 100
+  const noun =
+    last === 1 && teens !== 11
+      ? 'файл'
+      : last >= 2 && last <= 4 && (teens < 12 || teens > 14)
+        ? 'файли'
+        : 'файлів'
+  return `${count} ${noun} не прочитано`
+}
+
 /** One action for the whole block — never per row (ratified §4). */
 export const STRUCTURE_BLOCK_ACTION =
   'Матеріал оброблено без цих файлів; якщо вони потрібні — виправте і залийте знову.'
