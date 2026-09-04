@@ -7,6 +7,7 @@ import { nodesApi } from '../../api/nodes'
 import { StatusBadge } from '../ui/StatusBadge'
 import { MaterialProgressDetail } from './MaterialProgressDetail'
 import { UploadProgressView } from '../activity/UploadProgressView'
+import { UploadFailuresView } from '../activity/UploadFailuresView'
 import { UploadConfirmDialog } from '../ui/UploadConfirmDialog'
 import { ProjectBaseSection } from './ProjectBaseSection'
 import { sourceTypeMeta } from '../../utils/sourceTypeIcon'
@@ -76,7 +77,13 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
   const requestRefresh = useWorkListStore((s) => s.requestRefresh)
   const now = Date.now()
   const navigate = useNavigate()
-  const { state: uploadState, run: runUpload } = useUploadBatch()
+  const {
+    state: uploadState,
+    run: runUpload,
+    failures: uploadFailures,
+    reportFailures,
+    dismissFailures,
+  } = useUploadBatch()
   const [linkUrl, setLinkUrl] = useState('')
   const [addingLink, setAddingLink] = useState(false)
 
@@ -97,16 +104,22 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
   }, [tree, setTree])
 
   // File drop → shared pre-send checks (Е2: size + duration) → confirmation.
-  const onDrop = useCallback(async (files: File[]) => {
-    if (files.length === 0) return
-    const { accepted, durations, rejectionMessage } =
-      await validateUploadFiles(files)
-    if (rejectionMessage) alert(rejectionMessage)
-    if (accepted.length > 0) {
-      setPendingFiles(accepted)
-      setPendingFileDurations(durations)
-    }
-  }, [])
+  const onDrop = useCallback(
+    async (files: File[]) => {
+      if (files.length === 0) return
+      const { accepted, durations, rejectionMessage } =
+        await validateUploadFiles(files)
+      // Always called, with an empty list when nothing was refused: a new drop
+      // is a new answer, and a previous gesture's notice must not read as this
+      // one's.
+      reportFailures(rejectionMessage ? [rejectionMessage] : [])
+      if (accepted.length > 0) {
+        setPendingFiles(accepted)
+        setPendingFileDurations(durations)
+      }
+    },
+    [reportFailures],
+  )
 
   // Link add → show confirmation
   const handleAddLink = useCallback(() => {
@@ -182,17 +195,27 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
           // maps a SECURITY_REJECTED to the human dictionary and passes an
           // INTAKE_* video-duration reason through as-is; without this the link
           // door swallowed every rejection silently — no spinner-only dead end.
-          // No raw / internal text ever reaches the author.
-          alert(
+          // No raw / internal text ever reaches the author. Shown on the same
+          // surface as a file refusal (§2.5): one place to look, whichever door
+          // the material came through.
+          reportFailures([
             authoredRejectionMessage(err) ??
               'Не вдалося додати матеріал за посиланням. Спробуйте ще раз.',
-          )
+          ])
         } finally {
           setAddingLink(false)
         }
       }
     },
-    [node, pendingFiles, pendingLink, refresh, requestRefresh, runUpload],
+    [
+      node,
+      pendingFiles,
+      pendingLink,
+      refresh,
+      requestRefresh,
+      runUpload,
+      reportFailures,
+    ],
   )
 
   const handleCancelUpload = useCallback(() => {
@@ -288,7 +311,13 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
       )}
 
       {/* Upload zone */}
-      <div className="p-4 border-b border-canvas-dark/30">
+      <div className="p-4 border-b border-canvas-dark/30 space-y-2">
+        {/* Outside the active/idle branch on purpose: a failure outlives the
+            batch that produced it, and lives until the author closes it. */}
+        <UploadFailuresView
+          failures={uploadFailures}
+          onDismiss={dismissFailures}
+        />
         {uploadState.active ? (
           <UploadProgressView state={uploadState} />
         ) : (

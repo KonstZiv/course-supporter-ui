@@ -9,6 +9,14 @@ import { authoredRejectionMessage } from '../utils/apiError'
 // single tree re-read after the batch (point-1 cadence, ratified 2026-08-15).
 // It writes nothing to the work-list store — that store's only writer is the
 // poll (Д8); the cycle only wakes it.
+//
+// Failures are state here rather than a browser modal (step Г2 §2.5, closing
+// DD-2.2-AG). They are kept OUT of UploadBatchState on purpose: progress and
+// failures have opposite lifetimes. Progress is transient and clears itself
+// when the batch ends; a failure has to outlive the batch that produced it,
+// because it is the only place the author will ever read why their file did
+// not arrive. One state cannot be both, which is why the two are separate
+// fields with separate components.
 
 export interface UploadTask {
   /** File name, for the failure fallback text (Е8). */
@@ -46,11 +54,24 @@ export interface UploadBatchHooks {
 
 export function useUploadBatch() {
   const [state, setState] = useState<UploadBatchState>(IDLE)
+  const [failures, setFailures] = useState<string[]>([])
+
+  // Called at the START of a gesture with whatever the pre-send checks refused
+  // (an empty array when they refused nothing). It REPLACES rather than
+  // appends: a new drop is a new answer, and yesterday's refusals hanging над
+  // today's upload would be read as today's.
+  const reportFailures = useCallback((messages: string[]) => {
+    setFailures(messages)
+  }, [])
+
+  // The author closes the notice. Never a timer: a refusal the reader has not
+  // finished reading is the one thing that must not vanish on its own.
+  const dismissFailures = useCallback(() => setFailures([]), [])
 
   const run = useCallback(
     async (tasks: UploadTask[], hooks: UploadBatchHooks = {}): Promise<void> => {
       if (tasks.length === 0) return
-      const failures: string[] = []
+      const batchFailures: string[] = []
       setState({
         active: true,
         index: 1,
@@ -77,7 +98,7 @@ export function useUploadBatch() {
             })
             hooks.onFileQueued?.() // Е9 — a visible row after the FIRST file, not the last
           } catch (err) {
-            failures.push(
+            batchFailures.push(
               authoredRejectionMessage(err) ??
                 `${task.label}: не вдалося надіслати файл (код ${
                   err instanceof ApiError ? err.status : 'unknown'
@@ -89,11 +110,15 @@ export function useUploadBatch() {
         await hooks.onComplete?.()
         setState(IDLE)
       }
-      // Rejections stay in the browser modal (replacement is DD-2.2-AG).
-      if (failures.length > 0) alert(failures.join('\n'))
+      // APPENDED, not assigned: the gesture may already have reported files the
+      // pre-send checks refused, and those are as much a part of "what happened
+      // to my drop" as a server refusal is.
+      if (batchFailures.length > 0) {
+        setFailures((prev) => [...prev, ...batchFailures])
+      }
     },
     [],
   )
 
-  return { state, run }
+  return { state, run, failures, reportFailures, dismissFailures }
 }

@@ -24,6 +24,7 @@ import { documentsApi } from '../../api/documents'
 import { Modal } from '../ui/Modal'
 import { UploadConfirmDialog } from '../ui/UploadConfirmDialog'
 import { UploadProgressView } from '../activity/UploadProgressView'
+import { UploadFailuresView } from '../activity/UploadFailuresView'
 import type { AssignmentType, MaterialRole } from '../../types/api'
 
 export interface MenuPosition {
@@ -82,7 +83,13 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const refreshTree = useRefreshTree()
   const requestRefresh = useWorkListStore((s) => s.requestRefresh)
-  const { state: uploadState, run: runUpload } = useUploadBatch()
+  const {
+    state: uploadState,
+    run: runUpload,
+    failures: uploadFailures,
+    reportFailures,
+    dismissFailures,
+  } = useUploadBatch()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -228,11 +235,12 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
       const { accepted, rejectionMessage } = await validateUploadFiles(
         Array.from(input.files),
       )
-      if (rejectionMessage) alert(rejectionMessage)
+      // Always called, empty list included — see the panel's onDrop.
+      reportFailures(rejectionMessage ? [rejectionMessage] : [])
       if (accepted.length > 0) setPendingUpload(accepted)
     }
     input.click()
-  }, [])
+  }, [reportFailures])
 
   const handleConfirmUpload = useCallback(
     async (
@@ -346,6 +354,17 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
         {uploadState.active && (
           <div className="px-3 py-2">
             <UploadProgressView state={uploadState} />
+          </div>
+        )}
+        {/* Outside the active guard on purpose: a failure outlives the batch
+            that produced it, and the canvas menu is where the author is
+            standing when the picker refuses their file. */}
+        {uploadFailures.length > 0 && (
+          <div className="px-3 py-2">
+            <UploadFailuresView
+              failures={uploadFailures}
+              onDismiss={dismissFailures}
+            />
           </div>
         )}
         {!uploadState.active &&

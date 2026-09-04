@@ -85,8 +85,14 @@ export interface UploadValidationResult {
 /**
  * Pre-send checks run before the confirm dialog opens (Е2): presentation size
  * and audio duration today, video size/duration in Е10. Rejected files are left
- * out of ``accepted`` and named in ``rejectionMessage``; the caller shows it in
- * the browser modal (DD-2.2-AG).
+ * out of ``accepted`` and named in ``rejectionMessage``; the caller reports it
+ * to ``useUploadBatch`` and it is drawn on the author's own surface, next to
+ * where the drop happened (step Г2 §2.5 — the browser modal DD-2.2-AG named is
+ * gone).
+ *
+ * ``rejectionMessage`` is ONE pre-joined string, not a list: a block can be a
+ * heading plus the files it names, and the line breaks it writes are part of
+ * the message. Whoever renders it has to preserve them.
  */
 export async function validateUploadFiles(
   files: File[],

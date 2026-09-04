@@ -99,8 +99,7 @@ describe('useUploadBatch (the one upload cycle, Е2/Е9)', () => {
     expect(result.current.state.active).toBe(false)
   })
 
-  it('collects a failure, continues the batch, alerts the human reason', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+  it('collects a failure, continues the batch, keeps the human reason', async () => {
     const onFileQueued = vi.fn()
     const tasks: UploadTask[] = [
       {
@@ -127,14 +126,16 @@ describe('useUploadBatch (the one upload cycle, Е2/Е9)', () => {
     })
     // bad rejected → NOT woken; good succeeded → woken once (batch continued).
     expect(onFileQueued).toHaveBeenCalledTimes(1)
-    expect(alertSpy).toHaveBeenCalledWith(
+    expect(result.current.failures).toEqual([
       'Файл завеликий. Зменште його або розділіть на частини.',
-    )
+    ])
+    // Step Г2 §2.5: the failure OUTLIVES the batch. Progress is over and the
+    // reason is still there — which is the whole difference from the modal
+    // this replaced, whose text was gone the moment it was dismissed.
     expect(result.current.state.active).toBe(false)
   })
 
   it('falls back to product-language text when no reason is given (Е8)', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
     const tasks: UploadTask[] = [
       { label: 'x.mp4', send: () => Promise.reject(new ApiError(500, 'x', null)) },
     ]
@@ -142,8 +143,41 @@ describe('useUploadBatch (the one upload cycle, Е2/Е9)', () => {
     await act(async () => {
       await result.current.run(tasks)
     })
-    expect(alertSpy).toHaveBeenCalledWith(
+    expect(result.current.failures).toEqual([
       'x.mp4: не вдалося надіслати файл (код 500)',
-    )
+    ])
+  })
+
+  it('a new gesture replaces the previous answer', async () => {
+    const { result } = renderHook(() => useUploadBatch())
+    act(() => result.current.reportFailures(['перше']))
+    expect(result.current.failures).toEqual(['перше'])
+    act(() => result.current.reportFailures([]))
+    // An empty report is a real report: yesterday's refusals must not hang
+    // over today's drop.
+    expect(result.current.failures).toEqual([])
+  })
+
+  it('appends the batch outcome to what the gesture already reported', async () => {
+    // A drop can be refused twice over: some files never sent (pre-send
+    // checks), others refused by the server. Both belong to one answer.
+    const { result } = renderHook(() => useUploadBatch())
+    act(() => result.current.reportFailures(['завелике відео']))
+    await act(async () => {
+      await result.current.run([
+        { label: 'x.mp4', send: () => Promise.reject(new ApiError(500, 'x', null)) },
+      ])
+    })
+    expect(result.current.failures).toEqual([
+      'завелике відео',
+      'x.mp4: не вдалося надіслати файл (код 500)',
+    ])
+  })
+
+  it('only the author clears it', async () => {
+    const { result } = renderHook(() => useUploadBatch())
+    act(() => result.current.reportFailures(['щось пішло не так']))
+    act(() => result.current.dismissFailures())
+    expect(result.current.failures).toEqual([])
   })
 })

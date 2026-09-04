@@ -172,7 +172,6 @@ describe('NodeDetailPanel — link rejection is shown, never swallowed', () => {
   }
 
   it('surfaces the server reason (video past the duration cap)', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
     vi.mocked(documentsApi.uploadUrl).mockRejectedValue(
       new ApiError(400, 'API error 400', {
         detail: {
@@ -184,25 +183,44 @@ describe('NodeDetailPanel — link rejection is shown, never swallowed', () => {
       }),
     )
     addLinkThroughDialog('https://youtu.be/long')
+    // Step Г2 §2.5: the link door and the file door answer on ONE surface —
+    // the author has one place to look, whichever way the material came in.
     await waitFor(() =>
-      expect(alertSpy).toHaveBeenCalledWith(
-        'Система обробляє відео тривалістю до 150 хвилин; це відео — 180 хв.',
-      ),
+      expect(
+        screen.getByText(
+          'Система обробляє відео тривалістю до 150 хвилин; це відео — 180 хв.',
+        ),
+      ).toBeInTheDocument(),
     )
-    alertSpy.mockRestore()
   })
 
   it('falls back to a product-language message when no reason is given', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
     vi.mocked(documentsApi.uploadUrl).mockRejectedValue(
       new ApiError(400, 'API error 400', null),
     )
     addLinkThroughDialog('https://youtu.be/x')
     await waitFor(() =>
-      expect(alertSpy).toHaveBeenCalledWith(
+      expect(
+        screen.getByText(
+          'Не вдалося додати матеріал за посиланням. Спробуйте ще раз.',
+        ),
+      ).toBeInTheDocument(),
+    )
+  })
+
+  it('the reason stays until the author closes it', async () => {
+    vi.mocked(documentsApi.uploadUrl).mockRejectedValue(
+      new ApiError(400, 'API error 400', null),
+    )
+    addLinkThroughDialog('https://youtu.be/x')
+    await screen.findByText(
+      'Не вдалося додати матеріал за посиланням. Спробуйте ще раз.',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Закрити' }))
+    expect(
+      screen.queryByText(
         'Не вдалося додати матеріал за посиланням. Спробуйте ще раз.',
       ),
-    )
-    alertSpy.mockRestore()
+    ).not.toBeInTheDocument()
   })
 })
