@@ -334,3 +334,62 @@ describe('PortalReviewDetail — "Не прочитано під час пере
       expect(text).not.toContain(leak)
   })
 })
+
+describe('PortalReviewDetail — відновлене кодування (крок Г2 §2.2)', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  const NOTE = /Файл був збережений не в UTF-8/
+
+  it('tells the student in the reviewed bucket', async () => {
+    mockedSubmission.mockResolvedValue(detail())
+    render(<PortalReviewDetail row={row({ recovered_encoding: 'cp1251' })} />)
+    expect(await screen.findByText(NOTE)).toBeInTheDocument()
+    expect(screen.getByText('Windows, кирилиця')).toBeInTheDocument()
+  })
+
+  it('tells the student in the error bucket — without a fetch', () => {
+    render(
+      <PortalReviewDetail
+        row={row({ status: 'rejected', recovered_encoding: 'cp1251' })}
+      />,
+    )
+    expect(screen.getByText(NOTE)).toBeInTheDocument()
+    // The whole point of carrying it on the list row: a refused attempt is
+    // where "your file was not UTF-8" explains the most, and that branch
+    // never fetches (DD-6-D).
+    expect(mockedSubmission).not.toHaveBeenCalled()
+  })
+
+  it('tells the student in the pending bucket — without a fetch', () => {
+    render(
+      <PortalReviewDetail
+        row={row({ status: 'reviewing', recovered_encoding: 'cp1251' })}
+      />,
+    )
+    expect(screen.getByText(NOTE)).toBeInTheDocument()
+    expect(mockedSubmission).not.toHaveBeenCalled()
+  })
+
+  it('stays silent on an ordinary UTF-8 submission', async () => {
+    mockedSubmission.mockResolvedValue(detail())
+    render(<PortalReviewDetail row={row({ recovered_encoding: 'utf-8' })} />)
+    await screen.findByText('Добре виконано.')
+    expect(screen.queryByText(NOTE)).not.toBeInTheDocument()
+  })
+
+  it('stays silent when the question does not apply', async () => {
+    mockedSubmission.mockResolvedValue(detail())
+    render(<PortalReviewDetail row={row({ recovered_encoding: null })} />)
+    await screen.findByText('Добре виконано.')
+    expect(screen.queryByText(NOTE)).not.toBeInTheDocument()
+  })
+
+  it('names an unfamiliar encoding rather than leaving a blank', () => {
+    render(
+      <PortalReviewDetail
+        row={row({ status: 'rejected', recovered_encoding: 'shift_jis' })}
+      />,
+    )
+    expect(screen.getByText('(shift_jis)')).toBeInTheDocument()
+  })
+})
