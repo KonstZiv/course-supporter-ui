@@ -31,6 +31,31 @@ export interface PortalMe {
   // resets it to false).
   recovery_email: string | null
   recovery_email_confirmed: boolean
+  // The language this student last asked a review in (ISO 639-3), null until
+  // they ask for one. Written server-side on a submission that names a
+  // language; served here so the submit form can open on the standing choice
+  // instead of only remembering it (step Г2 §1.1).
+  preferred_language: string | null
+}
+
+// Response of ``GET /api/v1/portal/languages`` — the whitelist the review-
+// language field offers. Shape-identical to the author app's
+// ``AllowedLanguagesResponse`` in ``src/types/api.ts``, and deliberately NOT
+// imported from there: ``src/portal/`` is a separate entry with a separate
+// client, and it imports nothing from the author's type file today. Reaching
+// across would pull the author bundle's module graph into the portal for one
+// interface.
+export interface PortalLanguageEntry {
+  code: string
+  name_en: string
+  // Optional in the contract and null for every entry the backend serves
+  // today (the SIL table carries no native strings) — render ``name_en``.
+  name_native: string | null
+}
+
+export interface PortalLanguagesResponse {
+  items: PortalLanguageEntry[]
+  total: number
 }
 
 // --- c2: materials-listing (T4a) + media descriptor (T3) ---
@@ -182,6 +207,14 @@ export interface PortalSubmissionListItem {
   // it exists to prevent.
   rejection: PortalRejection | null
   not_opened: PortalNotOpened[]
+  // How the submitted file was read (step Г2 §1.2). Three values, three
+  // different facts: ``utf-8`` (decoded directly — the ordinary case), another
+  // encoding name (recovery established one and the review was written from
+  // that reading), or null (the question does not apply — an archive recovers
+  // its members individually, a document arrives already decoded). Carried on
+  // the LIST row like ``not_opened``, because the error and pending branches of
+  // the review detail render without fetching (DD-6-D).
+  recovered_encoding: string | null
 }
 
 // KD18 P5: I2 delta receipt — counters + staleness for a project submission,

@@ -23,6 +23,7 @@ const row = (over: Partial<PortalSubmissionListItem> = {}): PortalSubmissionList
   original_filename: 'a.py',
   rejection: null,
   not_opened: [],
+  recovered_encoding: null,
   ...over,
 })
 
@@ -37,6 +38,7 @@ const detail = (over: Partial<Parameters<typeof mockedSubmission.mockResolvedVal
   delta: null,
   rejection: null,
   not_opened: [],
+  recovered_encoding: null,
   ...over,
 })
 

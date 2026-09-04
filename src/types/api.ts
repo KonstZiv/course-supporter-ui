@@ -192,6 +192,40 @@ export interface ConfirmFileRolesRequest {
   tree_digest: string
 }
 
+// ─── Code-material structure (step Г2 §1.3) ───
+// What a code material's processing left out. Served by
+// ``GET /api/v1/documents/{id}/structure``; 404 when the document has no
+// structure at all (a non-code material, or code still being processed) —
+// which is a different answer from two empty lists, and the caller must not
+// collapse them.
+
+export interface DocumentStructureEntry {
+  /** Path inside the archive. */
+  path: string
+  /** Size in bytes, as the archive declared it. */
+  size: number
+  /** Bare ``CodeStructureReason`` token — the dictionary key. */
+  reason: string
+  /**
+   * What the token cannot say by itself: the matched directory, pattern or
+   * filename. Usually the half the author actually recognises. Null when the
+   * path already carries it.
+   */
+  detail: string | null
+  /**
+   * Raw files this row stands for — a denylist directory is collapsed to one
+   * row. Null where the concept does not apply (one file).
+   */
+  entries: number | null
+}
+
+export interface DocumentStructureResponse {
+  /** Files whose contents never reached the model. */
+  excluded: DocumentStructureEntry[]
+  /** Files named to the model as structure, contents not sent. */
+  description_only: DocumentStructureEntry[]
+}
+
 // ─── Document ───
 
 export interface AuthoredDocumentResponse {

@@ -49,6 +49,7 @@ describe('PortalHomePage (course list)', () => {
       display_name: 'Олена',
       recovery_email: null,
       recovery_email_confirmed: false,
+      preferred_language: null,
     })
   })
 
