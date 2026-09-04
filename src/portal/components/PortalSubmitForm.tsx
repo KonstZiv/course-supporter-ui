@@ -16,7 +16,9 @@ import { submitErrorMessage } from '../submissionCodes'
 // a format the server would have accepted — which is exactly what happened
 // before this pass, when .docx and .pdf were added server-side and 27 of the 41
 // stayed unselectable in the dialog. The fix is a submission-policy endpoint
-// this form reads instead (recorded as debt; TASK §2), not more care here.
+// this form reads instead (DD-SP-V), not more care here — a sibling of the
+// languages route the field below already reads, in the same portal lookup
+// module server-side.
 const PROSE = ['md', 'txt']
 const CODE = [
   'py', 'ipynb', 'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', 'java', 'kt', 'kts',
@@ -42,6 +44,10 @@ type SubmitState = 'idle' | 'submitting' | 'success' | 'duplicate' | 'error'
 // error (4xx / network). On success the parent re-fetches the tree so the
 // server-computed overlay flips none→pending (corrective: no optimistic drift);
 // on duplicate NO re-fetch (no new attempt was created).
+//
+// It also READS on mount now (step Г2 §2.1): the allowed language list, and the
+// student's standing language preference. Both fail soft — neither is required
+// to submit, and a submission with no language named is resolved server-side.
 export function PortalSubmitForm({
   taskId,
   base = null,

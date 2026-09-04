@@ -1,12 +1,16 @@
 // Student-facing "why" keyed by the backend's reason CODE — the third
 // dictionary on this axis, and the home of the ratified wording (gates TASK §4).
 //
-// The three are distinct axes, not variants of one lookup:
+// The axes are distinct, not variants of one lookup:
 //   terminalStatus.ts   — delivery STATUS (rejected / mismatch / failed) → phrase
 //   submissionCodes.ts  — submit-time DOOR code, both vocabularies → phrase
 //   this module         — the reason code the read-path now carries, on a whole
 //                         submission (``rejection.code``) and on one file inside
 //                         an archive (``not_opened[].reason``)
+//   encodingNames.ts    — display name for the encoding a file was recovered
+//                         from (step Г2 §2.2). Not a reason at all: it names a
+//                         fact about a file that WAS read, which is why it sits
+//                         beside this module rather than inside it.
 //
 // Three layers answer a refused attempt, in this order (ratified):
 //   1. the §4 article for the code, when there is one
