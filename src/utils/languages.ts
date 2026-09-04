@@ -1,6 +1,6 @@
 /** Language list cache + helpers (Task 2.4.13).
  *
- * The 57-language course whitelist is now served by the backend at
+ * The course-language whitelist is served by the backend at
  * ``GET /api/v1/config/languages`` — UI no longer carries a hardcoded
  * list. ``getLanguages()`` fetches once per app session and caches the
  * result in a module-level singleton; ``getCachedLanguages()`` is the
