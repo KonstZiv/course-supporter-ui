@@ -3,23 +3,52 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { PortalSubmitForm } from './PortalSubmitForm'
 import { submitErrorMessage } from '../submissionCodes'
 import { portalApi, PortalApiError } from '../api/portalClient'
-import type { PortalTaskBase } from '../types'
+import { resetPortalLanguages } from '../languages'
+import type { PortalMe, PortalTaskBase } from '../types'
 
 vi.mock('../api/portalClient', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/portalClient')>()
   return {
     ...actual,
-    portalApi: { ...actual.portalApi, submitTask: vi.fn() },
+    portalApi: {
+      ...actual.portalApi,
+      submitTask: vi.fn(),
+      // Step Г2 §2.1: the form now reads the language list and the student's
+      // standing preference on mount. Both are mocked so the field's two
+      // sources are controlled, and so the suite makes no real calls.
+      languages: vi.fn(),
+      me: vi.fn(),
+    },
   }
 })
 
 const mockedSubmit = vi.mocked(portalApi.submitTask)
+const mockedLanguages = vi.mocked(portalApi.languages)
+const mockedMe = vi.mocked(portalApi.me)
+
+const LANGUAGES = [
+  { code: 'ukr', name_en: 'Ukrainian', name_native: null },
+  { code: 'eng', name_en: 'English', name_native: null },
+]
+
+const me = (over: Partial<PortalMe> = {}): PortalMe => ({
+  student_id: 's1',
+  tenant_id: 't1',
+  login: 'olena',
+  display_name: 'Олена',
+  recovery_email: null,
+  recovery_email_confirmed: false,
+  preferred_language: null,
+  ...over,
+})
 
 function renderForm(base: PortalTaskBase | null = null) {
   const onSubmitted = vi.fn()
   render(<PortalSubmitForm taskId="task-1" base={base} onSubmitted={onSubmitted} />)
   return { onSubmitted }
 }
+
+const languageField = () => screen.getByLabelText('Мова рецензії')
 
 function pickFile(name = 'a.py', size?: number) {
   const file = new File(['print()'], name, { type: 'text/plain' })
@@ -34,6 +63,9 @@ const submitBtn = () => screen.getByRole('button', { name: /надіслати/i
 describe('PortalSubmitForm', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    resetPortalLanguages()
+    mockedLanguages.mockResolvedValue({ items: LANGUAGES, total: LANGUAGES.length })
+    mockedMe.mockResolvedValue(me())
   })
 
   it('submits a new attempt and re-fetches on success', async () => {
@@ -343,5 +375,95 @@ describe('PortalSubmitForm — the file picker offers what the server accepts', 
       'toml', 'sql', 'sh', 'docx', 'pdf', 'zip', 'gz', 'tgz',
     ])
     for (const ext of accept()) expect(known.has(ext.slice(1))).toBe(true)
+  })
+})
+
+describe('PortalSubmitForm — мова рецензії (крок Г2 §2.1)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    resetPortalLanguages()
+    mockedLanguages.mockResolvedValue({ items: LANGUAGES, total: LANGUAGES.length })
+    mockedMe.mockResolvedValue(me())
+    mockedSubmit.mockResolvedValue({
+      submission_id: 's',
+      status: 'received',
+      duplicate: false,
+    })
+  })
+
+  it('offers the server list with "course language" first', async () => {
+    renderForm()
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Ukrainian' })).toBeInTheDocument()
+    })
+    const options = screen.getAllByRole('option')
+    // The absence of a choice leads, and carries no code — a student who has
+    // no opinion should not have to have one.
+    expect(options[0]).toHaveTextContent('Мовою курсу')
+    expect(options[0]).toHaveValue('')
+    expect(options.map((o) => o.textContent)).toEqual([
+      'Мовою курсу',
+      'Ukrainian',
+      'English',
+    ])
+  })
+
+  it('opens on the stored preference', async () => {
+    mockedMe.mockResolvedValue(me({ preferred_language: 'eng' }))
+    renderForm()
+    await waitFor(() => expect(languageField()).toHaveValue('eng'))
+  })
+
+  it('opens on "course language" when the student has no preference', async () => {
+    renderForm()
+    await waitFor(() => expect(mockedMe).toHaveBeenCalled())
+    expect(languageField()).toHaveValue('')
+  })
+
+  it('sends response_language only when a language is chosen', async () => {
+    renderForm()
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'English' })).toBeInTheDocument()
+    })
+    fireEvent.change(languageField(), { target: { value: 'eng' } })
+    pickFile()
+    fireEvent.click(submitBtn())
+    await waitFor(() => expect(mockedSubmit).toHaveBeenCalled())
+    const body = mockedSubmit.mock.calls[0]![1] as FormData
+    expect(body.get('response_language')).toBe('eng')
+  })
+
+  it('omits the field entirely on "course language"', async () => {
+    renderForm()
+    await waitFor(() => expect(mockedMe).toHaveBeenCalled())
+    pickFile()
+    fireEvent.click(submitBtn())
+    await waitFor(() => expect(mockedSubmit).toHaveBeenCalled())
+    const body = mockedSubmit.mock.calls[0]![1] as FormData
+    // Absent, not empty: the server reads a blank value as "not given" either
+    // way, but an empty field on the wire is noise that invites a reader to
+    // wonder whether it meant something.
+    expect(body.has('response_language')).toBe(false)
+  })
+
+  it('stays usable when the language list cannot be fetched', async () => {
+    mockedLanguages.mockRejectedValue(new Error('offline'))
+    renderForm()
+    await waitFor(() => expect(mockedMe).toHaveBeenCalled())
+    // Only the fallback option — and submitting still works, which is the
+    // behaviour that existed before this field did.
+    expect(screen.getAllByRole('option')).toHaveLength(1)
+    pickFile()
+    fireEvent.click(submitBtn())
+    await waitFor(() => expect(mockedSubmit).toHaveBeenCalled())
+  })
+
+  it('stays usable when the preference cannot be read', async () => {
+    mockedMe.mockRejectedValue(new Error('offline'))
+    renderForm()
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'English' })).toBeInTheDocument()
+    })
+    expect(languageField()).toHaveValue('')
   })
 })

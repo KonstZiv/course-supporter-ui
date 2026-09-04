@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Loader2, Upload, CheckCircle2, Info, AlertCircle } from 'lucide-react'
 import { portalApi, PortalApiError } from '../api/portalClient'
-import type { PortalTaskBase } from '../types'
+import type { PortalLanguageEntry, PortalTaskBase } from '../types'
+import { getPortalLanguages } from '../languages'
 import { submitErrorMessage } from '../submissionCodes'
 
 // What the file picker offers, mirroring the backend's accepted set (gates
@@ -56,6 +57,48 @@ export function PortalSubmitForm({
   const [note, setNote] = useState('')
   const [state, setState] = useState<SubmitState>('idle')
   const [message, setMessage] = useState('')
+  // Empty string is the "course language" option — the absence of a choice,
+  // not a choice of nothing. It is never sent (the server reads a blank form
+  // value as "not given" anyway, but sending it would still be noise).
+  const [language, setLanguage] = useState('')
+  const [languages, setLanguages] = useState<PortalLanguageEntry[]>([])
+
+  // The list is a server-side constant, so one fetch per SPA session (the
+  // singleton) covers every task panel the student opens.
+  useEffect(() => {
+    let active = true
+    getPortalLanguages()
+      .then((items) => {
+        if (active) setLanguages(items)
+      })
+      // A failure leaves the field at "course language" — the same behaviour
+      // as before this field existed, and a submission still works.
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
+  }, [])
+
+  // The student's standing preference, read here rather than held in the
+  // session store or a shared cache. A cache would need invalidating in two
+  // places — after the recovery-email save, and after every submission that
+  // names a language, because the server rewrites the column then — which is
+  // a module with two divergence points to save one light request per panel
+  // open. Read on mount instead, and let the server stay the single truth.
+  useEffect(() => {
+    let active = true
+    portalApi
+      .me()
+      .then((me) => {
+        if (active && me.preferred_language) setLanguage(me.preferred_language)
+      })
+      // No preference readable → the field stays on "course language", which
+      // is what the server would fall back to anyway.
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
+  }, [])
 
   // D5 gating: a project task whose base EXISTS but is not READY blocks submit
   // (the base is not usable yet). base === null (no base attached) is a DISTINCT
@@ -82,6 +125,9 @@ export function PortalSubmitForm({
     setMessage('')
     const fd = new FormData()
     fd.append('file', file)
+    // Only an explicit choice is sent. Left alone, the server resolves the
+    // language itself: the student's stored preference, then the course's.
+    if (language) fd.append('response_language', language)
     if (note.trim()) fd.append('student_note', note.trim())
     // Auto-echo the base snapshot_hash from the descriptor (KD18 P5) — sent ONLY
     // when a READY base is attached (snapshot_hash is null otherwise). The
@@ -126,6 +172,27 @@ export function PortalSubmitForm({
                    file:border-0 file:bg-canvas-dark file:px-3 file:py-1.5
                    file:text-ink file:cursor-pointer"
       />
+      <label className="block">
+        <span className="block text-sm font-medium text-ink mb-1.5">
+          Мова рецензії
+        </span>
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          className="input"
+        >
+          <option value="">Мовою курсу</option>
+          {languages.map((l) => (
+            <option key={l.code} value={l.code}>
+              {/* ``name_native`` is null for every entry the backend serves
+                  today (the SIL table carries none), so this reads as the
+                  English name — and starts reading better the day a real
+                  i18n source fills it (DD-2.4-L), with no change here. */}
+              {l.name_native || l.name_en}
+            </option>
+          ))}
+        </select>
+      </label>
       <textarea
         value={note}
         onChange={(e) => setNote(e.target.value)}
