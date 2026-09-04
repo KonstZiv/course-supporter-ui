@@ -4,6 +4,7 @@ import type {
   AssignmentType,
   AuthoredDocumentResponse,
   ConfirmFileRolesRequest,
+  DocumentStructureResponse,
   MaterialRole,
   ProcessingEstimate,
   ProjectBaseAttachResponse,
@@ -82,6 +83,16 @@ export const documentsApi = {
 
   get: (entryId: string) =>
     api.get<AuthoredDocumentResponse>(`/api/v1/documents/${entryId}`),
+
+  // Step Г2 §2.6: what a code material's processing left out. 404 when the
+  // document has no structure at all — a non-code material (the column is NULL
+  // for every one of them) or code still being processed. That is a DIFFERENT
+  // answer from two empty lists, which means "read in full", and the caller
+  // must not collapse the two.
+  getStructure: (entryId: string) =>
+    api.get<DocumentStructureResponse>(
+      `/api/v1/documents/${entryId}/structure`,
+    ),
 
   delete: (entryId: string) =>
     api.delete<void>(`/api/v1/documents/${entryId}`),

@@ -8,6 +8,7 @@ import { StatusBadge } from '../ui/StatusBadge'
 import { MaterialProgressDetail } from './MaterialProgressDetail'
 import { UploadProgressView } from '../activity/UploadProgressView'
 import { UploadFailuresView } from '../activity/UploadFailuresView'
+import { DocumentStructureBlock } from './DocumentStructureBlock'
 import { UploadConfirmDialog } from '../ui/UploadConfirmDialog'
 import { ProjectBaseSection } from './ProjectBaseSection'
 import { sourceTypeMeta } from '../../utils/sourceTypeIcon'
@@ -454,6 +455,12 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                     </p>
                   )}
                   <MaterialProgressDetail job={liveJob} now={now} />
+                  {/* §2.6: only a code material has a structure to show, and
+                      only once processing has produced one — the route 404s
+                      otherwise, and the block removes itself when it does. */}
+                  {mat.source_type === 'code' && mat.state === 'ready' && (
+                    <DocumentStructureBlock documentId={mat.id} />
+                  )}
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   {(mat.state === 'error' || mat.state === 'ready') && (
