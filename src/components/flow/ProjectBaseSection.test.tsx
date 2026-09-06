@@ -43,14 +43,14 @@ describe('ProjectBaseSection', () => {
   it('no base (404) → renders the attach affordance, not a state', async () => {
     getBaseState.mockRejectedValue(noBase())
     render(<ProjectBaseSection documentId="doc-1" />)
-    expect(await screen.findByText('Прикріпити base')).toBeInTheDocument()
+    expect(await screen.findByText('Прикріпити базовий архів')).toBeInTheDocument()
     expect(screen.getByText(/не прикріплено/)).toBeInTheDocument()
   })
 
   it('ready → version + Готово badge + re-upload + staleness warning', async () => {
     getBaseState.mockResolvedValue(state('ready', { version: 3, snapshot_hash: 'h' }))
     render(<ProjectBaseSection documentId="doc-1" />)
-    expect(await screen.findByText('Base v3')).toBeInTheDocument()
+    expect(await screen.findByText('Базовий архів, версія 3')).toBeInTheDocument()
     expect(screen.getByText('Готово')).toBeInTheDocument()
     expect(screen.getByText('Повторно')).toBeInTheDocument()
     expect(screen.getByText(/залишаються прив/)).toBeInTheDocument()
@@ -81,7 +81,7 @@ describe('ProjectBaseSection', () => {
       state: 'pending',
     })
     const { container } = render(<ProjectBaseSection documentId="doc-9" />)
-    await screen.findByText('Прикріпити base')
+    await screen.findByText('Прикріпити базовий архів')
 
     const input = container.querySelector(
       'input[type=file]',
@@ -106,7 +106,7 @@ describe('ProjectBaseSection', () => {
       total_bytes: 5,
     })
     render(<ProjectBaseSection documentId="doc-5" />)
-    fireEvent.click(await screen.findByText('Manifest'))
+    fireEvent.click(await screen.findByText('Маніфест'))
     await waitFor(() =>
       expect(getBaseManifest).toHaveBeenCalledWith('doc-5'),
     )
@@ -121,7 +121,7 @@ describe('ProjectBaseSection', () => {
       }),
     )
     const { container } = render(<ProjectBaseSection documentId="doc-9" />)
-    await screen.findByText('Прикріпити base')
+    await screen.findByText('Прикріпити базовий архів')
     const input = container.querySelector(
       'input[type=file]',
     ) as HTMLInputElement

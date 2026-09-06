@@ -58,7 +58,7 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
       if (err instanceof ApiError && err.status === 404) {
         setBase(null)
       } else {
-        setError('Не вдалося завантажити стан base.')
+        setError('Не вдалося завантажити стан базового архіву.')
       }
     } finally {
       setLoading(false)
@@ -122,7 +122,7 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
     try {
       setManifest(await documentsApi.getBaseManifest(documentId))
     } catch {
-      setManifestError('Не вдалося завантажити manifest.')
+      setManifestError('Не вдалося завантажити маніфест.')
     }
   }, [documentId, manifest])
 
@@ -160,12 +160,12 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
       )}
 
       {loading ? (
-        <p className="text-ink-muted text-xs">Завантаження стану base…</p>
+        <p className="text-ink-muted text-xs">Завантаження стану базового архіву…</p>
       ) : base === null ? (
         /* No base attached — a valid state (submissions diff as all-new). */
         <div className="flex items-center gap-2 flex-wrap">
           <FileArchive size={14} className="text-ink-muted shrink-0" />
-          <span className="text-ink-muted text-xs">Base-архів не прикріплено.</span>
+          <span className="text-ink-muted text-xs">Базовий архів не прикріплено.</span>
           <button
             onClick={pickFile}
             disabled={uploading}
@@ -174,14 +174,16 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
                        disabled:opacity-50 cursor-pointer"
           >
             <Upload size={12} />
-            {uploading ? 'Завантаження…' : 'Прикріпити base'}
+            {uploading ? 'Завантаження…' : 'Прикріпити базовий архів'}
           </button>
         </div>
       ) : (
         <div className="space-y-1.5">
           <div className="flex items-center gap-2 flex-wrap">
             <FileArchive size={14} className="text-ink-muted shrink-0" />
-            <span className="text-ink font-medium">Base v{base.version}</span>
+            <span className="text-ink font-medium">
+              Базовий архів, версія {base.version}
+            </span>
             <ProjectBaseBadge state={base.state} />
             {base.state === 'ready' && (
               <button
@@ -192,7 +194,7 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
                 title="Переглянути manifest нормалізованого base"
               >
                 <ListTree size={12} />
-                Manifest
+                Маніфест
               </button>
             )}
             {(base.state === 'ready' || base.state === 'failed') && (
@@ -230,7 +232,7 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
       <Modal
         open={manifestOpen}
         onClose={() => setManifestOpen(false)}
-        title={`Manifest base v${base?.version ?? ''}`}
+        title={`Маніфест базового архіву, версія ${base?.version ?? ''}`}
         wide
       >
         {manifestError ? (
@@ -238,7 +240,7 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
         ) : manifest ? (
           <BaseManifestView manifest={manifest} />
         ) : (
-          <p className="text-sm text-ink-muted">Завантаження manifest…</p>
+          <p className="text-sm text-ink-muted">Завантаження маніфеста…</p>
         )}
       </Modal>
     </div>

@@ -52,9 +52,14 @@ function formatDate(iso: string): string {
 export function PortalSubmissionsList({
   taskId,
   reloadKey,
+  onLoaded,
 }: {
   taskId: string
   reloadKey: number
+  // Step Д: the ids this list currently shows, reported upward so the submit
+  // form can retire its "sent" notice once the attempt is visible here. The
+  // list stays the owner of the data; only the ids travel.
+  onLoaded?: (ids: string[]) => void
 }) {
   const [items, setItems] = useState<PortalSubmissionListItem[] | null>(null)
   const [error, setError] = useState('')
@@ -68,7 +73,9 @@ export function PortalSubmissionsList({
     portalApi
       .submissions(taskId)
       .then((rows) => {
-        if (active) setItems(rows)
+        if (!active) return
+        setItems(rows)
+        onLoaded?.(rows.map((r) => r.id))
       })
       .catch((err) => {
         if (!active) return
@@ -78,7 +85,10 @@ export function PortalSubmissionsList({
     return () => {
       active = false
     }
-  }, [taskId, reloadKey, refreshNonce])
+    // ``onLoaded`` is in the deps because the rule is right to ask: it is
+    // called from this effect. The parent passes a setState function, whose
+    // identity React keeps stable, so this does not re-fetch on every render.
+  }, [taskId, reloadKey, refreshNonce, onLoaded])
 
   return (
     <section className="space-y-3">

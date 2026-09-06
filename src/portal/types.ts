@@ -127,6 +127,12 @@ export interface PortalMaterialTreeNode {
   id: string
   title: string
   order: number
+  // Step Д: the COURSE language (ISO 639-3), set on the ROOT of the tree and
+  // null on every child. Not a per-node value — a child's own column is
+  // nullable dead data server-side, so the backend deliberately projects null
+  // there rather than inviting "this section has no language". Read at the
+  // root by the submission form, which is the only consumer.
+  default_language: string | null
   documents: PortalMaterialItem[]
   children: PortalMaterialTreeNode[]
 }
@@ -276,4 +282,34 @@ export interface ForgotPasswordRequest {
 export interface ResetPasswordRequest {
   token: string
   password: string
+}
+
+
+// --- Step Д: submission policy (DD-SP-V) ---
+// What the submission door accepts, served by GET /portal/submission-policy so
+// the form stops carrying copies of it. Three facts, one per gate the server
+// runs, in the order a submission meets them.
+//
+// ``PortalAssignmentType`` is declared here rather than imported from the
+// author bundle's ``AssignmentType``: the two applications share no types by
+// ratified design (see the header of this file), and ``PortalSourceType``
+// already sets the precedent for a portal-local twin of an author union.
+export type PortalAssignmentType = 'test' | 'short_task' | 'task' | 'project'
+
+export interface SubmissionPolicyEntry {
+  // Upload cap in bytes, exactly as the server compares it.
+  max_bytes: number
+  // Allowed extensions, dot-prefixed and sorted — the form of the HTML
+  // ``accept`` attribute, which is why nothing reshapes them here.
+  accept: string[]
+  // Whether the whole project must arrive as one archive; a loose file is
+  // refused server-side with ``ARCHIVE_ONLY``.
+  archive_only: boolean
+}
+
+export interface SubmissionPolicyResponse {
+  // One entry per assignment kind — all four, not the two the server branches
+  // on, so the form looks its own ``task_type`` up instead of re-deriving
+  // "project or not" on this side of the boundary.
+  policies: Record<PortalAssignmentType, SubmissionPolicyEntry>
 }

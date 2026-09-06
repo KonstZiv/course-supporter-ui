@@ -26,6 +26,7 @@ const TREE: PortalMaterialTreeNode = {
   id: 'r',
   title: 'Демо-курс',
   order: 0,
+  default_language: 'ukr',
   documents: [
     {
       id: 'm1',
@@ -43,6 +44,8 @@ const TREE: PortalMaterialTreeNode = {
       id: 'n1',
       title: 'Розділ 1',
       order: 0,
+      // Null on a child by contract — the language lives on the root only.
+      default_language: null,
       documents: [
         {
           id: 't1',

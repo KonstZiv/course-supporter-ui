@@ -26,6 +26,42 @@ const TOKENS = [
   'charset_violation',
 ]
 
+describe('structureReasonPhrase — oversize numbers (крок Д)', () => {
+  it('reads both numbers out of the detail in a human measure', () => {
+    // Server sends "<actual>/<cap>" in bytes (PR-1 commit B). 6 MiB over a
+    // 4 MiB cap — the author reads sizes, not byte counts.
+    expect(structureReasonPhrase('oversize', '6291456/4194304')).toBe(
+      'Файл завеликий: 6,0 МБ при межі 4,0 МБ.',
+    )
+  })
+
+  it('crosses units where the numbers do', () => {
+    // formatBytes keeps one decimal below ten and whole numbers above, so the
+    // cap reads "64 КБ" — past ten the fraction is noise.
+    expect(structureReasonPhrase('oversize', '1258291/65536')).toBe(
+      'Файл завеликий: 1,2 МБ при межі 64 КБ.',
+    )
+  })
+
+  it('falls back to the numberless phrase on the old English detail', () => {
+    // Rows written before the server changed shape still carry a sentence.
+    // Inventing numbers for them would be worse than saying less.
+    const old = 'file size 6291456 B exceeds the 4194304 B per-file cap'
+    expect(structureReasonPhrase('oversize', old)).toBe(
+      'Файл завеликий — для читання не взято.',
+    )
+    expect(structureReasonPhrase('oversize')).toBe(
+      'Файл завеликий — для читання не взято.',
+    )
+  })
+
+  it('states no cap of its own when it has no numbers', () => {
+    // The phrase used to hardcode "4 МБ" — a copy of a server constant with
+    // nothing holding the two together.
+    expect(structureReasonPhrase('oversize')).not.toMatch(/\d/)
+  })
+})
+
 describe('structureReasonPhrase', () => {
   it.each(TOKENS)('%s has a phrase of its own', (token) => {
     const phrase = structureReasonPhrase(token)
@@ -34,7 +70,7 @@ describe('structureReasonPhrase', () => {
   })
 
   it('every phrase is distinct — two reasons never read the same', () => {
-    const phrases = TOKENS.map(structureReasonPhrase)
+    const phrases = TOKENS.map((token) => structureReasonPhrase(token))
     expect(new Set(phrases).size).toBe(TOKENS.length)
   })
 
@@ -65,7 +101,7 @@ describe('structureReasonPhrase', () => {
 })
 
 describe('detailIsShowable', () => {
-  it('hides the oversize detail — it is an internal English sentence', () => {
+  it('hides the oversize detail — its numbers are already in the phrase', () => {
     // The server stores "file size 6291456 B exceeds the 4194304 B per-file
     // cap" there. The size is already in the phrase, so nothing is lost.
     expect(detailIsShowable('oversize')).toBe(false)

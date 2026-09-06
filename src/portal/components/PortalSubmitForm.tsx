@@ -1,39 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Loader2, Upload, CheckCircle2, Info, AlertCircle } from 'lucide-react'
 import { portalApi, PortalApiError } from '../api/portalClient'
-import type { PortalLanguageEntry, PortalTaskBase } from '../types'
+import type {
+  PortalLanguageEntry,
+  PortalTaskBase,
+  SubmissionPolicyEntry,
+} from '../types'
 import { getPortalLanguages } from '../languages'
+import { formatFileSize } from '../rejectionReasons'
+import { getSubmissionPolicy, policyFor } from '../submissionPolicy'
 import { submitErrorMessage } from '../submissionCodes'
-
-// What the file picker offers, mirroring the backend's accepted set (gates
-// FORMATS.md — the same 41 the server derives as
-// _PROSE | CODE_EXTENSIONS | _ARCHIVES | _DOCUMENTS). Grouped the way the list
-// was ratified, by reason rather than alphabetically, so a future edit lands in
-// the group whose reason it shares.
-//
-// This is a COPY with no lock behind it: nothing fails when the server's set
-// moves and this one does not. Being short by one means the student cannot pick
-// a format the server would have accepted — which is exactly what happened
-// before this pass, when .docx and .pdf were added server-side and 27 of the 41
-// stayed unselectable in the dialog. The fix is a submission-policy endpoint
-// this form reads instead (DD-SP-V), not more care here — a sibling of the
-// languages route the field below already reads, in the same portal lookup
-// module server-side.
-const PROSE = ['md', 'txt']
-const CODE = [
-  'py', 'ipynb', 'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', 'java', 'kt', 'kts',
-  'cs', 'go', 'rs', 'php', 'rb', 'c', 'h', 'cpp', 'hpp', 'cc', 'swift', 'dart',
-  'html', 'htm', 'css', 'scss', 'json', 'xml', 'yaml', 'yml', 'toml', 'sql', 'sh',
-]
-const DOCUMENTS = ['docx', 'pdf']
-const ARCHIVES = ['zip', 'gz', 'tgz']
-const ALLOWED_EXT = [...PROSE, ...CODE, ...DOCUMENTS, ...ARCHIVES].map((e) => `.${e}`)
-
-// The same copy problem as ALLOWED_EXT, and knowingly left alone: a project
-// submission is allowed 100 MB server-side, so this cuts off a legitimate one
-// before it is ever sent. Left for the policy endpoint to fix along with the
-// format list, rather than adding a second hand-maintained number here.
-const MAX_SIZE = 10 * 1024 * 1024 // 10 MB
 
 type SubmitState = 'idle' | 'submitting' | 'success' | 'duplicate' | 'error'
 
@@ -50,14 +26,29 @@ type SubmitState = 'idle' | 'submitting' | 'success' | 'duplicate' | 'error'
 // to submit, and a submission with no language named is resolved server-side.
 export function PortalSubmitForm({
   taskId,
+  taskType = null,
+  courseLanguage = null,
   base = null,
+  listedIds = [],
   onSubmitted,
 }: {
   taskId: string
+  // Which row of the submission policy applies (step Д). Crosses the wire as a
+  // free string, so it is kept as one here and narrowed at the lookup.
+  taskType?: string | null
+  // Step Д: the course's own language (ISO 639-3) off the tree root, so the
+  // "course language" option can send the code it names instead of sending
+  // nothing and letting the server fall back to the student's preference.
+  // Null only if the root carries none, which a CHECK forbids.
+  courseLanguage?: string | null
   // KD18 P5: the active base descriptor for a project task (null for a
   // non-project task or a base-less project). Drives the auto-echo + D5 gating.
   base?: PortalTaskBase | null
-  onSubmitted: () => void
+  // Ids the attempts list below has loaded. The "sent" notice lives until the
+  // attempt it announces is visible there, and not a moment longer — see the
+  // effect below.
+  listedIds?: string[]
+  onSubmitted: (submissionId: string) => void
 }) {
   const [file, setFile] = useState<File | null>(null)
   const [note, setNote] = useState('')
@@ -68,6 +59,13 @@ export function PortalSubmitForm({
   // value as "not given" anyway, but sending it would still be noise).
   const [language, setLanguage] = useState('')
   const [languages, setLanguages] = useState<PortalLanguageEntry[]>([])
+  const [policy, setPolicy] = useState<SubmissionPolicyEntry | null>(null)
+  // The attempt this form announced and is still announcing. Cleared when the
+  // list below shows it — at which point the notice has nothing left to say.
+  const [sentId, setSentId] = useState<string | null>(null)
+  // Remounts the file input so a cleared field really is empty, and so picking
+  // the SAME file again still fires a change event.
+  const [pickerKey, setPickerKey] = useState(0)
 
   // The list is a server-side constant, so one fetch per SPA session (the
   // singleton) covers every task panel the student opens.
@@ -84,6 +82,23 @@ export function PortalSubmitForm({
       active = false
     }
   }, [])
+
+  // What the door accepts, for THIS assignment kind (step Д, DD-SP-V). Fails
+  // soft exactly like the language list above: a policy that does not arrive
+  // leaves the form sending the file and the server answering — the same
+  // outcome as before this endpoint existed, and the same one the form
+  // already gives when the language list fails.
+  useEffect(() => {
+    let active = true
+    getSubmissionPolicy()
+      .then((p) => {
+        if (active) setPolicy(policyFor(p, taskType))
+      })
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
+  }, [taskType])
 
   // The student's standing preference, read here rather than held in the
   // session store or a shared cache. A cache would need invalidating in two
@@ -116,24 +131,48 @@ export function PortalSubmitForm({
     setFile(e.target.files?.[0] ?? null)
     setState('idle')
     setMessage('')
+    setSentId(null)
   }
+
+  // The notice "Рішення надіслано — очікує перевірки" answers a question the
+  // attempts list answers better the moment it can: it shows the attempt with
+  // its real status. Two answers to one question, one of them frozen at the
+  // instant of sending, is how a student ends up reading "очікує перевірки"
+  // beside a finished review. So the notice retires when the list adopts it.
+  useEffect(() => {
+    if (sentId !== null && listedIds.includes(sentId)) {
+      setSentId(null)
+      setState('idle')
+      setMessage('')
+    }
+  }, [sentId, listedIds])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!file || state === 'submitting') return // corrective 4: lock — no double POST
-    // Client size preflight (corrective 2); the server re-checks (422).
-    if (file.size > MAX_SIZE) {
+    // Client size preflight (corrective 2); the server re-checks (422). The
+    // cap and the number in the sentence both come from the policy for this
+    // assignment kind — a project is allowed ten times what a single file is,
+    // and the old literal refused it before the request was ever made. No
+    // policy (not loaded, unknown kind) → no preflight, and the server
+    // answers.
+    if (policy !== null && file.size > policy.max_bytes) {
       setState('error')
-      setMessage('Файл завеликий — максимум 10 МБ.')
+      setMessage(`Файл завеликий — максимум ${formatFileSize(policy.max_bytes)}.`)
       return
     }
     setState('submitting')
     setMessage('')
     const fd = new FormData()
     fd.append('file', file)
-    // Only an explicit choice is sent. Left alone, the server resolves the
-    // language itself: the student's stored preference, then the course's.
-    if (language) fd.append('response_language', language)
+    // Every option now sends the code it names. "Мовою курсу" used to send
+    // nothing, which made the server fall back — to the student's STORED
+    // preference first, so a student whose last review was in English got
+    // English again under a label promising the course's language. Measured
+    // 2026-09-04 on a ukr course. The absence of a choice is no longer the way
+    // to ask for the course language; naming it is.
+    const chosen = language || courseLanguage
+    if (chosen) fd.append('response_language', chosen)
     if (note.trim()) fd.append('student_note', note.trim())
     // Auto-echo the base snapshot_hash from the descriptor (KD18 P5) — sent ONLY
     // when a READY base is attached (snapshot_hash is null otherwise). The
@@ -148,7 +187,14 @@ export function PortalSubmitForm({
       } else {
         setState('success')
         setMessage('Рішення надіслано — очікує перевірки.')
-        onSubmitted() // re-fetch the tree → overlay none→pending
+        // The work is sent; the form is not a record of it. Leaving the file,
+        // the note and an enabled button behind invites a second identical
+        // submission that only the server's hash check refuses.
+        setFile(null)
+        setNote('')
+        setPickerKey((k) => k + 1)
+        setSentId(res.submission_id)
+        onSubmitted(res.submission_id) // re-fetch the tree → overlay none→pending
       }
     } catch (err) {
       if (err instanceof PortalApiError && err.status === 401) return // centralised
@@ -156,6 +202,22 @@ export function PortalSubmitForm({
       setMessage(submitErrorMessage(err))
     }
   }
+
+  // Which language "course language" actually offers. Read from the list the
+  // field already loaded — the same `name_native || name_en` the named options
+  // below use, so the two never disagree about what a code is called. Today
+  // that reads "Ukrainian": the server serves name_native as null for all 58
+  // entries (DD-2.4-L). The day it fills them, this label turns Ukrainian with
+  // no edit here.
+  //
+  // Falls back to the bare wording while the list is still loading, or if the
+  // course's code is not on it: an option that names the wrong language would
+  // be worse than one that names none.
+  const courseLanguageName = languages.find((l) => l.code === courseLanguage)
+  const courseLanguageLabel =
+    courseLanguageName === undefined
+      ? 'Мовою курсу'
+      : `Мовою курсу (${courseLanguageName.name_native || courseLanguageName.name_en})`
 
   const tone =
     state === 'success'
@@ -170,8 +232,9 @@ export function PortalSubmitForm({
     <form onSubmit={handleSubmit} className="space-y-3">
       <h3 className="font-display text-lg text-ink">Надіслати рішення</h3>
       <input
+        key={pickerKey}
         type="file"
-        accept={ALLOWED_EXT.join(',')}
+        accept={policy?.accept.join(',')}
         onChange={handleFile}
         aria-label="Файл рішення"
         className="block w-full text-sm text-ink-light file:mr-3 file:rounded-lg
@@ -187,7 +250,13 @@ export function PortalSubmitForm({
           onChange={(e) => setLanguage(e.target.value)}
           className="input"
         >
-          <option value="">Мовою курсу</option>
+          {/* Hidden when the root carries no language — a CHECK forbids it,
+              so this is a malformed root rather than a state to design for,
+              and an option that cannot say which language it means is worse
+              than no option: the named languages below still work. */}
+          {courseLanguage !== null && (
+            <option value="">{courseLanguageLabel}</option>
+          )}
           {languages.map((l) => (
             <option key={l.code} value={l.code}>
               {/* ``name_native`` is null for every entry the backend serves
@@ -215,7 +284,9 @@ export function PortalSubmitForm({
       )}
       <button
         type="submit"
-        disabled={!file || state === 'submitting' || baseNotReady}
+        disabled={
+          !file || state === 'submitting' || state === 'duplicate' || baseNotReady
+        }
         title={baseNotReady ? 'Базовий проєкт ще не готовий.' : undefined}
         className="btn-primary"
       >
