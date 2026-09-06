@@ -72,17 +72,29 @@ const me = (over: Partial<PortalMe> = {}): PortalMe => ({
 function renderForm(
   base: PortalTaskBase | null = null,
   taskType: string | null = 'task',
+  listedIds: string[] = [],
 ) {
   const onSubmitted = vi.fn()
-  render(
+  const view = render(
     <PortalSubmitForm
       taskId="task-1"
       taskType={taskType}
       base={base}
+      listedIds={listedIds}
       onSubmitted={onSubmitted}
     />,
   )
-  return { onSubmitted }
+  const relist = (ids: string[]) =>
+    view.rerender(
+      <PortalSubmitForm
+        taskId="task-1"
+        taskType={taskType}
+        base={base}
+        listedIds={ids}
+        onSubmitted={onSubmitted}
+      />,
+    )
+  return { onSubmitted, relist }
 }
 
 const languageField = () => screen.getByLabelText('Мова рецензії')
@@ -555,5 +567,92 @@ describe('PortalSubmitForm — мова рецензії (крок Г2 §2.1)', 
       expect(screen.getByRole('option', { name: 'English' })).toBeInTheDocument()
     })
     expect(languageField()).toHaveValue('')
+  })
+})
+
+
+describe('PortalSubmitForm — після подачі (крок Д)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    resetPortalLanguages()
+    resetSubmissionPolicy()
+    mockedLanguages.mockResolvedValue({ items: LANGUAGES, total: LANGUAGES.length })
+    mockedMe.mockResolvedValue(me())
+    mockedPolicy.mockResolvedValue(POLICY)
+    mockedSubmit.mockResolvedValue({
+      submission_id: 'sub-1',
+      status: 'received',
+      duplicate: false,
+    })
+  })
+
+  const filePicker = () => screen.getByLabelText('Файл рішення') as HTMLInputElement
+
+  it('clears the file and the note, and disables the button again', async () => {
+    renderForm()
+    await screen.findByRole('option', { name: 'Ukrainian' })
+    fireEvent.change(screen.getByLabelText('Коментар'), {
+      target: { value: 'питання до рецензента' },
+    })
+    pickFile()
+    fireEvent.click(submitBtn())
+    await waitFor(() => {
+      expect(screen.getByText('Рішення надіслано — очікує перевірки.')).toBeInTheDocument()
+    })
+    // The work is sent; nothing about it is still sitting in the form.
+    expect(filePicker().files?.length ?? 0).toBe(0)
+    expect((screen.getByLabelText('Коментар') as HTMLTextAreaElement).value).toBe('')
+    expect(submitBtn()).toBeDisabled()
+  })
+
+  it('retires the notice once the attempts list shows the submission', async () => {
+    const { relist } = renderForm()
+    await screen.findByRole('option', { name: 'Ukrainian' })
+    pickFile()
+    fireEvent.click(submitBtn())
+    await waitFor(() => {
+      expect(screen.getByText('Рішення надіслано — очікує перевірки.')).toBeInTheDocument()
+    })
+    // The list below adopts the attempt and states its real status; the frozen
+    // "очікує перевірки" would now be the second, staler answer.
+    relist(['sub-1'])
+    await waitFor(() => {
+      expect(
+        screen.queryByText('Рішення надіслано — очікує перевірки.'),
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it('keeps the notice while the list shows only OTHER attempts', async () => {
+    const { relist } = renderForm()
+    await screen.findByRole('option', { name: 'Ukrainian' })
+    pickFile()
+    fireEvent.click(submitBtn())
+    await screen.findByText('Рішення надіслано — очікує перевірки.')
+    relist(['some-older-attempt'])
+    expect(
+      screen.getByText('Рішення надіслано — очікує перевірки.'),
+    ).toBeInTheDocument()
+  })
+
+  it('after a duplicate the button stays disabled until the file changes', async () => {
+    mockedSubmit.mockResolvedValue({
+      submission_id: 'sub-old',
+      status: 'completed',
+      duplicate: true,
+    })
+    renderForm()
+    await screen.findByRole('option', { name: 'Ukrainian' })
+    pickFile('a.py')
+    fireEvent.click(submitBtn())
+    await waitFor(() => {
+      expect(
+        screen.getByText('Цей файл уже подано раніше — нову спробу не створено.'),
+      ).toBeInTheDocument()
+    })
+    // Re-sending the same bytes can only produce the same answer.
+    expect(submitBtn()).toBeDisabled()
+    pickFile('b.py')
+    expect(submitBtn()).toBeEnabled()
   })
 })

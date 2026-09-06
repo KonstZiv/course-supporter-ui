@@ -28,6 +28,7 @@ export function PortalSubmitForm({
   taskId,
   taskType = null,
   base = null,
+  listedIds = [],
   onSubmitted,
 }: {
   taskId: string
@@ -37,7 +38,11 @@ export function PortalSubmitForm({
   // KD18 P5: the active base descriptor for a project task (null for a
   // non-project task or a base-less project). Drives the auto-echo + D5 gating.
   base?: PortalTaskBase | null
-  onSubmitted: () => void
+  // Ids the attempts list below has loaded. The "sent" notice lives until the
+  // attempt it announces is visible there, and not a moment longer — see the
+  // effect below.
+  listedIds?: string[]
+  onSubmitted: (submissionId: string) => void
 }) {
   const [file, setFile] = useState<File | null>(null)
   const [note, setNote] = useState('')
@@ -49,6 +54,12 @@ export function PortalSubmitForm({
   const [language, setLanguage] = useState('')
   const [languages, setLanguages] = useState<PortalLanguageEntry[]>([])
   const [policy, setPolicy] = useState<SubmissionPolicyEntry | null>(null)
+  // The attempt this form announced and is still announcing. Cleared when the
+  // list below shows it — at which point the notice has nothing left to say.
+  const [sentId, setSentId] = useState<string | null>(null)
+  // Remounts the file input so a cleared field really is empty, and so picking
+  // the SAME file again still fires a change event.
+  const [pickerKey, setPickerKey] = useState(0)
 
   // The list is a server-side constant, so one fetch per SPA session (the
   // singleton) covers every task panel the student opens.
@@ -114,7 +125,21 @@ export function PortalSubmitForm({
     setFile(e.target.files?.[0] ?? null)
     setState('idle')
     setMessage('')
+    setSentId(null)
   }
+
+  // The notice "Рішення надіслано — очікує перевірки" answers a question the
+  // attempts list answers better the moment it can: it shows the attempt with
+  // its real status. Two answers to one question, one of them frozen at the
+  // instant of sending, is how a student ends up reading "очікує перевірки"
+  // beside a finished review. So the notice retires when the list adopts it.
+  useEffect(() => {
+    if (sentId !== null && listedIds.includes(sentId)) {
+      setSentId(null)
+      setState('idle')
+      setMessage('')
+    }
+  }, [sentId, listedIds])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -151,7 +176,14 @@ export function PortalSubmitForm({
       } else {
         setState('success')
         setMessage('Рішення надіслано — очікує перевірки.')
-        onSubmitted() // re-fetch the tree → overlay none→pending
+        // The work is sent; the form is not a record of it. Leaving the file,
+        // the note and an enabled button behind invites a second identical
+        // submission that only the server's hash check refuses.
+        setFile(null)
+        setNote('')
+        setPickerKey((k) => k + 1)
+        setSentId(res.submission_id)
+        onSubmitted(res.submission_id) // re-fetch the tree → overlay none→pending
       }
     } catch (err) {
       if (err instanceof PortalApiError && err.status === 401) return // centralised
@@ -173,6 +205,7 @@ export function PortalSubmitForm({
     <form onSubmit={handleSubmit} className="space-y-3">
       <h3 className="font-display text-lg text-ink">Надіслати рішення</h3>
       <input
+        key={pickerKey}
         type="file"
         accept={policy?.accept.join(',')}
         onChange={handleFile}
@@ -218,7 +251,9 @@ export function PortalSubmitForm({
       )}
       <button
         type="submit"
-        disabled={!file || state === 'submitting' || baseNotReady}
+        disabled={
+          !file || state === 'submitting' || state === 'duplicate' || baseNotReady
+        }
         title={baseNotReady ? 'Базовий проєкт ще не готовий.' : undefined}
         className="btn-primary"
       >
