@@ -180,6 +180,7 @@ export function PortalMaterialPanel({
               )}
               <PortalSubmitForm
                 taskId={item.id}
+                taskType={item.task_type}
                 base={item.base}
                 onSubmitted={handleSubmitted}
               />

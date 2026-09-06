@@ -1,39 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Loader2, Upload, CheckCircle2, Info, AlertCircle } from 'lucide-react'
 import { portalApi, PortalApiError } from '../api/portalClient'
-import type { PortalLanguageEntry, PortalTaskBase } from '../types'
+import type {
+  PortalLanguageEntry,
+  PortalTaskBase,
+  SubmissionPolicyEntry,
+} from '../types'
 import { getPortalLanguages } from '../languages'
+import { formatFileSize } from '../rejectionReasons'
+import { getSubmissionPolicy, policyFor } from '../submissionPolicy'
 import { submitErrorMessage } from '../submissionCodes'
-
-// What the file picker offers, mirroring the backend's accepted set (gates
-// FORMATS.md — the same 41 the server derives as
-// _PROSE | CODE_EXTENSIONS | _ARCHIVES | _DOCUMENTS). Grouped the way the list
-// was ratified, by reason rather than alphabetically, so a future edit lands in
-// the group whose reason it shares.
-//
-// This is a COPY with no lock behind it: nothing fails when the server's set
-// moves and this one does not. Being short by one means the student cannot pick
-// a format the server would have accepted — which is exactly what happened
-// before this pass, when .docx and .pdf were added server-side and 27 of the 41
-// stayed unselectable in the dialog. The fix is a submission-policy endpoint
-// this form reads instead (DD-SP-V), not more care here — a sibling of the
-// languages route the field below already reads, in the same portal lookup
-// module server-side.
-const PROSE = ['md', 'txt']
-const CODE = [
-  'py', 'ipynb', 'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', 'java', 'kt', 'kts',
-  'cs', 'go', 'rs', 'php', 'rb', 'c', 'h', 'cpp', 'hpp', 'cc', 'swift', 'dart',
-  'html', 'htm', 'css', 'scss', 'json', 'xml', 'yaml', 'yml', 'toml', 'sql', 'sh',
-]
-const DOCUMENTS = ['docx', 'pdf']
-const ARCHIVES = ['zip', 'gz', 'tgz']
-const ALLOWED_EXT = [...PROSE, ...CODE, ...DOCUMENTS, ...ARCHIVES].map((e) => `.${e}`)
-
-// The same copy problem as ALLOWED_EXT, and knowingly left alone: a project
-// submission is allowed 100 MB server-side, so this cuts off a legitimate one
-// before it is ever sent. Left for the policy endpoint to fix along with the
-// format list, rather than adding a second hand-maintained number here.
-const MAX_SIZE = 10 * 1024 * 1024 // 10 MB
 
 type SubmitState = 'idle' | 'submitting' | 'success' | 'duplicate' | 'error'
 
@@ -50,10 +26,14 @@ type SubmitState = 'idle' | 'submitting' | 'success' | 'duplicate' | 'error'
 // to submit, and a submission with no language named is resolved server-side.
 export function PortalSubmitForm({
   taskId,
+  taskType = null,
   base = null,
   onSubmitted,
 }: {
   taskId: string
+  // Which row of the submission policy applies (step Д). Crosses the wire as a
+  // free string, so it is kept as one here and narrowed at the lookup.
+  taskType?: string | null
   // KD18 P5: the active base descriptor for a project task (null for a
   // non-project task or a base-less project). Drives the auto-echo + D5 gating.
   base?: PortalTaskBase | null
@@ -68,6 +48,7 @@ export function PortalSubmitForm({
   // value as "not given" anyway, but sending it would still be noise).
   const [language, setLanguage] = useState('')
   const [languages, setLanguages] = useState<PortalLanguageEntry[]>([])
+  const [policy, setPolicy] = useState<SubmissionPolicyEntry | null>(null)
 
   // The list is a server-side constant, so one fetch per SPA session (the
   // singleton) covers every task panel the student opens.
@@ -84,6 +65,23 @@ export function PortalSubmitForm({
       active = false
     }
   }, [])
+
+  // What the door accepts, for THIS assignment kind (step Д, DD-SP-V). Fails
+  // soft exactly like the language list above: a policy that does not arrive
+  // leaves the form sending the file and the server answering — the same
+  // outcome as before this endpoint existed, and the same one the form
+  // already gives when the language list fails.
+  useEffect(() => {
+    let active = true
+    getSubmissionPolicy()
+      .then((p) => {
+        if (active) setPolicy(policyFor(p, taskType))
+      })
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
+  }, [taskType])
 
   // The student's standing preference, read here rather than held in the
   // session store or a shared cache. A cache would need invalidating in two
@@ -121,10 +119,15 @@ export function PortalSubmitForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!file || state === 'submitting') return // corrective 4: lock — no double POST
-    // Client size preflight (corrective 2); the server re-checks (422).
-    if (file.size > MAX_SIZE) {
+    // Client size preflight (corrective 2); the server re-checks (422). The
+    // cap and the number in the sentence both come from the policy for this
+    // assignment kind — a project is allowed ten times what a single file is,
+    // and the old literal refused it before the request was ever made. No
+    // policy (not loaded, unknown kind) → no preflight, and the server
+    // answers.
+    if (policy !== null && file.size > policy.max_bytes) {
       setState('error')
-      setMessage('Файл завеликий — максимум 10 МБ.')
+      setMessage(`Файл завеликий — максимум ${formatFileSize(policy.max_bytes)}.`)
       return
     }
     setState('submitting')
@@ -171,7 +174,7 @@ export function PortalSubmitForm({
       <h3 className="font-display text-lg text-ink">Надіслати рішення</h3>
       <input
         type="file"
-        accept={ALLOWED_EXT.join(',')}
+        accept={policy?.accept.join(',')}
         onChange={handleFile}
         aria-label="Файл рішення"
         className="block w-full text-sm text-ink-light file:mr-3 file:rounded-lg

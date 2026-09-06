@@ -4,7 +4,8 @@ import { PortalSubmitForm } from './PortalSubmitForm'
 import { submitErrorMessage } from '../submissionCodes'
 import { portalApi, PortalApiError } from '../api/portalClient'
 import { resetPortalLanguages } from '../languages'
-import type { PortalMe, PortalTaskBase } from '../types'
+import { resetSubmissionPolicy } from '../submissionPolicy'
+import type { PortalMe, PortalTaskBase, SubmissionPolicyResponse } from '../types'
 
 vi.mock('../api/portalClient', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/portalClient')>()
@@ -18,6 +19,8 @@ vi.mock('../api/portalClient', async (importOriginal) => {
       // sources are controlled, and so the suite makes no real calls.
       languages: vi.fn(),
       me: vi.fn(),
+      // Step Д: the door's own numbers, no longer copied into the form.
+      submissionPolicy: vi.fn(),
     },
   }
 })
@@ -25,6 +28,30 @@ vi.mock('../api/portalClient', async (importOriginal) => {
 const mockedSubmit = vi.mocked(portalApi.submitTask)
 const mockedLanguages = vi.mocked(portalApi.languages)
 const mockedMe = vi.mocked(portalApi.me)
+const mockedPolicy = vi.mocked(portalApi.submissionPolicy)
+
+// The 41 the server derives (_PROSE | CODE_EXTENSIONS | _ARCHIVES | _DOCUMENTS),
+// dot-prefixed and sorted the way the route serves them. Written once, here,
+// as a FIXTURE of the wire — not as the form's own knowledge of the door.
+const ACCEPT = [
+  '.c', '.cc', '.cjs', '.cpp', '.cs', '.css', '.dart', '.docx', '.go', '.gz',
+  '.h', '.hpp', '.htm', '.html', '.ipynb', '.java', '.js', '.json', '.jsx',
+  '.kt', '.kts', '.md', '.mjs', '.pdf', '.php', '.py', '.rb', '.rs', '.scss',
+  '.sh', '.sql', '.swift', '.tgz', '.toml', '.ts', '.tsx', '.txt', '.xml',
+  '.yaml', '.yml', '.zip',
+]
+
+const TASK_CAP = 10 * 1024 * 1024
+const PROJECT_CAP = 100 * 1024 * 1024
+
+const POLICY: SubmissionPolicyResponse = {
+  policies: {
+    test: { max_bytes: TASK_CAP, accept: ACCEPT, archive_only: false },
+    short_task: { max_bytes: TASK_CAP, accept: ACCEPT, archive_only: false },
+    task: { max_bytes: TASK_CAP, accept: ACCEPT, archive_only: false },
+    project: { max_bytes: PROJECT_CAP, accept: ACCEPT, archive_only: true },
+  },
+}
 
 const LANGUAGES = [
   { code: 'ukr', name_en: 'Ukrainian', name_native: null },
@@ -42,9 +69,19 @@ const me = (over: Partial<PortalMe> = {}): PortalMe => ({
   ...over,
 })
 
-function renderForm(base: PortalTaskBase | null = null) {
+function renderForm(
+  base: PortalTaskBase | null = null,
+  taskType: string | null = 'task',
+) {
   const onSubmitted = vi.fn()
-  render(<PortalSubmitForm taskId="task-1" base={base} onSubmitted={onSubmitted} />)
+  render(
+    <PortalSubmitForm
+      taskId="task-1"
+      taskType={taskType}
+      base={base}
+      onSubmitted={onSubmitted}
+    />,
+  )
   return { onSubmitted }
 }
 
@@ -64,7 +101,9 @@ describe('PortalSubmitForm', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     resetPortalLanguages()
+    resetSubmissionPolicy()
     mockedLanguages.mockResolvedValue({ items: LANGUAGES, total: LANGUAGES.length })
+    mockedPolicy.mockResolvedValue(POLICY)
     mockedMe.mockResolvedValue(me())
   })
 
@@ -120,12 +159,60 @@ describe('PortalSubmitForm', () => {
 
   it('rejects an oversize file in the client preflight without a POST', async () => {
     renderForm()
-    pickFile('big.py', 11 * 1024 * 1024)
+    await screen.findByRole('option', { name: 'Ukrainian' }) // policy settled
+    pickFile('big.py', TASK_CAP + 1)
     fireEvent.click(submitBtn())
     await waitFor(() => {
       expect(screen.getByText('Файл завеликий — максимум 10 МБ.')).toBeInTheDocument()
     })
     expect(mockedSubmit).not.toHaveBeenCalled()
+  })
+
+  it('lets a project archive through at a size a task would refuse', async () => {
+    // The whole of DD-SP-V in one assertion: 11 MiB was refused by the old
+    // literal before the request was made, while the server allows 100 MB for
+    // a project. The cap is now the one the door actually applies.
+    mockedSubmit.mockResolvedValue({
+      submission_id: 's',
+      status: 'received',
+      duplicate: false,
+    })
+    renderForm(null, 'project')
+    await screen.findByRole('option', { name: 'Ukrainian' })
+    pickFile('solution.zip', TASK_CAP + 1)
+    fireEvent.click(submitBtn())
+    await waitFor(() => expect(mockedSubmit).toHaveBeenCalledTimes(1))
+  })
+
+  it('names the project cap when a project archive is over it', async () => {
+    renderForm(null, 'project')
+    await screen.findByRole('option', { name: 'Ukrainian' })
+    pickFile('huge.zip', PROJECT_CAP + 1)
+    fireEvent.click(submitBtn())
+    await waitFor(() => {
+      expect(
+        screen.getByText('Файл завеликий — максимум 100 МБ.'),
+      ).toBeInTheDocument()
+    })
+    expect(mockedSubmit).not.toHaveBeenCalled()
+  })
+
+  it('sends the file when the policy did not load, rather than guessing', async () => {
+    // Fail-soft, symmetric with the language list: an unavailable policy must
+    // not invent a cap. The server is the door either way, and a guess would
+    // refuse a legitimate project archive with no way for the student to tell
+    // why.
+    mockedPolicy.mockRejectedValue(new Error('offline'))
+    mockedSubmit.mockResolvedValue({
+      submission_id: 's',
+      status: 'received',
+      duplicate: false,
+    })
+    renderForm(null, 'project')
+    await screen.findByRole('option', { name: 'Ukrainian' })
+    pickFile('solution.zip', PROJECT_CAP + 1)
+    fireEvent.click(submitBtn())
+    await waitFor(() => expect(mockedSubmit).toHaveBeenCalledTimes(1))
   })
 
   it('locks during submission — a double click sends one POST', async () => {
@@ -343,38 +430,39 @@ describe('submitErrorMessage — no server string ever reaches the student', () 
   })
 })
 
-describe('PortalSubmitForm — the file picker offers what the server accepts', () => {
-  beforeEach(() => vi.clearAllMocks())
+describe('PortalSubmitForm — the file picker offers what the server serves', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    resetSubmissionPolicy()
+    mockedPolicy.mockResolvedValue(POLICY)
+  })
 
-  const accept = () => {
-    renderForm()
-    return (screen.getByLabelText('Файл рішення') as HTMLInputElement).accept
-      .split(',')
-      .map((e) => e.trim())
+  const acceptAfterLoad = async (taskType: string | null = 'task') => {
+    renderForm(null, taskType)
+    const picker = screen.getByLabelText('Файл рішення') as HTMLInputElement
+    await waitFor(() => expect(picker.accept).not.toBe(''))
+    return picker.accept.split(',').map((e) => e.trim())
   }
 
-  it('offers all 41 accepted formats', () => {
-    expect(accept()).toHaveLength(41)
+  it('offers exactly what the policy served, nothing added or dropped', async () => {
+    // The list is no longer knowledge this file holds — it is an echo. The
+    // assertion is equality with the fixture of the wire, which is the only
+    // thing that can go wrong now: a transform that reshapes what arrived.
+    expect(await acceptAfterLoad()).toEqual(ACCEPT)
   })
 
-  it('offers the formats this pass added — the ones a dialog used to hide', () => {
-    // .docx and .pdf are the point of the document conveyor; a student could
-    // not pick either while the list stood at the old fourteen.
-    expect(accept()).toEqual(
-      expect.arrayContaining(['.docx', '.pdf', '.tgz', '.json', '.yaml', '.tsx', '.go']),
-    )
+  it('offers the same list for a project — narrowing is the server\'s gate', async () => {
+    // archive_only is served as its own field and enforced server-side with
+    // ARCHIVE_ONLY. The portal keeps no archive list of its own to intersect
+    // with (the one it had went with the constants), so re-deriving one here
+    // would be the copy this endpoint exists to delete.
+    expect(await acceptAfterLoad('project')).toEqual(ACCEPT)
   })
 
-  it('offers no extension the server would refuse', () => {
-    // The set is a copy, so it can only be wrong in two directions; this pins
-    // the direction that would produce a 422 the student cannot understand.
-    const known = new Set([
-      'md', 'txt', 'py', 'ipynb', 'js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', 'java',
-      'kt', 'kts', 'cs', 'go', 'rs', 'php', 'rb', 'c', 'h', 'cpp', 'hpp', 'cc',
-      'swift', 'dart', 'html', 'htm', 'css', 'scss', 'json', 'xml', 'yaml', 'yml',
-      'toml', 'sql', 'sh', 'docx', 'pdf', 'zip', 'gz', 'tgz',
-    ])
-    for (const ext of accept()) expect(known.has(ext.slice(1))).toBe(true)
+  it('offers nothing until the policy arrives, rather than a stale guess', () => {
+    renderForm()
+    const picker = screen.getByLabelText('Файл рішення') as HTMLInputElement
+    expect(picker.accept).toBe('')
   })
 })
 
@@ -382,7 +470,9 @@ describe('PortalSubmitForm — мова рецензії (крок Г2 §2.1)', 
   beforeEach(() => {
     vi.clearAllMocks()
     resetPortalLanguages()
+    resetSubmissionPolicy()
     mockedLanguages.mockResolvedValue({ items: LANGUAGES, total: LANGUAGES.length })
+    mockedPolicy.mockResolvedValue(POLICY)
     mockedMe.mockResolvedValue(me())
     mockedSubmit.mockResolvedValue({
       submission_id: 's',

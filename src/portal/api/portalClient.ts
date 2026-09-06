@@ -8,6 +8,7 @@ import type {
   PortalLoginRequest,
   PortalLoginResponse,
   PortalMaterialTreeNode,
+  SubmissionPolicyResponse,
   PortalMe,
   PortalMediaResponse,
   PortalSubmissionDetail,
@@ -179,6 +180,8 @@ export const portalApi = {
   // cannot pass, hence the portal twin server-side; this is its caller.
   languages: () =>
     authGet<PortalLanguagesResponse>('/api/v1/portal/languages'),
+  submissionPolicy: () =>
+    authGet<SubmissionPolicyResponse>('/api/v1/portal/submission-policy'),
   courses: () => authGet<PortalCourseListItem[]>('/api/v1/portal/courses'),
   courseMaterials: (rootId: string) =>
     authGet<PortalMaterialTreeNode>(
