@@ -196,23 +196,29 @@ describe('DocumentStructureBlock — розкритий вміст', () => {
     expect(screen.queryByText(/· 1 файлів/)).not.toBeInTheDocument()
   })
 
-  it('never shows the oversize detail — it is an internal English string', async () => {
+  it('reads the oversize numbers into the phrase, in a human measure', async () => {
+    // Step Д: the server sends "<actual>/<cap>" in bytes (PR-1 commit B), and
+    // the author reads sizes. The old English sentence is gone from the wire;
+    // what would have been a suppressed developer string is now the answer.
     mockedGet.mockResolvedValue({
       excluded: [],
       description_only: [
         entry({
           path: 'data.csv',
           reason: 'oversize',
-          detail: 'file size 6291456 B exceeds the 4194304 B per-file cap',
+          detail: '6291456/4194304',
           size: 6_291_456,
         }),
       ],
     })
     render(<DocumentStructureBlock documentId="d1" />)
     await open('1 файл не прочитано')
-    expect(screen.getByText(/Файл більший за 4 МБ/)).toBeInTheDocument()
-    expect(screen.queryByText(/exceeds the/)).not.toBeInTheDocument()
-    expect(screen.queryByText(/per-file cap/)).not.toBeInTheDocument()
+    expect(
+      screen.getByText(/Файл завеликий: 6,0 МБ при межі 4,0 МБ/),
+    ).toBeInTheDocument()
+    // The raw pair is not printed after the phrase — that would be the same
+    // fact twice, once in bytes.
+    expect(screen.queryByText(/6291456/)).not.toBeInTheDocument()
   })
 
   it('shows the detail everywhere it is a path, a name or a pattern', async () => {

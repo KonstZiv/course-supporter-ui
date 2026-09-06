@@ -22,7 +22,7 @@ const CLS_LABEL: Record<EntryClass, string> = {
 }
 
 const REASON_LABEL: Record<ExcludedReason, string> = {
-  denylist_dir: 'denylist-директорія',
+  denylist_dir: 'службова тека',
   magic_mismatch: 'невідповідність типу',
   nested_archive: 'вкладений архів',
 }
@@ -99,7 +99,7 @@ export function BaseManifestView({ manifest }: { manifest: ProjectBaseManifest }
           <strong className="text-ink">{formatBytes(manifest.total_bytes)}</strong>
         </span>
         <span className="font-mono truncate" title={manifest.aggregate_hash}>
-          hash {manifest.aggregate_hash.slice(0, 12)}…
+          відбиток {manifest.aggregate_hash.slice(0, 12)}…
         </span>
       </div>
 

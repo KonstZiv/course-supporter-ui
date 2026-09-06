@@ -54,7 +54,7 @@ function StructureGroup({
               <span className="text-ink-muted"> · {e.entries} файлів</span>
             )}
             {' — '}
-            {structureReasonPhrase(e.reason)}
+            {structureReasonPhrase(e.reason, e.detail)}
             {e.detail && detailIsShowable(e.reason) && (
               <span className="text-ink-muted"> ({e.detail})</span>
             )}

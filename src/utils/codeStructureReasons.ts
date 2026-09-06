@@ -15,6 +15,8 @@
 // block carries one action for all of them, because a per-row instruction
 // would be invented noise under a `.DS_Store`.
 
+import { formatBytes } from './formatBytes'
+
 /** Files whose contents never reached the model at all. */
 const NOT_INCLUDED: Record<string, string> = {
   denylist_dir: 'Службова тека середовища або редактора.',
@@ -30,7 +32,12 @@ const NAME_ONLY: Record<string, string> = {
   vendored_dir: 'Стороння бібліотека у складі проєкту.',
   lockfile: 'Список залежностей проєкту.',
   generated_artifact: 'Файл, згенерований збіркою.',
-  oversize: 'Файл більший за 4 МБ — для читання завеликий.',
+  // Numberless fallback only. The cap used to be written here as "4 МБ" — a
+  // copy of a server constant with nothing holding the two together, and it
+  // was already wrong by the time anyone read it. Since step Д the server
+  // sends both numbers in the detail, so the phrase below is built from them
+  // and this line is what remains when the detail is missing or malformed.
+  oversize: 'Файл завеликий — для читання не взято.',
   build_config: 'Налаштування складання проєкту.',
   author_structure_only:
     'За вашим вибором на екрані підтвердження ролей: увійшла лише назва.',
@@ -73,8 +80,32 @@ export const STRUCTURE_BLOCK_ACTION =
  * says the reason is missing rather than dropping the row — the same rule the
  * student-side dictionary follows, for the same reason.
  */
-export function structureReasonPhrase(reason: string): string {
+export function structureReasonPhrase(reason: string, detail?: string | null): string {
+  if (reason === 'oversize') {
+    const sizes = parseOversizeDetail(detail)
+    if (sizes !== null) {
+      return `Файл завеликий: ${formatBytes(sizes.size)} при межі ${formatBytes(sizes.cap)}.`
+    }
+  }
   return REASON_PHRASES[reason] ?? 'Причину не вказано.'
+}
+
+/**
+ * The two byte counts the server puts in an ``oversize`` detail, or null.
+ *
+ * Shape is ``"<actual>/<cap>"`` (PR-1 commit B), chosen so the numbers survive
+ * translation where the English sentence they replaced did not. Null on
+ * anything else — a row written before that change still carries the old
+ * sentence, and the numberless phrase is the honest answer for it rather than
+ * a number invented to fill the shape.
+ */
+function parseOversizeDetail(
+  detail: string | null | undefined,
+): { size: number; cap: number } | null {
+  if (!detail) return null
+  const m = /^(\d+)\/(\d+)$/.exec(detail.trim())
+  if (m === null) return null
+  return { size: Number(m[1]), cap: Number(m[2]) }
 }
 
 /**
@@ -82,13 +113,11 @@ export function structureReasonPhrase(reason: string): string {
  *
  * Eleven of the twelve carry something the author recognises — the directory,
  * the filename, the pattern (``node_modules``, ``package-lock.json``,
- * ``*.min.js``). ``oversize`` carries an internal English sentence with byte
- * counts in it (``file size 6291456 B exceeds the 4194304 B per-file cap``),
- * which is a developer string and must not reach the author; the size is
- * already in its phrase, so nothing is lost by suppressing it.
- *
- * Recorded for the server side rather than patched here: the detail itself
- * ought to be product-language or absent.
+ * ``*.min.js``). ``oversize`` is still suppressed, but for the opposite reason
+ * to before: its detail is no longer an English sentence to hide (PR-1 commit
+ * B replaced that with ``"<actual>/<cap>"``) — it is now READ, and both
+ * numbers appear inside the phrase. Printing ``6291456/4194304`` after them
+ * would say the same thing twice, once in bytes.
  */
 export function detailIsShowable(reason: string): boolean {
   return reason !== 'oversize'

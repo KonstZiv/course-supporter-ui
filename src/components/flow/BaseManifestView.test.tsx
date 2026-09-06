@@ -33,7 +33,7 @@ describe('BaseManifestView', () => {
   it('renders the collapsed excluded rows with a reason label', () => {
     render(<BaseManifestView manifest={manifest} />)
     expect(screen.getByText('node_modules/')).toBeInTheDocument()
-    expect(screen.getByText('denylist-директорія')).toBeInTheDocument()
+    expect(screen.getByText('службова тека')).toBeInTheDocument()
     expect(screen.getByText(/42/)).toBeInTheDocument()
   })
 
