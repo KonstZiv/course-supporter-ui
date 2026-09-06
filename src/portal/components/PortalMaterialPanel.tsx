@@ -89,10 +89,15 @@ function ProjectBaseSection({
 // successful submit ``onSubmitted`` re-fetches the tree so the overlay flips.
 export function PortalMaterialPanel({
   item,
+  courseLanguage = null,
   onClose,
   onSubmitted,
 }: {
   item: PortalMaterialItem
+  // Step Д: the course language, read off the tree ROOT one screen up. Passed
+  // rather than fetched — the form needs it to say what "course language"
+  // means, and the tree that carries it is already on screen.
+  courseLanguage?: string | null
   onClose: () => void
   onSubmitted: () => void
 }) {
@@ -185,6 +190,7 @@ export function PortalMaterialPanel({
               <PortalSubmitForm
                 taskId={item.id}
                 taskType={item.task_type}
+                courseLanguage={courseLanguage}
                 base={item.base}
                 listedIds={listedIds}
                 onSubmitted={handleSubmitted}

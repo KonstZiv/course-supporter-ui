@@ -73,12 +73,14 @@ function renderForm(
   base: PortalTaskBase | null = null,
   taskType: string | null = 'task',
   listedIds: string[] = [],
+  courseLanguage: string | null = 'ukr',
 ) {
   const onSubmitted = vi.fn()
   const view = render(
     <PortalSubmitForm
       taskId="task-1"
       taskType={taskType}
+      courseLanguage={courseLanguage}
       base={base}
       listedIds={listedIds}
       onSubmitted={onSubmitted}
@@ -89,6 +91,7 @@ function renderForm(
       <PortalSubmitForm
         taskId="task-1"
         taskType={taskType}
+        courseLanguage={courseLanguage}
         base={base}
         listedIds={ids}
         onSubmitted={onSubmitted}
@@ -493,21 +496,44 @@ describe('PortalSubmitForm — мова рецензії (крок Г2 §2.1)', 
     })
   })
 
-  it('offers the server list with "course language" first', async () => {
+  it('offers the server list with "course language" first, named', async () => {
     renderForm()
     await waitFor(() => {
       expect(screen.getByRole('option', { name: 'Ukrainian' })).toBeInTheDocument()
     })
     const options = screen.getAllByRole('option')
-    // The absence of a choice leads, and carries no code — a student who has
-    // no opinion should not have to have one.
-    expect(options[0]).toHaveTextContent('Мовою курсу')
+    // The absence of a choice leads and still carries no code — but it now
+    // says WHICH language it means, from the same list the named options use.
     expect(options[0]).toHaveValue('')
     expect(options.map((o) => o.textContent)).toEqual([
-      'Мовою курсу',
+      'Мовою курсу (Ukrainian)',
       'Ukrainian',
       'English',
     ])
+  })
+
+  it('names the course language from the list, not from a dictionary of its own', async () => {
+    // A course in English must say English. The name comes from the same
+    // `name_native || name_en` the named options use, so the two cannot
+    // disagree about what a code is called.
+    renderForm(null, 'task', [], 'eng')
+    await waitFor(() => {
+      expect(
+        screen.getByRole('option', { name: 'Мовою курсу (English)' }),
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('stays bare while the list is loading, rather than naming the wrong one', async () => {
+    // The label is built from the list; before it arrives there is nothing to
+    // build from, and an option naming the wrong language would be worse than
+    // one naming none.
+    mockedLanguages.mockRejectedValue(new Error('offline'))
+    renderForm()
+    await waitFor(() => expect(mockedMe).toHaveBeenCalled())
+    expect(
+      screen.getByRole('option', { name: 'Мовою курсу' }),
+    ).toBeInTheDocument()
   })
 
   it('opens on the stored preference', async () => {
@@ -535,17 +561,49 @@ describe('PortalSubmitForm — мова рецензії (крок Г2 §2.1)', 
     expect(body.get('response_language')).toBe('eng')
   })
 
-  it('omits the field entirely on "course language"', async () => {
+  it('sends the COURSE code on "course language" (крок Д)', async () => {
+    // Reverses the Г2 behaviour this test used to pin. Sending nothing made
+    // the server fall back to the student's STORED preference first, so the
+    // option promising the course's language delivered the language of the
+    // last review instead. Naming the code is the only way the label and the
+    // outcome agree.
     renderForm()
     await waitFor(() => expect(mockedMe).toHaveBeenCalled())
     pickFile()
     fireEvent.click(submitBtn())
     await waitFor(() => expect(mockedSubmit).toHaveBeenCalled())
     const body = mockedSubmit.mock.calls[0]![1] as FormData
-    // Absent, not empty: the server reads a blank value as "not given" either
-    // way, but an empty field on the wire is noise that invites a reader to
-    // wonder whether it meant something.
-    expect(body.has('response_language')).toBe(false)
+    expect(body.get('response_language')).toBe('ukr')
+  })
+
+  it('sends the course code even when the preference says otherwise', async () => {
+    // The case that was measured on prod: preference eng, course ukr, review
+    // in English under a Ukrainian label. The field still OPENS on the
+    // preference (unchanged); choosing "course language" now overrides it.
+    mockedMe.mockResolvedValue(me({ preferred_language: 'eng' }))
+    renderForm()
+    await waitFor(() =>
+      expect((languageField() as HTMLSelectElement).value).toBe('eng'),
+    )
+    fireEvent.change(languageField(), { target: { value: '' } })
+    pickFile()
+    fireEvent.click(submitBtn())
+    await waitFor(() => expect(mockedSubmit).toHaveBeenCalled())
+    const body = mockedSubmit.mock.calls[0]![1] as FormData
+    expect(body.get('response_language')).toBe('ukr')
+  })
+
+  it('hides the option when the root carries no language', async () => {
+    // A CHECK forbids this on a root, so it is a malformed row rather than a
+    // state to design for — and an option that cannot say which language it
+    // means is worse than no option. The named languages still work.
+    renderForm(null, 'task', [], null)
+    await waitFor(() => {
+      expect(screen.getByRole('option', { name: 'Ukrainian' })).toBeInTheDocument()
+    })
+    expect(
+      screen.queryByRole('option', { name: 'Мовою курсу' }),
+    ).not.toBeInTheDocument()
   })
 
   it('stays usable when the language list cannot be fetched', async () => {

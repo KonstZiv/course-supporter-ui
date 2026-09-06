@@ -79,6 +79,7 @@ export function PortalCoursePage() {
       {selected && (
         <PortalMaterialPanel
           item={selected}
+          courseLanguage={tree?.default_language ?? null}
           onClose={() => setSelected(null)}
           onSubmitted={loadTree}
         />

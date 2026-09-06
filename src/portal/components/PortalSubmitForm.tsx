@@ -27,6 +27,7 @@ type SubmitState = 'idle' | 'submitting' | 'success' | 'duplicate' | 'error'
 export function PortalSubmitForm({
   taskId,
   taskType = null,
+  courseLanguage = null,
   base = null,
   listedIds = [],
   onSubmitted,
@@ -35,6 +36,11 @@ export function PortalSubmitForm({
   // Which row of the submission policy applies (step Д). Crosses the wire as a
   // free string, so it is kept as one here and narrowed at the lookup.
   taskType?: string | null
+  // Step Д: the course's own language (ISO 639-3) off the tree root, so the
+  // "course language" option can send the code it names instead of sending
+  // nothing and letting the server fall back to the student's preference.
+  // Null only if the root carries none, which a CHECK forbids.
+  courseLanguage?: string | null
   // KD18 P5: the active base descriptor for a project task (null for a
   // non-project task or a base-less project). Drives the auto-echo + D5 gating.
   base?: PortalTaskBase | null
@@ -159,9 +165,14 @@ export function PortalSubmitForm({
     setMessage('')
     const fd = new FormData()
     fd.append('file', file)
-    // Only an explicit choice is sent. Left alone, the server resolves the
-    // language itself: the student's stored preference, then the course's.
-    if (language) fd.append('response_language', language)
+    // Every option now sends the code it names. "Мовою курсу" used to send
+    // nothing, which made the server fall back — to the student's STORED
+    // preference first, so a student whose last review was in English got
+    // English again under a label promising the course's language. Measured
+    // 2026-09-04 on a ukr course. The absence of a choice is no longer the way
+    // to ask for the course language; naming it is.
+    const chosen = language || courseLanguage
+    if (chosen) fd.append('response_language', chosen)
     if (note.trim()) fd.append('student_note', note.trim())
     // Auto-echo the base snapshot_hash from the descriptor (KD18 P5) — sent ONLY
     // when a READY base is attached (snapshot_hash is null otherwise). The
@@ -191,6 +202,22 @@ export function PortalSubmitForm({
       setMessage(submitErrorMessage(err))
     }
   }
+
+  // Which language "course language" actually offers. Read from the list the
+  // field already loaded — the same `name_native || name_en` the named options
+  // below use, so the two never disagree about what a code is called. Today
+  // that reads "Ukrainian": the server serves name_native as null for all 58
+  // entries (DD-2.4-L). The day it fills them, this label turns Ukrainian with
+  // no edit here.
+  //
+  // Falls back to the bare wording while the list is still loading, or if the
+  // course's code is not on it: an option that names the wrong language would
+  // be worse than one that names none.
+  const courseLanguageName = languages.find((l) => l.code === courseLanguage)
+  const courseLanguageLabel =
+    courseLanguageName === undefined
+      ? 'Мовою курсу'
+      : `Мовою курсу (${courseLanguageName.name_native || courseLanguageName.name_en})`
 
   const tone =
     state === 'success'
@@ -223,7 +250,13 @@ export function PortalSubmitForm({
           onChange={(e) => setLanguage(e.target.value)}
           className="input"
         >
-          <option value="">Мовою курсу</option>
+          {/* Hidden when the root carries no language — a CHECK forbids it,
+              so this is a malformed root rather than a state to design for,
+              and an option that cannot say which language it means is worse
+              than no option: the named languages below still work. */}
+          {courseLanguage !== null && (
+            <option value="">{courseLanguageLabel}</option>
+          )}
           {languages.map((l) => (
             <option key={l.code} value={l.code}>
               {/* ``name_native`` is null for every entry the backend serves
