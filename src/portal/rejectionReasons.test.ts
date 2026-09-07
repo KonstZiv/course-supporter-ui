@@ -64,6 +64,42 @@ describe('rejectionPhrase — declines, so the caller can fall to the status lay
   })
 })
 
+describe('rejectionPhrase — the two sizes behind over_budget', () => {
+  // Stage 1 refuses one oversize file and puts the FILENAME in details; the
+  // project branch refuses an assembled context and puts the two NUMBERS
+  // there. One code, two answers, and the discriminator is the shape of
+  // details — a filename can never parse as a pair of numbers.
+  it('a pair of numbers → the project sentence, grouped for uk', () => {
+    const phrase = rejectionPhrase(rej('over_budget', '295 000 / 131 072'))
+    expect(phrase).toBe(
+      `Проєкт завеликий для перевірки: 295\u00A0000 знаків тексту після ` +
+        `очищення проти межі 131\u00A0072. ` +
+        'До перевірки йдуть лише результати вашої роботи. Приберіть з архіву ' +
+        'автоматично створені файли, сторонні бібліотеки, теки залежностей і ' +
+        'кешів, великі дані та бінарні файли — і надішліть знову.',
+    )
+  })
+
+  it('groups thousands itself rather than echoing the server spacing', () => {
+    // The server sends plain spaces; the portal re-groups with the
+    // non-breaking space uk uses, so the number never wraps mid-way.
+    const phrase = rejectionPhrase(rej('over_budget', '1000000/2000000'))
+    expect(phrase).toContain('1\u00A0000\u00A0000 знаків')
+    expect(phrase).toContain('межі 2\u00A0000\u00A0000.')
+  })
+
+  it.each([null, '', ' / ', 'GATE-4.md', 'work.zip', '131072'])(
+    'details %p → the plain phrase, no invented numbers',
+    (details) => {
+      const phrase = rejectionPhrase(rej('over_budget', details))
+      expect(phrase).toBe(
+        'Робота завелика для перевірки. ' +
+          'Лишіть у роботі лише потрібне і подайте знову.',
+      )
+    },
+  )
+})
+
 describe('rejectionPhrase — the gzip discrimination', () => {
   // Sound, not a guess: the backend answers a VALID gzip whose payload is not a
   // tar with magic_mismatch, and BROKEN gzip framing with archive_violation. So
