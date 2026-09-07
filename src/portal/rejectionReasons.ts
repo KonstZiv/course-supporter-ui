@@ -109,6 +109,42 @@ const BARE_GZIP: ReasonArticle = {
   action: 'Запакуйте роботу як .zip або .tar.gz.',
 }
 
+// ``over_budget`` arrives from two places and means two different sizes. Stage 1
+// refuses a single file or archive whose text does not fit the reading budget,
+// and its ``details`` is the filename. The project branch refuses an assembled
+// context no first rung of the mentor chain could hold (step E), and its
+// ``details`` is the pair of numbers the refusal is about — numbers only, by
+// design, because the sentence around them belongs here, in the language the
+// student reads.
+//
+// The pair is parsed strictly: digits, a slash, digits. A filename never
+// matches, so the stage-1 case falls through to the plain article untouched —
+// which is the right answer there, since "приберіть з архіву" is nonsense
+// advice for a single oversize .md.
+const OVER_BUDGET_PAIR = /^\s*([\d\s\u00A0]+)\/([\d\s\u00A0]+)$/
+
+function overBudgetWithNumbers(details: string): ReasonArticle | null {
+  const m = OVER_BUDGET_PAIR.exec(details)
+  if (!m) return null
+  const digits = (raw: string | undefined) =>
+    Number((raw ?? '').replace(/[\s\u00A0]/g, ''))
+  const chars = digits(m[1])
+  const budget = digits(m[2])
+  // Both sides must be real counts: the character classes above also match a
+  // run of spaces, and Number('') is a finite 0.
+  if (!(chars > 0) || !(budget > 0)) return null
+  const uk = (n: number) => n.toLocaleString('uk-UA')
+  return {
+    what:
+      `Проєкт завеликий для перевірки: ${uk(chars)} знаків тексту після ` +
+      `очищення проти межі ${uk(budget)}.`,
+    action:
+      'До перевірки йдуть лише результати вашої роботи. Приберіть з архіву ' +
+      'автоматично створені файли, сторонні бібліотеки, теки залежностей і ' +
+      'кешів, великі дані та бінарні файли — і надішліть знову.',
+  }
+}
+
 export function reasonArticle(code: string): ReasonArticle | null {
   return WHOLE_FILE[code] ?? null
 }
@@ -119,6 +155,10 @@ export function rejectionPhrase(rejection: PortalRejection): string | null {
   const name = rejection.details ?? ''
   if (rejection.code === 'magic_mismatch' && /\.(gz|tgz)$/i.test(name)) {
     return articlePhrase(BARE_GZIP)
+  }
+  if (rejection.code === 'over_budget') {
+    const withNumbers = overBudgetWithNumbers(name)
+    if (withNumbers) return articlePhrase(withNumbers)
   }
   const article = reasonArticle(rejection.code)
   return article ? articlePhrase(article) : null

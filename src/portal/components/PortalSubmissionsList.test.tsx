@@ -153,4 +153,39 @@ describe('PortalSubmissionsList — the "not read" marker on an attempt row', ()
     expect(screen.getByText(/Кодування файла не розпізнано/)).toBeInTheDocument()
     expect(mockedSubmission).not.toHaveBeenCalled()
   })
+  it('an oversize project refusal reads with its numbers in «Мої спроби»', async () => {
+    // Reaches the student only because curated_rejection now codes the
+    // project branch's refusal (source='normalizer', category over_budget)
+    // instead of returning null and leaving the row on its status phrase.
+    // details carries the two numbers and no words; the sentence is ours.
+    mockedSubmissions.mockResolvedValue([
+      row({
+        id: 'ob',
+        status: 'rejected',
+        score: null,
+        verdict: null,
+        original_filename: 'solution.zip',
+        rejection: { code: 'over_budget', details: '295 000 / 131 072' },
+      }),
+    ])
+    render(<PortalSubmissionsList taskId="t1" reloadKey={0} />)
+    await waitFor(() => expect(screen.getByText('solution.zip')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { expanded: false }))
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          // ``.`` for the thousands separator: the portal groups with a
+          // non-breaking space, and the DOM matcher normalises it to a plain
+          // one. The exact grouping is pinned in rejectionReasons.test.ts.
+          /Проєкт завеликий для перевірки: 295.000 знаків тексту після очищення проти межі 131.072\./,
+        ),
+      ).toBeInTheDocument(),
+    )
+    expect(
+      screen.getByText(/Приберіть з архіву автоматично створені файли/),
+    ).toBeInTheDocument()
+    // The detail endpoint is never called for an error row (DD-6-D).
+    expect(mockedSubmission).not.toHaveBeenCalled()
+  })
+
 })
