@@ -211,3 +211,71 @@ describe('PortalSubmissionsList — the "not read" marker on an attempt row', ()
   })
 
 })
+
+describe('PortalSubmissionsList — what an attempt is told (task 03)', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it.each([
+    ['not_an_attempt', 'Не схоже на спробу'],
+    ['not_opened', 'Не відкрито'],
+    ['awaiting_funds', 'Призупинено'],
+    ['in_progress', 'На перевірці'],
+  ])('the chip for %s reads «%s», never «Помилка»', async (state, label) => {
+    mockedSubmissions.mockResolvedValue([
+      row({
+        id: 'x',
+        status: 'mismatch',
+        score: null,
+        verdict: null,
+        presentation: { state: state as never, reason_code: null },
+      }),
+    ])
+    render(<PortalSubmissionsList taskId="t-1" reloadKey={0} />)
+
+    await waitFor(() => expect(screen.getByText(label)).toBeInTheDocument())
+    expect(screen.queryByText('Помилка')).not.toBeInTheDocument()
+  })
+
+  it('an off-task attempt expands into the answer, not into an error', async () => {
+    // Criterion 6, the attempts-list half: the phrase is an answer to the
+    // student with something to do, and no second request is made for it.
+    mockedSubmissions.mockResolvedValue([
+      row({
+        id: 'x',
+        status: 'mismatch',
+        score: null,
+        verdict: null,
+        presentation: { state: 'not_an_attempt', reason_code: 'mismatch' },
+      }),
+    ])
+    render(<PortalSubmissionsList taskId="t-1" reloadKey={0} />)
+    await waitFor(() =>
+      expect(screen.getByText('Не схоже на спробу')).toBeInTheDocument(),
+    )
+
+    fireEvent.click(screen.getByText('Не схоже на спробу'))
+
+    expect(screen.getByText(/не схоже на рішення цього завдання/)).toBeInTheDocument()
+    expect(screen.getByText(/Перевірте, що подаєте правильний файл/)).toBeInTheDocument()
+    expect(mockedSubmission).not.toHaveBeenCalled()
+  })
+
+  it('a held attempt says it resumes by itself and asks for no resubmission', async () => {
+    mockedSubmissions.mockResolvedValue([
+      row({
+        id: 'x',
+        status: 'awaiting_funds',
+        score: null,
+        verdict: null,
+      }),
+    ])
+    render(<PortalSubmissionsList taskId="t-1" reloadKey={0} />)
+    await waitFor(() => expect(screen.getByText('Призупинено')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByText('Призупинено'))
+
+    expect(screen.getByText(/продовжиться автоматично/)).toBeInTheDocument()
+    expect(screen.getByText(/Надсилати роботу знову не потрібно/)).toBeInTheDocument()
+    expect(mockedSubmission).not.toHaveBeenCalled()
+  })
+})

@@ -134,3 +134,59 @@ describe('SubmissionBadge', () => {
     expect(screen.getByText('Перевірено')).toBeInTheDocument()
   })
 })
+
+describe('SubmissionBadge — the four ways an attempt is not a result (task 03)', () => {
+  // Criterion 6. The tree used to carry one coarse "error" bucket, so a student
+  // whose work simply did not look like an attempt was told the system had
+  // broken. The badge now says which of the four it was, in the server's own
+  // words.
+  it.each([
+    ['not_an_attempt', 'Не схоже на спробу'],
+    ['not_opened', 'Не відкрито'],
+    ['awaiting_funds', 'Призупинено'],
+    ['in_progress', 'На перевірці'],
+  ])('%s → «%s», never «Помилка»', (state, label) => {
+    render(
+      <SubmissionBadge
+        overlay={overlay({
+          submission_status: 'error',
+          presentation: { state: state as never, reason_code: null },
+        })}
+      />,
+    )
+
+    expect(screen.getByText(label)).toBeInTheDocument()
+    expect(screen.queryByText('Помилка')).not.toBeInTheDocument()
+  })
+
+  it('reads the server, not the old bucket', () => {
+    // The bucket still says "error" — it is the wire field this task did not
+    // touch. What the student reads comes from the presentation.
+    render(
+      <SubmissionBadge
+        overlay={overlay({
+          submission_status: 'error',
+          presentation: { state: 'not_an_attempt', reason_code: 'mismatch' },
+        })}
+      />,
+    )
+
+    expect(screen.getByText('Не схоже на спробу')).toBeInTheDocument()
+  })
+
+  it('an earned score still rides along with the state', () => {
+    render(
+      <SubmissionBadge
+        overlay={overlay({
+          submission_status: 'error',
+          presentation: { state: 'not_an_attempt', reason_code: 'mismatch' },
+          best: { score: 90, verdict: { passed: true, correctness: 'correct' } },
+        })}
+      />,
+    )
+
+    expect(
+      screen.getByText('Не схоже на спробу · 90/100 · зараховано'),
+    ).toBeInTheDocument()
+  })
+})
