@@ -8,7 +8,12 @@ import type {
   PortalSubmissionDetail,
   PortalSubmissionListItem,
 } from '../types'
-import { errorPhrase, PENDING_LABEL, statusBucket } from '../terminalStatus'
+import {
+  isReviewed,
+  presentationPhrase,
+  stateLabel,
+  stateTone,
+} from '../presentationPhrases'
 import {
   formatFileSize,
   notOpenedPhrase,
@@ -124,19 +129,19 @@ function RecoveredEncodingBlock({ encoding }: { encoding: string | null }) {
 //
 // The "why" of a refusal resolves in three layers, in this order:
 //   1. the ratified article for the reason code (rejectionReasons)
-//   2. the phrase for the delivery status (terminalStatus)
+//   2. the phrase for the state the server reported (presentationPhrases)
 //   3. that module's own generic
 // Layer 1 declines by returning null rather than answering generically, which
 // is what keeps mismatch and stage2_rejected on their better status phrases.
 // The backend's error_message is read at no layer — it is not on the contract.
 export function PortalReviewDetail({ row }: { row: PortalSubmissionListItem }) {
-  const { id: submissionId, status } = row
-  const bucket = statusBucket(status)
+  const { id: submissionId, presentation } = row
+  const reviewed = isReviewed(presentation.state)
   const [detail, setDetail] = useState<PortalSubmissionDetail | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (bucket !== 'reviewed') return // error / pending render from status alone
+    if (!reviewed) return // every other state renders from the row alone
     let active = true
     setDetail(null)
     setError('')
@@ -153,25 +158,23 @@ export function PortalReviewDetail({ row }: { row: PortalSubmissionListItem }) {
     return () => {
       active = false
     }
-  }, [submissionId, bucket])
+  }, [submissionId, reviewed])
 
-  if (bucket === 'error') {
+  if (!reviewed) {
+    // One branch for the four states that have no review to show. The sentence
+    // is the server's answer put into words (mentor-rebuild task 03): the
+    // article for the reason code where the doors left one — which is how the
+    // file-specific lines survive — else the phrase for the state.
+    //
+    // ``rejection`` is still consulted first: its articles know the FILE, and
+    // the state cannot.
     const phrase =
-      (row.rejection && rejectionPhrase(row.rejection)) ?? errorPhrase(status)
+      (row.rejection && rejectionPhrase(row.rejection)) ??
+      presentationPhrase(presentation)
     return (
       <div className="space-y-3">
-        <div className="p-3 rounded-xl bg-coral-pale text-coral text-sm">{phrase}</div>
-        <RecoveredEncodingBlock encoding={row.recovered_encoding} />
-        <NotOpenedBlock entries={row.not_opened} />
-      </div>
-    )
-  }
-
-  if (bucket === 'pending') {
-    return (
-      <div className="space-y-3">
-        <div className="p-3 rounded-xl bg-amber-pale text-amber-dark text-sm">
-          {PENDING_LABEL} — рецензія зʼявиться, коли перевірка завершиться.
+        <div className={`p-3 rounded-xl text-sm ${stateTone(presentation.state)}`}>
+          {stateLabel(presentation.state)} — {phrase}
         </div>
         <RecoveredEncodingBlock encoding={row.recovered_encoding} />
         <NotOpenedBlock entries={row.not_opened} />

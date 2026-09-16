@@ -86,8 +86,35 @@ export interface PortalAttemptResult {
 // distinct from a reviewed-but-not-passed verdict.
 export type PortalSubmissionStatus = 'none' | 'pending' | 'reviewed' | 'error'
 
+// What to SAY about an attempt (mentor-rebuild task 03). The server's single
+// answer, carried identically by the tree, the attempts list and the detail —
+// so the interface no longer keeps its own copy of the rule and the three can
+// no longer phrase the same attempt differently (DD-SP-AS).
+//
+// Five states, because that is how many different things a student can be told.
+// Which of the ten stored lifecycle milestones it was is internal and stays so
+// — the raw ``status`` still crosses the wire for whoever already reads it, but
+// nothing in the portal decides anything from it any more.
+export type PortalPresentationState =
+  | 'not_opened'
+  | 'not_an_attempt'
+  | 'awaiting_funds'
+  | 'in_progress'
+  | 'reviewed'
+
+export interface PortalPresentation {
+  state: PortalPresentationState
+  // A service key, not a sentence: this side picks the words. Null where the
+  // state is the whole answer.
+  reason_code: string | null
+}
+
 export interface PortalSubmissionOverlay {
   submission_status: PortalSubmissionStatus
+  // The same answer the attempts list carries for the LATEST attempt. Null when
+  // there are no attempts. Beside ``submission_status``, never instead of it —
+  // the old bucket stays on the wire until DD-SP-AS retires it.
+  presentation: PortalPresentation | null
   last: PortalAttemptResult | null
   best: PortalAttemptResult | null
 }
@@ -202,6 +229,9 @@ export interface PortalNotOpened {
 export interface PortalSubmissionListItem {
   id: string
   status: string
+  // What to say about this attempt (mentor-rebuild task 03), beside ``status``
+  // and never instead of it.
+  presentation: PortalPresentation
   score: number | null
   verdict: PortalVerdict | null
   created_at: string

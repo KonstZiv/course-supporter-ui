@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { PortalReviewDetail } from './PortalReviewDetail'
 import { portalApi } from '../api/portalClient'
-import type { PortalNotOpened, PortalSubmissionListItem } from '../types'
+import type {
+  PortalNotOpened,
+  PortalPresentation,
+  PortalSubmissionListItem,
+} from '../types'
 
 vi.mock('../api/portalClient', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/portalClient')>()
@@ -14,9 +18,32 @@ vi.mock('../api/portalClient', async (importOriginal) => {
 
 const mockedSubmission = vi.mocked(portalApi.submission)
 
+// What the SERVER would say about an attempt in that lifecycle status — the
+// same mapping ``_portal_shared.curated_presentation`` applies. Tests that were
+// written against the raw status keep driving by it; the component now reads
+// the server's answer, and this is what turns one into the other.
+const PRESENTATION: Record<string, PortalPresentation> = {
+  rejected: { state: 'not_opened', reason_code: 'stage2_rejected' },
+  failed: { state: 'not_opened', reason_code: 'processing_failed' },
+  mismatch: { state: 'not_an_attempt', reason_code: 'mismatch' },
+  awaiting_funds: { state: 'awaiting_funds', reason_code: 'awaiting_funds' },
+  received: { state: 'in_progress', reason_code: null },
+  safety_ok: { state: 'in_progress', reason_code: null },
+  sanity_ok: { state: 'in_progress', reason_code: null },
+  reviewing: { state: 'in_progress', reason_code: null },
+  completed: { state: 'reviewed', reason_code: null },
+  delivered: { state: 'reviewed', reason_code: null },
+}
+
 const row = (over: Partial<PortalSubmissionListItem> = {}): PortalSubmissionListItem => ({
   id: 'sub-1',
-  status: 'completed',
+  status: over.status ?? 'completed',
+  presentation:
+    over.presentation ??
+    PRESENTATION[over.status ?? 'completed'] ?? {
+      state: 'reviewed',
+      reason_code: null,
+    },
   score: 85,
   verdict: { passed: true, correctness: 'correct' },
   created_at: '2026-06-29T10:00:00Z',
@@ -30,6 +57,7 @@ const row = (over: Partial<PortalSubmissionListItem> = {}): PortalSubmissionList
 const detail = (over: Partial<Parameters<typeof mockedSubmission.mockResolvedValue>[0]> = {}) => ({
   id: 'sub-1',
   status: 'completed',
+  presentation: { state: 'reviewed' as const, reason_code: null },
   score: 85,
   verdict: { passed: true, correctness: 'correct' },
   review_markdown: '# Рецензія\n\nДобре виконано.',
@@ -191,10 +219,23 @@ describe('PortalReviewDetail — the three phrase layers on a refusal', () => {
     expect(mockedSubmission).not.toHaveBeenCalled()
   })
 
-  it('layer 2: a code with NO article falls to the status phrase, not a generic', () => {
-    // stage2_rejected is deliberately absent from the dictionary: the status
-    // phrase says more than any generic could, and this is what proves the
+  it('layer 2: a code with NO article falls to the state phrase, not a generic', () => {
+    // ``mismatch`` is deliberately absent from the dictionary: the phrase for
+    // its state says more than any generic could, and this is what proves the
     // fall-through actually reaches it.
+    render(
+      <PortalReviewDetail
+        row={row({
+          status: 'mismatch',
+          rejection: { code: 'mismatch', details: 'work.py' },
+        })}
+      />,
+    )
+    expect(screen.getByText(/не схоже на рішення/)).toBeInTheDocument()
+  })
+
+  it('layer 1: a safety refusal keeps its ratified sentence', () => {
+    // It used to come from the status layer; the article carries it now.
     render(
       <PortalReviewDetail
         row={row({
@@ -203,10 +244,10 @@ describe('PortalReviewDetail — the three phrase layers on a refusal', () => {
         })}
       />,
     )
-    expect(screen.getByText('Рішення не пройшло перевірку безпеки')).toBeInTheDocument()
+    expect(screen.getByText(/не пройшло перевірку безпеки/)).toBeInTheDocument()
   })
 
-  it('layer 2: mismatch keeps its own status phrase too', () => {
+  it('layer 2: mismatch keeps its own ratified phrase too', () => {
     render(
       <PortalReviewDetail
         row={row({
@@ -218,16 +259,22 @@ describe('PortalReviewDetail — the three phrase layers on a refusal', () => {
     expect(screen.getByText(/не схоже на рішення/)).toBeInTheDocument()
   })
 
-  it('layer 3: an unknown status with an unknown code still says something', () => {
+  it('layer 3: an unknown state with an unknown code still says something', () => {
+    // Both dictionaries decline — a build older than the server it talks to.
+    // Saying something true and useless beats saying nothing.
     render(
       <PortalReviewDetail
         row={row({
           status: 'failed',
-          rejection: { code: 'code_from_the_future', details: 'x.py' },
+          presentation: {
+            state: 'a_state_from_the_future' as PortalPresentation['state'],
+            reason_code: 'code_from_the_future',
+          },
+          rejection: null,
         })}
       />,
     )
-    expect(screen.getByText(/Не вдалося обробити подачу/)).toBeInTheDocument()
+    expect(screen.getByText(/сталася помилка/)).toBeInTheDocument()
   })
 
   it('no rejection at all → the status phrase, exactly as before', () => {

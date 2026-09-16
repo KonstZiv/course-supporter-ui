@@ -31,7 +31,7 @@ const TASK: PortalMaterialItem = {
   order: 0,
   task_type: null,
   base: null,
-  overlay: { submission_status: 'none', last: null, best: null },
+  overlay: { submission_status: 'none', presentation: null, last: null, best: null },
 }
 const MATERIAL: PortalMaterialItem = {
   ...TASK,

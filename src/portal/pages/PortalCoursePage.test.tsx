@@ -57,6 +57,7 @@ const TREE: PortalMaterialTreeNode = {
           base: null,
           overlay: {
             submission_status: 'reviewed',
+            presentation: { state: 'reviewed' as const, reason_code: null },
             last: { score: 85, verdict: { passed: true, correctness: 'correct' } },
             best: { score: 85, verdict: { passed: true, correctness: 'correct' } },
           },

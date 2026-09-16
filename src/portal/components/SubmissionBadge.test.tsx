@@ -1,10 +1,24 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { SubmissionBadge } from './SubmissionBadge'
-import type { PortalSubmissionOverlay } from '../types'
+import type { PortalPresentation, PortalSubmissionOverlay } from '../types'
+
+// The tree badge now reads the server's answer about the latest attempt; these
+// tests keep driving by the coarse bucket, so this is what the server would say
+// alongside it.
+const FOR_BUCKET: Record<string, PortalPresentation | null> = {
+  none: null,
+  pending: { state: 'in_progress', reason_code: null },
+  reviewed: { state: 'reviewed', reason_code: null },
+  error: { state: 'not_opened', reason_code: 'processing_failed' },
+}
 
 const overlay = (o: Partial<PortalSubmissionOverlay>): PortalSubmissionOverlay => ({
-  submission_status: 'none',
+  submission_status: o.submission_status ?? 'none',
+  presentation:
+    o.presentation !== undefined
+      ? o.presentation
+      : (FOR_BUCKET[o.submission_status ?? 'none'] ?? null),
   last: null,
   best: null,
   ...o,
@@ -21,13 +35,13 @@ describe('SubmissionBadge', () => {
     expect(screen.getByText('На перевірці')).toBeInTheDocument()
   })
 
-  it('error with no earned result → «Помилка» alone', () => {
+  it('error with no earned result → the state, not «Помилка»', () => {
     render(<SubmissionBadge overlay={overlay({ submission_status: 'error' })} />)
-    expect(screen.getByText('Помилка')).toBeInTheDocument()
+    expect(screen.getByText('Не відкрито')).toBeInTheDocument()
   })
 
   // Step Г2 §2.3 — two tiers. These two cases REVERSE a rule this file used to
-  // lock ("error with an earlier reviewed best → STILL «Помилка», never the
+  // lock ("error with an earlier reviewed best → STILL the state, never the
   // score"). That rule fixed a real bug — an else-fallthrough that showed a
   // stale score INSTEAD of the failure — and it fixed it by hiding the score.
   // The ratified shape keeps the state and the number both: the state is by the
@@ -42,7 +56,7 @@ describe('SubmissionBadge', () => {
         })}
       />,
     )
-    expect(screen.getByText('Помилка · 90/100 · зараховано')).toBeInTheDocument()
+    expect(screen.getByText('Не відкрито · 90/100 · зараховано')).toBeInTheDocument()
   })
 
   it('pending over an earlier reviewed best → the earned result does not vanish', () => {
@@ -86,7 +100,7 @@ describe('SubmissionBadge', () => {
         })}
       />,
     )
-    expect(screen.getByText('Помилка')).toBeInTheDocument()
+    expect(screen.getByText('Не відкрито')).toBeInTheDocument()
   })
 
   it('reviewed + passed → «{score}/100 · зараховано»', () => {
@@ -112,11 +126,67 @@ describe('SubmissionBadge', () => {
     )
     expect(screen.getByText('40/100 · не зараховано')).toBeInTheDocument()
     // "checked, not passed" is NOT the same surface as a terminal error.
-    expect(screen.queryByText('Помилка')).not.toBeInTheDocument()
+    expect(screen.queryByText('Не відкрито')).not.toBeInTheDocument()
   })
 
   it('reviewed without a usable score → «Перевірено»', () => {
     render(<SubmissionBadge overlay={overlay({ submission_status: 'reviewed' })} />)
     expect(screen.getByText('Перевірено')).toBeInTheDocument()
+  })
+})
+
+describe('SubmissionBadge — the four ways an attempt is not a result (task 03)', () => {
+  // Criterion 6. The tree used to carry one coarse "error" bucket, so a student
+  // whose work simply did not look like an attempt was told the system had
+  // broken. The badge now says which of the four it was, in the server's own
+  // words.
+  it.each([
+    ['not_an_attempt', 'Не схоже на спробу'],
+    ['not_opened', 'Не відкрито'],
+    ['awaiting_funds', 'Призупинено'],
+    ['in_progress', 'На перевірці'],
+  ])('%s → «%s», never «Помилка»', (state, label) => {
+    render(
+      <SubmissionBadge
+        overlay={overlay({
+          submission_status: 'error',
+          presentation: { state: state as never, reason_code: null },
+        })}
+      />,
+    )
+
+    expect(screen.getByText(label)).toBeInTheDocument()
+    expect(screen.queryByText('Помилка')).not.toBeInTheDocument()
+  })
+
+  it('reads the server, not the old bucket', () => {
+    // The bucket still says "error" — it is the wire field this task did not
+    // touch. What the student reads comes from the presentation.
+    render(
+      <SubmissionBadge
+        overlay={overlay({
+          submission_status: 'error',
+          presentation: { state: 'not_an_attempt', reason_code: 'mismatch' },
+        })}
+      />,
+    )
+
+    expect(screen.getByText('Не схоже на спробу')).toBeInTheDocument()
+  })
+
+  it('an earned score still rides along with the state', () => {
+    render(
+      <SubmissionBadge
+        overlay={overlay({
+          submission_status: 'error',
+          presentation: { state: 'not_an_attempt', reason_code: 'mismatch' },
+          best: { score: 90, verdict: { passed: true, correctness: 'correct' } },
+        })}
+      />,
+    )
+
+    expect(
+      screen.getByText('Не схоже на спробу · 90/100 · зараховано'),
+    ).toBeInTheDocument()
   })
 })

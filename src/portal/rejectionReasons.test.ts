@@ -43,12 +43,21 @@ describe('rejectionPhrase — layer 1, the §4 article for a whole submission', 
   )
 })
 
-describe('rejectionPhrase — declines, so the caller can fall to the status layer', () => {
-  // These two have GOOD status phrases in terminalStatus.ts. Answering them here
-  // with a generic would be a downgrade, which is why layer 1 returns null
-  // rather than a string.
-  it.each(['mismatch', 'stage2_rejected'])('%s → null', (code) => {
-    expect(rejectionPhrase(rej(code))).toBeNull()
+describe('rejectionPhrase — declines, so the caller can fall to the state layer', () => {
+  // ``mismatch`` still declines: the phrase for its state says more than any
+  // article keyed on the code could, and that wording is ratified.
+  it('mismatch → null', () => {
+    expect(rejectionPhrase(rej('mismatch'))).toBeNull()
+  })
+
+  // ``stage2_rejected`` no longer declines (mentor-rebuild task 03). Its
+  // sentence used to live in the status layer; with that layer gone the article
+  // carries it, so the safety refusal keeps the words it was ratified with
+  // instead of falling to the generic phrase for "not opened".
+  it('stage2_rejected → the ratified safety sentence', () => {
+    expect(rejectionPhrase(rej('stage2_rejected'))).toMatch(
+      /не пройшло перевірку безпеки/,
+    )
   })
 
   it('a code this interface has never seen → null', () => {

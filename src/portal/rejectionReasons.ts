@@ -2,7 +2,8 @@
 // dictionary on this axis, and the home of the ratified wording (gates TASK §4).
 //
 // The axes are distinct, not variants of one lookup:
-//   terminalStatus.ts   — delivery STATUS (rejected / mismatch / failed) → phrase
+//   presentationPhrases.ts — the server's own answer about an attempt (five
+//                         states + a reason code) → label, tone, phrase
 //   submissionCodes.ts  — submit-time DOOR code, both vocabularies → phrase
 //   this module         — the reason code the read-path now carries, on a whole
 //                         submission (``rejection.code``) and on one file inside
@@ -14,12 +15,12 @@
 //
 // Three layers answer a refused attempt, in this order (ratified):
 //   1. the §4 article for the code, when there is one
-//   2. the status phrase from terminalStatus.ts
+//   2. the phrase for the state, from presentationPhrases.ts
 //   3. that module's own generic default
 // So ``rejectionPhrase`` returns null rather than a generic string when it has
 // no article: ``mismatch`` and ``stage2_rejected`` deliberately have none, and
-// their status phrases ("Надіслане не схоже на рішення цього завдання",
-// "Рішення не пройшло перевірку безпеки") say more than any generic would.
+// the phrase for their state ("Надіслане не схоже на рішення цього завдання")
+// says more than any generic would.
 //
 // Every article is two parts: WHAT happened, always, and WHAT TO DO, only where
 // the student actually has an action. The second half is never invented to fill
@@ -38,7 +39,7 @@ export function articlePhrase(a: ReasonArticle): string {
 
 // The last resort, once neither a code nor a status could say anything. Used by
 // the door (submissionCodes.ts); the review detail falls to its status phrase
-// first and only reaches a generic inside terminalStatus.
+// first and only reaches a generic inside presentationPhrases.
 export const UNKNOWN_REASON: ReasonArticle = {
   what: 'Під час обробки подачі сталася помилка.',
   action: 'Спробуйте подати ще раз.',
@@ -145,8 +146,47 @@ function overBudgetWithNumbers(details: string): ReasonArticle | null {
   }
 }
 
+// Two codes the rebuilt Mentor's path added (task 03). They are not about the
+// FILE — nothing was wrong with what the student sent — so they live beside the
+// whole-file articles rather than inside them, and each still answers the two
+// questions every refusal owes: what happened, and what this person can do.
+const PATH_STATE: Record<string, ReasonArticle> = {
+  // The model safety check refused it. This wording is the one ratified in the
+  // doors pass — it used to live in the status layer, which is why this code
+  // deliberately had no article of its own. With that layer gone (task 03) the
+  // sentence moves here rather than disappearing.
+  stage2_rejected: {
+    what: 'Рішення не пройшло перевірку безпеки.',
+  },
+  // The run broke. Before this the student saw nothing but "Помилка".
+  processing_failed: {
+    what: 'Не вдалося перевірити роботу.',
+    action: 'Надішліть її ще раз.',
+  },
+  // Held before anything was spent.
+  //
+  // The action deliberately says nothing about WHO lifts the hold: that depends
+  // on how the course is sold (KD19) — the author's own credits in classes B/C,
+  // the student's own purchase in class A — and nothing on the wire says which.
+  // The class lives on ``billing_account``, a table the billing work has yet to
+  // build, so the surface cannot know today, and naming the wrong person to go
+  // to would be worse than naming none. When the class arrives, this code
+  // splits in two, each with its own address.
+  //
+  // What it DOES say is the one thing that is true either way and that the
+  // student can act on: do not send the work again. A held revision is already
+  // queued, and a second one would be a second submission of the same work —
+  // paid for twice, judged twice, and racing the first (``DD-SP-AT``).
+  awaiting_funds: {
+    what:
+      'Перевірку призупинено — вона продовжиться автоматично, ' +
+      'щойно ліміт поновлять.',
+    action: 'Надсилати роботу знову не потрібно.',
+  },
+}
+
 export function reasonArticle(code: string): ReasonArticle | null {
-  return WHOLE_FILE[code] ?? null
+  return WHOLE_FILE[code] ?? PATH_STATE[code] ?? null
 }
 
 // The phrase for a refused attempt, or null when this dictionary has nothing to

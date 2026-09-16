@@ -1,4 +1,5 @@
 import type { PortalSubmissionOverlay } from '../types'
+import { isReviewed, stateLabel, stateTone } from '../presentationPhrases'
 
 // The student's best usable result, as one phrase, or null when no attempt has
 // earned one yet. ``best`` is the backend's own pick (highest-scored REVIEWED
@@ -27,23 +28,20 @@ export function SubmissionBadge({ overlay }: { overlay: PortalSubmissionOverlay 
   if (overlay.submission_status === 'none') {
     return <span className={`${base} bg-canvas-dark text-ink-muted`}>Не здано</span>
   }
-  if (overlay.submission_status === 'pending') {
+  const state = overlay.presentation?.state
+  if (state !== undefined && !isReviewed(state)) {
+    // The latest attempt has not reached a graded result. WHICH of the four
+    // ways it did not is the server's answer now (mentor-rebuild task 03); the
+    // tree used to collapse them into "Помилка", so a student whose work simply
+    // did not look like an attempt was told the system had broken.
+    //
+    // The number that rides along is an EARLIER attempt's, which is why it is
+    // never shown alone here. DISTINCT from the reviewed branch below, where
+    // "{score}/100 · не зараховано" means checked-and-not-passed.
+    const label = stateLabel(state)
     return (
-      <span className={`${base} bg-amber-pale text-amber-dark`}>
-        {result ? `На перевірці · ${result}` : 'На перевірці'}
-      </span>
-    )
-  }
-  if (overlay.submission_status === 'error') {
-    // A terminal error (rejected / mismatch / failed): the LATEST attempt never
-    // reached a graded result. The tone stays the error's, and the number that
-    // rides along is an EARLIER attempt's — which is why it is never shown
-    // alone here. DISTINCT from the reviewed branch below, where the same
-    // "{score}/100 · не зараховано" means checked-and-not-passed rather than
-    // a processing failure.
-    return (
-      <span className={`${base} bg-coral-pale text-coral`}>
-        {result ? `Помилка · ${result}` : 'Помилка'}
+      <span className={`${base} ${stateTone(state)}`}>
+        {result ? `${label} · ${result}` : label}
       </span>
     )
   }

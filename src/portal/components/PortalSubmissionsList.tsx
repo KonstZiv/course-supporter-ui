@@ -1,29 +1,33 @@
 import { useEffect, useState } from 'react'
 import { ChevronDown, ChevronRight, Loader2, RotateCw } from 'lucide-react'
 import { portalApi, PortalApiError } from '../api/portalClient'
-import type { PortalSubmissionListItem, PortalVerdict } from '../types'
-import { statusBucket } from '../terminalStatus'
+import type {
+  PortalPresentation,
+  PortalSubmissionListItem,
+  PortalVerdict,
+} from '../types'
+import { isReviewed, stateLabel, stateTone } from '../presentationPhrases'
 import { notOpenedCountLabel } from '../rejectionReasons'
 import { PortalReviewDetail } from './PortalReviewDetail'
 
-// Compact per-attempt status chip (one attempt, not the overlay). Mirrors
-// SubmissionBadge's buckets but reads the attempt's OWN status/score/verdict.
+// Compact per-attempt chip. Reads the server's own answer about THIS attempt
+// (mentor-rebuild task 03) — the portal no longer groups lifecycle statuses of
+// its own, so the chip here and the badge in the tree cannot disagree.
 function AttemptChip({
-  status,
+  presentation,
   score,
   verdict,
 }: {
-  status: string
+  presentation: PortalPresentation
   score: number | null
   verdict: PortalVerdict | null
 }) {
   const base = 'text-xs px-2 py-0.5 rounded-full whitespace-nowrap'
-  const bucket = statusBucket(status)
-  if (bucket === 'error') {
-    return <span className={`${base} bg-coral-pale text-coral`}>Помилка</span>
-  }
-  if (bucket === 'pending') {
-    return <span className={`${base} bg-amber-pale text-amber-dark`}>На перевірці</span>
+  const { state } = presentation
+  if (!isReviewed(state)) {
+    return (
+      <span className={`${base} ${stateTone(state)}`}>{stateLabel(state)}</span>
+    )
   }
   if (score !== null) {
     const passed = verdict?.passed ?? false
@@ -128,7 +132,11 @@ export function PortalSubmissionsList({
                   className="w-full flex items-center gap-3 px-3 py-2 text-left"
                 >
                   {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                  <AttemptChip status={it.status} score={it.score} verdict={it.verdict} />
+                  <AttemptChip
+                    presentation={it.presentation}
+                    score={it.score}
+                    verdict={it.verdict}
+                  />
                   {it.not_opened.length > 0 && (
                     <span className="text-xs px-2 py-0.5 rounded-full bg-amber-pale text-amber-dark whitespace-nowrap">
                       {notOpenedCountLabel(it.not_opened.length)}

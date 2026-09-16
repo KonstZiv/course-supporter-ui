@@ -1,6 +1,6 @@
 // UK copy for the R3 password-recovery self-service flow.
 //
-// Mirrors the terminalStatus.ts pattern: named constants for fixed UI copy
+// Mirrors the presentationPhrases.ts pattern: named constants for fixed UI copy
 // (titles, labels, success/state phrases) plus a keyed Record with a fallback
 // accessor for the error phrases. UK-only MVP (ratified Q7); a future language
 // dimension keys these by locale, same as the email dictionary on the backend.
