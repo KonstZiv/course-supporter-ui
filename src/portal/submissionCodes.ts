@@ -12,7 +12,8 @@
 // spaces are disjoint by case, so the order of the two checks carries no
 // meaning.
 //
-// A SEPARATE axis from terminalStatus.ts (which maps the delivery STATUS) and
+// A SEPARATE axis from presentationPhrases.ts (which maps the SERVER'S answer
+// about an attempt) and
 // from rejectionReasons.ts (the reason code on a STORED attempt) — but the
 // lower_snake half takes its wording from that module rather than restating it:
 // the same refusal deserves the same sentence whether the student meets it at
@@ -30,7 +31,8 @@
 //
 // The normalizer read-path rejection (DD-6-Z) is intentionally NOT here: the
 // curated detail does not carry the normalizer source/reason, so a normalizer
-// rejection stays on its status phrase in terminalStatus.ts — this dictionary
+// rejection stays on the phrase for its state in presentationPhrases.ts — this
+// dictionary
 // is submit-time only.
 
 import { PortalApiError } from './api/portalClient'
