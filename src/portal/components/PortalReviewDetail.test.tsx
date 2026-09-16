@@ -17,6 +17,7 @@ const mockedSubmission = vi.mocked(portalApi.submission)
 const row = (over: Partial<PortalSubmissionListItem> = {}): PortalSubmissionListItem => ({
   id: 'sub-1',
   status: 'completed',
+  presentation: { state: 'reviewed', reason_code: null },
   score: 85,
   verdict: { passed: true, correctness: 'correct' },
   created_at: '2026-06-29T10:00:00Z',
@@ -30,6 +31,7 @@ const row = (over: Partial<PortalSubmissionListItem> = {}): PortalSubmissionList
 const detail = (over: Partial<Parameters<typeof mockedSubmission.mockResolvedValue>[0]> = {}) => ({
   id: 'sub-1',
   status: 'completed',
+  presentation: { state: 'reviewed' as const, reason_code: null },
   score: 85,
   verdict: { passed: true, correctness: 'correct' },
   review_markdown: '# Рецензія\n\nДобре виконано.',

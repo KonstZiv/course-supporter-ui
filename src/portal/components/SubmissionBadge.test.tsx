@@ -5,6 +5,7 @@ import type { PortalSubmissionOverlay } from '../types'
 
 const overlay = (o: Partial<PortalSubmissionOverlay>): PortalSubmissionOverlay => ({
   submission_status: 'none',
+  presentation: null,
   last: null,
   best: null,
   ...o,
