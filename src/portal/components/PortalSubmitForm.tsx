@@ -205,10 +205,10 @@ export function PortalSubmitForm({
 
   // Which language "course language" actually offers. Read from the list the
   // field already loaded — the same `name_native || name_en` the named options
-  // below use, so the two never disagree about what a code is called. Today
-  // that reads "Ukrainian": the server serves name_native as null for all 58
-  // entries (DD-2.4-L). The day it fills them, this label turns Ukrainian with
-  // no edit here.
+  // below use, so the two never disagree about what a code is called. The
+  // server serves a native name for every language on its list, read from
+  // CLDR, so this reads "українська" for a Ukrainian course. `name_en` is the
+  // fallback the contract's nullable type leaves room for.
   //
   // Falls back to the bare wording while the list is still loading, or if the
   // course's code is not on it: an option that names the wrong language would
@@ -259,10 +259,9 @@ export function PortalSubmitForm({
           )}
           {languages.map((l) => (
             <option key={l.code} value={l.code}>
-              {/* ``name_native`` is null for every entry the backend serves
-                  today (the SIL table carries none), so this reads as the
-                  English name — and starts reading better the day a real
-                  i18n source fills it (DD-2.4-L), with no change here. */}
+              {/* Each language named as it names itself, from the CLDR-backed
+                  ``name_native`` the server sends for every entry on its list.
+                  ``name_en`` is what the nullable contract falls back to. */}
               {l.name_native || l.name_en}
             </option>
           ))}

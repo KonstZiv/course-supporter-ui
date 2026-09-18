@@ -53,9 +53,16 @@ const POLICY: SubmissionPolicyResponse = {
   },
 }
 
+// What the server actually serves: a native name for every language on its
+// list, read from CLDR (mentor-rebuild task 04). The old fixture had them all
+// null, which the backend can no longer produce — so every assertion below was
+// exercising the fallback and nothing was exercising the field itself.
+// ``cnr`` keeps a null to hold the fallback path, which the nullable contract
+// still allows.
 const LANGUAGES = [
-  { code: 'ukr', name_en: 'Ukrainian', name_native: null },
-  { code: 'eng', name_en: 'English', name_native: null },
+  { code: 'ukr', name_en: 'Ukrainian', name_native: 'українська' },
+  { code: 'eng', name_en: 'English', name_native: 'English' },
+  { code: 'cnr', name_en: 'Montenegrin', name_native: null },
 ]
 
 const me = (over: Partial<PortalMe> = {}): PortalMe => ({
@@ -174,7 +181,7 @@ describe('PortalSubmitForm', () => {
 
   it('rejects an oversize file in the client preflight without a POST', async () => {
     renderForm()
-    await screen.findByRole('option', { name: 'Ukrainian' }) // policy settled
+    await screen.findByRole('option', { name: 'українська' }) // policy settled
     pickFile('big.py', TASK_CAP + 1)
     fireEvent.click(submitBtn())
     await waitFor(() => {
@@ -193,7 +200,7 @@ describe('PortalSubmitForm', () => {
       duplicate: false,
     })
     renderForm(null, 'project')
-    await screen.findByRole('option', { name: 'Ukrainian' })
+    await screen.findByRole('option', { name: 'українська' })
     pickFile('solution.zip', TASK_CAP + 1)
     fireEvent.click(submitBtn())
     await waitFor(() => expect(mockedSubmit).toHaveBeenCalledTimes(1))
@@ -201,7 +208,7 @@ describe('PortalSubmitForm', () => {
 
   it('names the project cap when a project archive is over it', async () => {
     renderForm(null, 'project')
-    await screen.findByRole('option', { name: 'Ukrainian' })
+    await screen.findByRole('option', { name: 'українська' })
     pickFile('huge.zip', PROJECT_CAP + 1)
     fireEvent.click(submitBtn())
     await waitFor(() => {
@@ -224,7 +231,7 @@ describe('PortalSubmitForm', () => {
       duplicate: false,
     })
     renderForm(null, 'project')
-    await screen.findByRole('option', { name: 'Ukrainian' })
+    await screen.findByRole('option', { name: 'українська' })
     pickFile('solution.zip', PROJECT_CAP + 1)
     fireEvent.click(submitBtn())
     await waitFor(() => expect(mockedSubmit).toHaveBeenCalledTimes(1))
@@ -499,16 +506,19 @@ describe('PortalSubmitForm — мова рецензії (крок Г2 §2.1)', 
   it('offers the server list with "course language" first, named', async () => {
     renderForm()
     await waitFor(() => {
-      expect(screen.getByRole('option', { name: 'Ukrainian' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: 'українська' })).toBeInTheDocument()
     })
     const options = screen.getAllByRole('option')
     // The absence of a choice leads and still carries no code — but it now
     // says WHICH language it means, from the same list the named options use.
     expect(options[0]).toHaveValue('')
     expect(options.map((o) => o.textContent)).toEqual([
-      'Мовою курсу (Ukrainian)',
-      'Ukrainian',
+      'Мовою курсу (українська)',
+      'українська',
       'English',
+      // The one entry whose native name is null falls back to the English
+      // name — the behaviour the nullable contract leaves room for.
+      'Montenegrin',
     ])
   })
 
@@ -599,7 +609,7 @@ describe('PortalSubmitForm — мова рецензії (крок Г2 §2.1)', 
     // means is worse than no option. The named languages still work.
     renderForm(null, 'task', [], null)
     await waitFor(() => {
-      expect(screen.getByRole('option', { name: 'Ukrainian' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: 'українська' })).toBeInTheDocument()
     })
     expect(
       screen.queryByRole('option', { name: 'Мовою курсу' }),
@@ -648,7 +658,7 @@ describe('PortalSubmitForm — після подачі (крок Д)', () => {
 
   it('clears the file and the note, and disables the button again', async () => {
     renderForm()
-    await screen.findByRole('option', { name: 'Ukrainian' })
+    await screen.findByRole('option', { name: 'українська' })
     fireEvent.change(screen.getByLabelText('Коментар'), {
       target: { value: 'питання до рецензента' },
     })
@@ -665,7 +675,7 @@ describe('PortalSubmitForm — після подачі (крок Д)', () => {
 
   it('retires the notice once the attempts list shows the submission', async () => {
     const { relist } = renderForm()
-    await screen.findByRole('option', { name: 'Ukrainian' })
+    await screen.findByRole('option', { name: 'українська' })
     pickFile()
     fireEvent.click(submitBtn())
     await waitFor(() => {
@@ -683,7 +693,7 @@ describe('PortalSubmitForm — після подачі (крок Д)', () => {
 
   it('keeps the notice while the list shows only OTHER attempts', async () => {
     const { relist } = renderForm()
-    await screen.findByRole('option', { name: 'Ukrainian' })
+    await screen.findByRole('option', { name: 'українська' })
     pickFile()
     fireEvent.click(submitBtn())
     await screen.findByText('Рішення надіслано — очікує перевірки.')
@@ -700,7 +710,7 @@ describe('PortalSubmitForm — після подачі (крок Д)', () => {
       duplicate: true,
     })
     renderForm()
-    await screen.findByRole('option', { name: 'Ukrainian' })
+    await screen.findByRole('option', { name: 'українська' })
     pickFile('a.py')
     fireEvent.click(submitBtn())
     await waitFor(() => {

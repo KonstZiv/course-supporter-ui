@@ -30,8 +30,10 @@ export type JobStatus =
 
 // ─── Course languages (Task 2.4.13) ───
 // Whitelist + display metadata served by GET /api/v1/config/languages.
-// Codes are canonical ISO 639-3; name_native is best-effort (iso639 SIL
-// table does not always carry it — UI falls back to name_en).
+// Codes are canonical ISO 639-3. ``name_en`` comes from the SIL table and
+// ``name_native`` from CLDR; the backend serves both for every language on
+// its list. The type stays nullable because the contract allows null, and
+// ``name_en`` is what is rendered then.
 
 export interface LanguageEntry {
   code: string
