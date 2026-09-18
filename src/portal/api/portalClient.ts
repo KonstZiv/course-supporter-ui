@@ -1,6 +1,8 @@
 import { usePortalSession } from '../stores/session'
 import type {
   ConfirmRecoveryEmailRequest,
+  FeedbackTouch,
+  FeedbackValue,
   ForgotPasswordRequest,
   PortalBaseDownload,
   PortalCourseListItem,
@@ -14,6 +16,7 @@ import type {
   PortalSubmissionDetail,
   PortalSubmissionListItem,
   PortalSubmitResponse,
+  PortalTouchRequest,
   RecoveryEmailRequest,
   RecoveryEmailResponse,
   ResetPasswordRequest,
@@ -205,6 +208,14 @@ export const portalApi = {
   // apart from an access-failure 404 (body.detail = "Task not found.").
   base: (taskId: string) =>
     authGet<PortalBaseDownload>(`/api/v1/portal/tasks/${taskId}/base`),
+  // Task 05: the student's answer about a review. A repeat answer replaces the
+  // previous one server-side, so the caller does not track which case it is —
+  // it sends the value and gets back what is now stored.
+  touchReview: (submissionId: string, value: FeedbackValue) =>
+    postAuthJson<FeedbackTouch>(
+      `/api/v1/portal/submissions/${submissionId}/feedback`,
+      { kind: 'touch', value } satisfies PortalTouchRequest,
+    ),
   // R3 password-recovery. Public (no bearer) — forgot always 202; reset/confirm
   // 204 or 400 generic; caller renders inline.
   forgotPassword: (req: ForgotPasswordRequest) =>

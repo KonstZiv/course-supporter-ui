@@ -52,6 +52,13 @@ const SUBMISSION_CODES: Record<string, string> = {
     'Базовий проєкт оновився, відколи ви відкрили завдання. Подачу неможливо ' +
     'звірити зі старою версією. Оновіть сторінку, завантажте новий базовий ' +
     'проєкт і спробуйте ще раз.',
+  // Task 05 — the one refusal an answer about a review can meet. Not a door
+  // code: the student reaches it from the review panel, not from the submit
+  // form. It lives here because this is where a code becomes a sentence, and a
+  // second module doing the same thing is a second place to keep in step.
+  no_review:
+    'Рецензії для цієї роботи зараз немає, тож відповідати немає про що. ' +
+    'Оновіть сторінку — вона покаже поточний стан роботи.',
 }
 
 // Resolve a door code to a uk phrase. Total: an unknown code — a future backend
@@ -94,6 +101,34 @@ const STATUS_PHRASES: Record<number, string> = {
 // with no code no longer gets a format lecture either: every door refusal now
 // carries a code, so a code-less 422 is a validation failure the student did
 // not cause and cannot fix by changing their file.
+// Statuses an ANSWER about a review can meet, as distinct from a submission's.
+// A 409 never lands here: that refusal carries the ``no_review`` code and is
+// answered by the dictionary above.
+const TOUCH_STATUS_PHRASES: Record<number, string> = {
+  401: 'Сесія закінчилась — увійдіть знову.',
+  404: 'Цієї роботи більше немає у вашому списку. Оновіть сторінку.',
+}
+
+// Map a failed answer about a review to a uk message. Same order as
+// ``submitErrorMessage`` and the same rule: the backend's own English strings
+// are read at no point.
+export function touchErrorMessage(err: unknown): string {
+  if (err instanceof PortalApiError) {
+    const detail = (err.body as { detail?: unknown } | null)?.detail
+    if (detail !== null && typeof detail === 'object') {
+      const d = detail as { code?: unknown }
+      if (typeof d.code === 'string') {
+        return submissionCodePhrase(d.code)
+      }
+    }
+    return (
+      TOUCH_STATUS_PHRASES[err.status] ??
+      'Не вдалося зберегти відповідь. Спробуйте ще раз.'
+    )
+  }
+  return 'Не вдалося зберегти відповідь. Перевірте зʼєднання та спробуйте ще раз.'
+}
+
 export function submitErrorMessage(err: unknown): string {
   if (err instanceof PortalApiError) {
     const detail = (err.body as { detail?: unknown } | null)?.detail

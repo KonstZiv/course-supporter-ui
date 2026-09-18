@@ -79,6 +79,7 @@ describe('PortalSubmissionsList', () => {
       // Null as the backend serves it: no stage writes a structure yet.
       structure: null,
       delta: null,
+      own_feedback: null,
     })
     render(<PortalSubmissionsList taskId="t1" reloadKey={0} />)
     await waitFor(() =>

@@ -67,6 +67,10 @@ const detail = (over: Partial<Parameters<typeof mockedSubmission.mockResolvedVal
   created_at: '2026-06-29T10:00:00Z',
   original_filename: 'a.py',
   delta: null,
+  // The student has not answered about this review yet (task 05). The tests
+  // that are about the answer set it; every other test is about a review
+  // nobody has answered about.
+  own_feedback: null,
   rejection: null,
   not_opened: [],
   recovered_encoding: null,
