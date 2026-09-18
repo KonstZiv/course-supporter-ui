@@ -61,6 +61,9 @@ const detail = (over: Partial<Parameters<typeof mockedSubmission.mockResolvedVal
   score: 85,
   verdict: { passed: true, correctness: 'correct' },
   review_markdown: '# Рецензія\n\nДобре виконано.',
+  // Null on every submission the backend serves today: no stage writes a
+  // structure yet, and no screen reads one (mentor-rebuild task 04).
+  structure: null,
   created_at: '2026-06-29T10:00:00Z',
   original_filename: 'a.py',
   delta: null,

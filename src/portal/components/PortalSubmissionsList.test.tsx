@@ -76,6 +76,8 @@ describe('PortalSubmissionsList', () => {
     mockedSubmission.mockResolvedValue({
       ...row({ id: 'b' }),
       review_markdown: '# Рецензія\n\nЧудово.',
+      // Null as the backend serves it: no stage writes a structure yet.
+      structure: null,
       delta: null,
     })
     render(<PortalSubmissionsList taskId="t1" reloadKey={0} />)

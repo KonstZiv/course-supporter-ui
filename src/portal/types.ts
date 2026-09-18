@@ -48,8 +48,9 @@ export interface PortalMe {
 export interface PortalLanguageEntry {
   code: string
   name_en: string
-  // Optional in the contract and null for every entry the backend serves
-  // today (the SIL table carries no native strings) — render ``name_en``.
+  // What the language calls itself. The backend reads these from CLDR and
+  // serves one for every language on its list; the type stays nullable
+  // because the contract allows null, and ``name_en`` is the fallback.
   name_native: string | null
 }
 
@@ -273,7 +274,79 @@ export interface PortalDeltaReceipt {
 // slice otherwise — still no internal trace.
 export interface PortalSubmissionDetail extends PortalSubmissionListItem {
   review_markdown: string | null
+  structure: ReviewStructureV1 | null
   delta: PortalDeltaReceipt | null
+}
+
+// --- The review as data (mentor-rebuild task 04) ---
+// Mirrors the backend models verbatim against a fresh OpenAPI snapshot. No
+// screen reads these yet: the review is still shown as ``review_markdown``,
+// and building the page out of the structure is a later task. They are here
+// because the contract carries them, and a type that lags the contract is how
+// a field arrives unnoticed.
+//
+// ``structure`` is null on every submission the backend serves today — no
+// stage writes one, and a review written before the rebuild has none.
+
+// Where in the material a remark points. The four kinds are closed on the
+// server; a fifth would arrive as a string this build does not know.
+export type ReviewPositionKind = 'video' | 'slide' | 'paragraph' | 'file'
+
+export interface ReviewPosition {
+  kind: ReviewPositionKind
+  value: string
+}
+
+// Something to read, already resolved to a link by the server.
+export interface ReviewReference {
+  title: string
+  url: string
+}
+
+// One remark, in the contrasting form: what is wrong, why it matters, what to
+// do, where to read. The first three are always present.
+export interface ReviewRemark {
+  what: string
+  why: string
+  todo: string
+  read: ReviewReference[]
+  position: ReviewPosition | null
+}
+
+export type ReviewReplyKind = 'question' | 'objection' | 'comment'
+
+export interface ReviewReply {
+  kind: ReviewReplyKind
+  said: string
+  answer: string
+}
+
+export interface ReviewVerdict {
+  passed: boolean
+  why: string
+}
+
+// What was established by running the work, and what by reading it. Either
+// list may be empty, but the server refuses a section where both are.
+export interface ReviewVerification {
+  by_run: string[]
+  by_reading: string[]
+}
+
+// The whole review. ``language`` is the ISO 639-3 code it is written in, and
+// it is part of the review rather than something the reader chooses.
+export interface ReviewStructureV1 {
+  schema_version: string
+  language: string
+  verdict: ReviewVerdict | null
+  fixed: ReviewRemark[]
+  new_remarks: ReviewRemark[]
+  open: ReviewRemark[]
+  broken: ReviewRemark[]
+  mentor_voice: string | null
+  replies: ReviewReply[]
+  verification: ReviewVerification | null
+  progress: string | null
 }
 
 // --- R3: password-recovery self-service ---
