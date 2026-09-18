@@ -3,6 +3,8 @@ import { MarkdownContent } from './MarkdownContent'
 import { Loader2 } from 'lucide-react'
 import { portalApi, PortalApiError } from '../api/portalClient'
 import type {
+  FeedbackTouch,
+  FeedbackValue,
   PortalDeltaReceipt,
   PortalNotOpened,
   PortalSubmissionDetail,
@@ -20,6 +22,7 @@ import {
   rejectionPhrase,
 } from '../rejectionReasons'
 import { encodingDisplayName, shouldReportEncoding } from '../encodingNames'
+import { touchErrorMessage } from '../submissionCodes'
 
 // KD18 P5 (I2): the delta receipt for a project submission — how it diverged
 // from the base + whether the base has since moved on. Rendered ONLY in the
@@ -104,6 +107,89 @@ function RecoveredEncodingBlock({ encoding }: { encoding: string | null }) {
       </span>{' '}
       і прочитано; рецензія складена за цим прочитанням. Щоб уникнути помилок
       надалі, зберігайте файли в UTF-8.
+    </div>
+  )
+}
+
+// Task 05: the one question a student is asked about a review, and the answer
+// they gave. Shown only where a review is shown — the server refuses an answer
+// about a submission that carries none, and a button that leads to a refusal is
+// a button that should not be there.
+//
+// The answer is a CHOICE, not a one-way action: the chosen button stays visibly
+// chosen, and pressing the other one changes it. ``aria-pressed`` carries that
+// state to a screen reader, which is the only way the choice is visible without
+// colour.
+//
+// State comes in from the server (``own_feedback`` on the detail) and is
+// replaced by what the server returns from the answer, rather than by what was
+// clicked: the server is where a repeat answer is resolved, so it is also where
+// the truth about the current answer lives.
+function ReviewTouch({
+  submissionId,
+  initial,
+}: {
+  submissionId: string
+  initial: FeedbackTouch | null
+}) {
+  const [touch, setTouch] = useState<FeedbackTouch | null>(initial)
+  const [saving, setSaving] = useState<FeedbackValue | null>(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    setTouch(initial)
+    setError('')
+  }, [initial, submissionId])
+
+  const answer = (value: FeedbackValue) => {
+    setSaving(value)
+    setError('')
+    portalApi
+      .touchReview(submissionId, value)
+      .then((stored) => setTouch(stored))
+      .catch((err) => {
+        if (err instanceof PortalApiError && err.status === 401) return // centralised
+        setError(touchErrorMessage(err))
+      })
+      .finally(() => setSaving(null))
+  }
+
+  const chosen = touch?.value ?? null
+  const options: { value: FeedbackValue; label: string }[] = [
+    { value: 'helped', label: 'Допомогла' },
+    { value: 'not_helped', label: 'Не допомогла' },
+  ]
+
+  return (
+    <div className="pt-3 border-t border-ink-muted/15 space-y-2">
+      <div className="text-sm text-ink">Чи допомогла вам ця рецензія?</div>
+      <div className="flex items-center gap-2">
+        {options.map(({ value, label }) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => answer(value)}
+            disabled={saving !== null}
+            aria-pressed={chosen === value}
+            className={`px-3 py-1.5 rounded-xl text-sm border transition-colors ${
+              chosen === value
+                ? 'bg-forest-pale text-forest border-forest/30 font-medium'
+                : 'bg-transparent text-ink-light border-ink-muted/30 hover:bg-amber-pale/40'
+            } ${saving !== null ? 'opacity-60 cursor-default' : ''}`}
+          >
+            {label}
+          </button>
+        ))}
+        {saving !== null && (
+          <Loader2 size={14} className="animate-spin text-ink-muted" />
+        )}
+      </div>
+      {chosen !== null && error === '' && (
+        <div className="text-xs text-ink-muted">
+          Дякуємо! Відповідь збережено — її можна змінити будь-коли.
+        </div>
+      )}
+      {error !== '' && <div className="text-xs text-coral">{error}</div>}
     </div>
   )
 }
@@ -229,6 +315,12 @@ export function PortalReviewDetail({ row }: { row: PortalSubmissionListItem }) {
         <MarkdownContent markdown={detail.review_markdown} />
       ) : (
         <div className="text-sm text-ink-muted">Рецензію ще не сформовано.</div>
+      )}
+      {detail.review_markdown && (
+        <ReviewTouch
+          submissionId={submissionId}
+          initial={detail.own_feedback}
+        />
       )}
     </div>
   )

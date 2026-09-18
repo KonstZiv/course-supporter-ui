@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { PortalReviewDetail } from './PortalReviewDetail'
-import { portalApi } from '../api/portalClient'
+import { portalApi, PortalApiError } from '../api/portalClient'
 import type {
+  FeedbackTouch,
+  FeedbackValue,
   PortalNotOpened,
   PortalPresentation,
   PortalSubmissionListItem,
@@ -12,11 +14,28 @@ vi.mock('../api/portalClient', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/portalClient')>()
   return {
     ...actual,
-    portalApi: { ...actual.portalApi, submission: vi.fn() },
+    portalApi: {
+      ...actual.portalApi,
+      submission: vi.fn(),
+      touchReview: vi.fn(),
+    },
   }
 })
 
 const mockedSubmission = vi.mocked(portalApi.submission)
+const mockedTouch = vi.mocked(portalApi.touchReview)
+
+const stored = (value: FeedbackValue): FeedbackTouch => ({
+  kind: 'touch',
+  value,
+  updated_at: '2026-09-18T10:00:00Z',
+})
+
+const QUESTION = 'Чи допомогла вам ця рецензія?'
+const HELPED = 'Допомогла'
+const NOT_HELPED = 'Не допомогла'
+
+const button = (name: string) => screen.getByRole('button', { name })
 
 // What the SERVER would say about an attempt in that lifecycle status — the
 // same mapping ``_portal_shared.curated_presentation`` applies. Tests that were
@@ -67,6 +86,10 @@ const detail = (over: Partial<Parameters<typeof mockedSubmission.mockResolvedVal
   created_at: '2026-06-29T10:00:00Z',
   original_filename: 'a.py',
   delta: null,
+  // The student has not answered about this review yet (task 05). The tests
+  // that are about the answer set it; every other test is about a review
+  // nobody has answered about.
+  own_feedback: null,
   rejection: null,
   not_opened: [],
   recovered_encoding: null,
@@ -445,5 +468,118 @@ describe('PortalReviewDetail — відновлене кодування (кро
       />,
     )
     expect(screen.getByText('(shift_jis)')).toBeInTheDocument()
+  })
+
+  // --- Task 05: the one question asked about a review ---
+
+  it('asks the question under a review, with neither answer chosen yet', async () => {
+    mockedSubmission.mockResolvedValue(detail())
+    render(<PortalReviewDetail row={row()} />)
+    await screen.findByText(QUESTION)
+
+    expect(button(HELPED)).toHaveAttribute('aria-pressed', 'false')
+    expect(button(NOT_HELPED)).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('does not ask where no review is shown', async () => {
+    // Every state that has no review to answer about, driven the way the
+    // server drives the panel. A button here would lead to a refusal, and the
+    // refusal exists for a stale tab, not as an ordinary path.
+    for (const status of ['received', 'reviewing', 'mismatch', 'rejected']) {
+      const { unmount } = render(<PortalReviewDetail row={row({ status })} />)
+      expect(screen.queryByText(QUESTION)).not.toBeInTheDocument()
+      unmount()
+    }
+
+    // And the one case that IS reviewed but carries no review text.
+    mockedSubmission.mockResolvedValue(detail({ review_markdown: null }))
+    render(<PortalReviewDetail row={row()} />)
+    await screen.findByText('Рецензію ще не сформовано.')
+    expect(screen.queryByText(QUESTION)).not.toBeInTheDocument()
+    expect(mockedTouch).not.toHaveBeenCalled()
+  })
+
+  it('shows the answer the student gave, and says it can be changed', async () => {
+    mockedSubmission.mockResolvedValue(detail())
+    mockedTouch.mockResolvedValue(stored('helped'))
+    render(<PortalReviewDetail row={row()} />)
+    await screen.findByText(QUESTION)
+
+    fireEvent.click(button(HELPED))
+
+    await waitFor(() =>
+      expect(button(HELPED)).toHaveAttribute('aria-pressed', 'true'),
+    )
+    expect(button(NOT_HELPED)).toHaveAttribute('aria-pressed', 'false')
+    expect(mockedTouch).toHaveBeenCalledWith('sub-1', 'helped')
+    expect(
+      screen.getByText(/Відповідь збережено — її можна змінити/),
+    ).toBeInTheDocument()
+  })
+
+  it('serves an answer given earlier, without asking again', async () => {
+    mockedSubmission.mockResolvedValue(detail({ own_feedback: stored('not_helped') }))
+    render(<PortalReviewDetail row={row()} />)
+    await screen.findByText(QUESTION)
+
+    expect(button(NOT_HELPED)).toHaveAttribute('aria-pressed', 'true')
+    expect(button(HELPED)).toHaveAttribute('aria-pressed', 'false')
+    expect(mockedTouch).not.toHaveBeenCalled()
+  })
+
+  it('changes the answer when the other button is pressed', async () => {
+    mockedSubmission.mockResolvedValue(detail({ own_feedback: stored('helped') }))
+    mockedTouch.mockResolvedValue(stored('not_helped'))
+    render(<PortalReviewDetail row={row()} />)
+    await screen.findByText(QUESTION)
+    expect(button(HELPED)).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.click(button(NOT_HELPED))
+
+    await waitFor(() =>
+      expect(button(NOT_HELPED)).toHaveAttribute('aria-pressed', 'true'),
+    )
+    expect(button(HELPED)).toHaveAttribute('aria-pressed', 'false')
+    expect(mockedTouch).toHaveBeenCalledWith('sub-1', 'not_helped')
+  })
+
+  it('takes the current answer from the server, not from the button pressed', async () => {
+    // The double answers with the OTHER value on purpose. That cannot happen
+    // in life — the server stores what it was sent — and the disagreement is
+    // the only way to ask which of the two the panel believes. It has to be
+    // the server: a repeat answer is resolved there, so what is stored is
+    // what the server says is stored.
+    mockedSubmission.mockResolvedValue(detail())
+    mockedTouch.mockResolvedValue(stored('not_helped'))
+    render(<PortalReviewDetail row={row()} />)
+    await screen.findByText(QUESTION)
+
+    fireEvent.click(button(HELPED))
+
+    await waitFor(() =>
+      expect(button(NOT_HELPED)).toHaveAttribute('aria-pressed', 'true'),
+    )
+    expect(button(HELPED)).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('says why an answer was refused, and what to do', async () => {
+    mockedSubmission.mockResolvedValue(detail())
+    mockedTouch.mockRejectedValue(
+      new PortalApiError(409, 'conflict', {
+        detail: { code: 'no_review', details: 'English developer sentence.' },
+      }),
+    )
+    render(<PortalReviewDetail row={row()} />)
+    await screen.findByText(QUESTION)
+
+    fireEvent.click(button(HELPED))
+
+    await screen.findByText(/Рецензії для цієї роботи зараз немає/)
+    expect(screen.getByText(/Оновіть сторінку/)).toBeInTheDocument()
+    // The backend's own English sentence never reaches the student (DD-SP-D).
+    expect(
+      screen.queryByText(/English developer sentence/),
+    ).not.toBeInTheDocument()
+    expect(button(HELPED)).toHaveAttribute('aria-pressed', 'false')
   })
 })

@@ -276,6 +276,36 @@ export interface PortalSubmissionDetail extends PortalSubmissionListItem {
   review_markdown: string | null
   structure: ReviewStructureV1 | null
   delta: PortalDeltaReceipt | null
+  own_feedback: FeedbackTouch | null
+}
+
+// --- What the student says about a review (mentor-rebuild task 05) ---
+// Mirrored verbatim against a fresh OpenAPI snapshot of the backend branch.
+// Both vocabularies are CLOSED on the server: a third value would arrive as a
+// string this build does not know, so the narrow types are the contract and not
+// a convenience.
+
+export type FeedbackKind = 'touch'
+export type FeedbackValue = 'helped' | 'not_helped'
+
+// The answer as the server serves it back — from the touch route itself and,
+// on the next read, from the submission detail. One shape for both, which is
+// why the server's model is not named after either surface.
+//
+// ``updated_at`` is the time of the CURRENT answer: a repeat touch replaces the
+// previous one rather than adding a second, and the time moves with it.
+export interface FeedbackTouch {
+  kind: FeedbackKind
+  value: FeedbackValue
+  updated_at: string
+}
+
+// The body of a touch from the portal. ``kind`` is sent although the vocabulary
+// has one member: the server spells it out for the same reason, and a body that
+// omits it today would have to start naming it the day a second kind arrives.
+export interface PortalTouchRequest {
+  kind: FeedbackKind
+  value: FeedbackValue
 }
 
 // --- The review as data (mentor-rebuild task 04) ---
