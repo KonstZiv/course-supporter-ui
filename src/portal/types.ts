@@ -149,6 +149,12 @@ export interface PortalMaterialItem {
   task_type: string | null
   base: PortalTaskBase | null
   overlay: PortalSubmissionOverlay | null
+  // Task 07 (DD-SP-BD): true when this task is a test answered with the test
+  // form — the questions of ``GET /portal/tasks/{id}/test`` instead of a file
+  // upload. Optional on purpose: a backend from before task 07 does not send
+  // it, and the file form must then stay. The server sends ``false`` for every
+  // other document, and for a test while tests are still answered with a file.
+  test_form?: boolean
 }
 
 export interface PortalMaterialTreeNode {
@@ -191,6 +197,57 @@ export interface PortalSubmitResponse {
   submission_id: string
   status: string
   duplicate: boolean
+}
+
+// --- Task 07: a test answered with its answers ---
+// Mirrored verbatim against a fresh OpenAPI snapshot of backend main
+// (``5004d75``), identical to the live contract. The structure route carries
+// nothing of the key — not the right options, not how many there are, no
+// explanation — so no field here could show one.
+
+// One option of a question, as the test prints it.
+export interface TestStructureOption {
+  label: string
+  text: string
+}
+
+// One question, with its options in the order the test lists them.
+export interface TestStructureQuestion {
+  number: string
+  text: string
+  options: TestStructureOption[]
+}
+
+// GET /portal/tasks/{id}/test. ``version`` goes back as ``test_version`` with
+// the answers. ``accepting_answers`` is false while tests are still answered
+// with a file, or while the author's key does not apply to this version: the
+// test can be read then, but not answered.
+export interface TestStructureResponse {
+  version: string
+  accepting_answers: boolean
+  questions: TestStructureQuestion[]
+}
+
+// POST /portal/tasks/{id}/test-submissions → 202 with ``PortalSubmitResponse``.
+// ``answers`` maps a question number to the labels ticked; a question left out
+// is not refused, it counts as answered wrong. Without ``test_version`` the
+// answers are taken for the current version; a stale one is refused with
+// ``TEST_VERSION_CHANGED``. The same answers sent twice are two attempts.
+export interface PortalTestSubmitRequest {
+  answers: Record<string, string[]>
+  test_version?: string | null
+  response_language?: string | null
+  student_note?: string | null
+}
+
+// A door's refusal, as it crosses the wire: FastAPI nests an HTTPException's
+// detail under ``detail``, and a door that names its reason puts this OBJECT
+// there, where other refusals put a string. ``code`` is what the portal picks
+// its words by; ``details`` is the server's English fallback and is never
+// shown to a student (DD-SP-D).
+export interface PortalDoorRefusal {
+  code: string
+  details: string | null
 }
 
 // --- c3b: read-path (own attempts list + review detail) ---
@@ -315,8 +372,9 @@ export interface PortalTouchRequest {
 // because the contract carries them, and a type that lags the contract is how
 // a field arrives unnoticed.
 //
-// ``structure`` is null on every submission the backend serves today — no
-// stage writes one, and a review written before the rebuild has none.
+// ``structure`` is null on a review written before the rebuild and on every
+// review but a test's: since task 07 a test's review carries one, with its
+// ``test`` section, and no other stage writes one yet.
 
 // Where in the material a remark points. The four kinds are closed on the
 // server; a fifth would arrive as a string this build does not know.
@@ -351,9 +409,11 @@ export interface ReviewReply {
   answer: string
 }
 
+// ``why`` is null on a test's verdict — the score is its reason (task 07,
+// decision 20); every other verdict carries one.
 export interface ReviewVerdict {
   passed: boolean
-  why: string
+  why: string | null
 }
 
 // What was established by running the work, and what by reading it. Either
@@ -363,12 +423,38 @@ export interface ReviewVerification {
   by_reading: string[]
 }
 
+// A test's result, question by question (task 07). A right answer is its
+// verdict alone; a wrong one adds the correct options as the student saw them
+// and the explanation shown — null when there is none.
+export interface ReviewTestOption {
+  label: string
+  text: string
+}
+
+export interface ReviewTestQuestion {
+  number: string
+  correct: boolean
+  correct_answer: ReviewTestOption[] | null
+  explanation: string | null
+}
+
+// ``explanations_in_course_language`` is true when an explanation shown is in
+// the course language rather than the review's; ``retry_offer`` when the pass
+// mark was missed.
+export interface ReviewTestSection {
+  score: number
+  questions: ReviewTestQuestion[]
+  explanations_in_course_language: boolean
+  retry_offer: boolean
+}
+
 // The whole review. ``language`` is the ISO 639-3 code it is written in, and
 // it is part of the review rather than something the reader chooses.
 export interface ReviewStructureV1 {
   schema_version: string
   language: string
   verdict: ReviewVerdict | null
+  test: ReviewTestSection | null
   fixed: ReviewRemark[]
   new_remarks: ReviewRemark[]
   open: ReviewRemark[]

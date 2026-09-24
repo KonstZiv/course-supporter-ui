@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { portalApi, PortalApiError } from './portalClient'
+import { doorRefusal, portalApi, PortalApiError } from './portalClient'
 import { usePortalSession } from '../stores/session'
 
 describe('portalApi.submitTask (authPost)', () => {
@@ -269,5 +269,111 @@ describe('portalApi recovery (R3: public + protected JSON POST)', () => {
       portalApi.setRecoveryEmail({ email: 'a@b.com' }),
     ).rejects.toBeInstanceOf(PortalApiError)
     expect(usePortalSession.getState().token).toBeNull()
+  })
+})
+
+describe('portalApi test (task 07: structure, answers, refusal)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    usePortalSession.getState().setSession({
+      token: 'jwt',
+      tenantId: 't',
+      studentId: 's',
+      displayName: null,
+    })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('GETs the test structure with the bearer', async () => {
+    const structure = {
+      version: 'v-hash',
+      accepting_answers: true,
+      questions: [
+        {
+          number: '1',
+          text: 'Перше?',
+          options: [
+            { label: 'а', text: 'так' },
+            { label: 'б', text: 'ні' },
+          ],
+        },
+      ],
+    }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(structure),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const res = await portalApi.testStructure('task-1')
+
+    expect(res).toEqual(structure)
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url.endsWith('/api/v1/portal/tasks/task-1/test')).toBe(true)
+    const headers = init.headers as Record<string, string>
+    expect(headers.Authorization).toBe('Bearer jwt')
+  })
+
+  it('POSTs the answers as JSON with the bearer and returns the 202 body', async () => {
+    const accepted = { submission_id: 'sub-1', status: 'received', duplicate: false }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 202,
+      json: () => Promise.resolve(accepted),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const body = { answers: { '1': ['б'], '2': ['а', 'в'] }, test_version: 'v-hash' }
+
+    const res = await portalApi.submitTest('task-1', body)
+
+    expect(res).toEqual(accepted)
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url.endsWith('/api/v1/portal/tasks/task-1/test-submissions')).toBe(true)
+    expect(init.method).toBe('POST')
+    const headers = init.headers as Record<string, string>
+    expect(headers.Authorization).toBe('Bearer jwt')
+    expect(headers['Content-Type']).toBe('application/json')
+    expect(init.body).toBe(JSON.stringify(body))
+  })
+
+  it('a refusal keeps its status and names its reason as {code, details}', async () => {
+    const details = 'The test has changed since these answers were given.'
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 409,
+        json: () =>
+          Promise.resolve({ detail: { code: 'TEST_VERSION_CHANGED', details } }),
+      }),
+    )
+
+    const err: unknown = await portalApi
+      .submitTest('task-1', { answers: { '1': ['а'] } })
+      .catch((e: unknown) => e)
+
+    expect(err).toBeInstanceOf(PortalApiError)
+    expect((err as PortalApiError).status).toBe(409)
+    expect(doorRefusal(err)).toEqual({ code: 'TEST_VERSION_CHANGED', details })
+  })
+
+  it('a failure without a code is no door refusal', () => {
+    expect(
+      doorRefusal(new PortalApiError(404, 'x', { detail: 'Task not found.' })),
+    ).toBeNull()
+    expect(
+      doorRefusal(new PortalApiError(422, 'x', { detail: { details: 'no code' } })),
+    ).toBeNull()
+    expect(doorRefusal(new PortalApiError(500, 'x', null))).toBeNull()
+    expect(doorRefusal(new TypeError('network'))).toBeNull()
+  })
+
+  it('details that are not a string come back as null', () => {
+    expect(
+      doorRefusal(new PortalApiError(409, 'x', { detail: { code: 'TEST_NOT_READY' } })),
+    ).toEqual({ code: 'TEST_NOT_READY', details: null })
   })
 })
