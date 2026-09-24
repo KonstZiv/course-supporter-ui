@@ -14,6 +14,7 @@ vi.mock('../api/portalClient', async (importOriginal) => {
       submitTask: vi.fn(),
       submissions: vi.fn(),
       base: vi.fn(),
+      testStructure: vi.fn(),
     },
   }
 })
@@ -22,6 +23,7 @@ const mockedMaterial = vi.mocked(portalApi.material)
 const mockedSubmit = vi.mocked(portalApi.submitTask)
 const mockedSubmissions = vi.mocked(portalApi.submissions)
 const mockedBase = vi.mocked(portalApi.base)
+const mockedTestStructure = vi.mocked(portalApi.testStructure)
 
 const TASK: PortalMaterialItem = {
   id: 't1',
@@ -228,5 +230,87 @@ describe('PortalMaterialPanel — project base affordance + marker (KD18 P5)', (
         screen.getByText('No base is available for this task yet.'),
       ).toBeInTheDocument(),
     )
+  })
+})
+
+// Task 07: a test answered with its answers. The tree decides, not the task
+// type: a backend that does not send ``test_form`` — or sends it false while
+// tests still go by file — keeps the file form (DD-SP-BD).
+const TEST_TASK: PortalMaterialItem = { ...TASK, id: 't7', task_type: 'test' }
+
+describe('PortalMaterialPanel — форма тесту лише за test_form (задача 07)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockedMaterial.mockResolvedValue(EXTERNAL)
+    mockedSubmissions.mockResolvedValue([])
+    mockedTestStructure.mockResolvedValue({
+      version: '0a80a922' + '5e'.repeat(28),
+      accepting_answers: true,
+      questions: [
+        {
+          number: '1',
+          text: 'Що виведе print(2 ** 3)?',
+          options: [
+            { label: 'а', text: '6' },
+            { label: 'б', text: '8' },
+          ],
+        },
+      ],
+    })
+  })
+
+  it('test_form true → the test form stands in place of the file form', async () => {
+    render(
+      <PortalMaterialPanel
+        item={{ ...TEST_TASK, test_form: true }}
+        onClose={vi.fn()}
+        onSubmitted={vi.fn()}
+      />,
+    )
+    await waitFor(() => expect(screen.getByText('Відповіді на тест')).toBeInTheDocument())
+    expect(mockedTestStructure).toHaveBeenCalledWith('t7')
+    expect(screen.queryByLabelText('Файл рішення')).not.toBeInTheDocument()
+    // The attempts list stays below it, as for a file.
+    expect(screen.getByText('Мої спроби')).toBeInTheDocument()
+  })
+
+  it.each([
+    ['the backend sends no flag', undefined],
+    ['the flag is false', false],
+  ])('the test form does not appear when %s — the file form stays', async (_, flag) => {
+    const item = flag === undefined ? TEST_TASK : { ...TEST_TASK, test_form: flag }
+    render(<PortalMaterialPanel item={item} onClose={vi.fn()} onSubmitted={vi.fn()} />)
+    await waitFor(() => expect(screen.getByLabelText('Файл рішення')).toBeInTheDocument())
+    expect(screen.queryByText('Відповіді на тест')).not.toBeInTheDocument()
+    expect(mockedTestStructure).not.toHaveBeenCalled()
+  })
+
+  it('a file sent from a page opened before tests took answers → told to refresh', async () => {
+    // The tree said "file" when the page opened; the file door now refuses a
+    // file on a test (TEST_ANSWERS_REQUIRED, the file routes' code).
+    mockedSubmit.mockRejectedValue(
+      new PortalApiError(422, 'x', {
+        detail: {
+          code: 'TEST_ANSWERS_REQUIRED',
+          details:
+            'This task is a test: it is answered with the answers to its questions, not with a file.',
+        },
+      }),
+    )
+    render(<PortalMaterialPanel item={TEST_TASK} onClose={vi.fn()} onSubmitted={vi.fn()} />)
+    await waitFor(() => expect(screen.getByLabelText('Файл рішення')).toBeInTheDocument())
+    fireEvent.change(screen.getByLabelText('Файл рішення'), {
+      target: { files: [new File(['а'], 'answers.txt')] },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /надіслати/i }))
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          'Це завдання — тест: на нього відповідають у формі тесту, файл не ' +
+            'приймається. Оновіть сторінку — зʼявиться форма тесту.',
+        ),
+      ).toBeInTheDocument(),
+    )
+    expect(screen.queryByText(/answered with the answers/)).not.toBeInTheDocument()
   })
 })

@@ -6,6 +6,7 @@ import type {
   ForgotPasswordRequest,
   PortalBaseDownload,
   PortalCourseListItem,
+  PortalDoorRefusal,
   PortalLanguagesResponse,
   PortalLoginRequest,
   PortalLoginResponse,
@@ -16,10 +17,12 @@ import type {
   PortalSubmissionDetail,
   PortalSubmissionListItem,
   PortalSubmitResponse,
+  PortalTestSubmitRequest,
   PortalTouchRequest,
   RecoveryEmailRequest,
   RecoveryEmailResponse,
   ResetPasswordRequest,
+  TestStructureResponse,
 } from '../types'
 
 // Bearer session client for the student portal (Phase 6 / T4b). A sibling to
@@ -59,6 +62,19 @@ function redirectToLogin(tenantId: string | null): void {
 async function parseError(res: Response): Promise<PortalApiError> {
   const body = await res.json().catch(() => null)
   return new PortalApiError(res.status, `portal api ${res.status}`, body)
+}
+
+// The door's refusal a failed call carried, or null when it carried none: a
+// plain-string ``detail`` (an access 404, a readiness 409), an object without a
+// string ``code``, or a failure that is not an API error at all. The caller
+// picks its words by ``code``; ``details`` is kept for logs, not for students.
+export function doorRefusal(err: unknown): PortalDoorRefusal | null {
+  if (!(err instanceof PortalApiError)) return null
+  const detail = (err.body as { detail?: unknown } | null)?.detail
+  if (detail === null || typeof detail !== 'object') return null
+  const { code, details } = detail as { code?: unknown; details?: unknown }
+  if (typeof code !== 'string') return null
+  return { code, details: typeof details === 'string' ? details : null }
 }
 
 // Unauthenticated login. Does NOT attach a bearer and does NOT trigger the
@@ -175,6 +191,16 @@ export const portalApi = {
   submitTask: (taskId: string, body: FormData) =>
     authPost<PortalSubmitResponse>(
       `/api/v1/portal/tasks/${taskId}/submissions`,
+      body,
+    ),
+  // Task 07: a test is answered with its answers, not a file. The structure
+  // carries nothing of the key; the answers go as JSON, and a door that
+  // refuses them names its reason — read it with ``doorRefusal``.
+  testStructure: (taskId: string) =>
+    authGet<TestStructureResponse>(`/api/v1/portal/tasks/${taskId}/test`),
+  submitTest: (taskId: string, body: PortalTestSubmitRequest) =>
+    postAuthJson<PortalSubmitResponse>(
+      `/api/v1/portal/tasks/${taskId}/test-submissions`,
       body,
     ),
   // c2 read-path. All inherit authGet's bearer + 401-clear-redirect contract.
