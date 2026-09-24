@@ -12,6 +12,38 @@ describe('submissionCodePhrase — the UPPER_SNAKE project vocabulary', () => {
   })
 })
 
+describe('submissionCodePhrase — the doors of a test (task 07)', () => {
+  const TEST_CODES = [
+    'TEST_ANSWERS_REQUIRED',
+    'TEST_FORM_UNAVAILABLE',
+    'NOT_A_TEST_TASK',
+    'TEST_VERSION_CHANGED',
+    'TEST_NOT_READY',
+    'ANSWERS_DO_NOT_MATCH_TEST',
+  ]
+
+  // What happened and what to do, as the error index of the documentation site
+  // puts it for each code (``docs/uk/errors``), in words for a student.
+  it.each([
+    ['TEST_ANSWERS_REQUIRED', /відповідають у формі тесту, файл не приймається/],
+    ['TEST_FORM_UNAVAILABLE', /поки що приймає роботу файлом/],
+    ['NOT_A_TEST_TASK', /не є тестом\. .*надішліть роботу файлом/],
+    ['TEST_VERSION_CHANGED', /оновився, поки ви відповідали.*новій версії/],
+    ['TEST_NOT_READY', /^Тест ще не готовий приймати відповіді\./],
+    ['ANSWERS_DO_NOT_MATCH_TEST', /не збігаються з питаннями тесту/],
+  ])('%s → its uk phrase', (code, re) => {
+    expect(submissionCodePhrase(code)).toMatch(re)
+  })
+
+  it('gives every code a sentence of its own, none of them the generic', () => {
+    const phrases = TEST_CODES.map(submissionCodePhrase)
+    expect(new Set(phrases).size).toBe(TEST_CODES.length)
+    for (const phrase of phrases) {
+      expect(phrase).not.toBe(submissionCodePhrase('SOME_NEW_CODE'))
+    }
+  })
+})
+
 describe('submissionCodePhrase — the lower_snake ErrorCategory vocabulary', () => {
   // The ordinary submission door speaks ErrorCategory values, not project codes.
   // Both arrive at the same handler, so both must resolve here.

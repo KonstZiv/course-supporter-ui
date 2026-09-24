@@ -5,6 +5,7 @@ import type { PortalMaterialItem, PortalMediaResponse, PortalTaskBase } from '..
 import { PortalMaterialView } from './PortalMaterialView'
 import { PortalSubmitForm } from './PortalSubmitForm'
 import { PortalSubmissionsList } from './PortalSubmissionsList'
+import { PortalTestForm } from './PortalTestForm'
 
 // KD18 P5: the dedicated base-download section for a project task, driven by
 // ``item.base``. ready → an active download button (fetches a FRESH presigned
@@ -87,6 +88,9 @@ function ProjectBaseSection({
 //
 // c3a: for a task item the brief is followed by the submission form; on a
 // successful submit ``onSubmitted`` re-fetches the tree so the overlay flips.
+// Task 07: a test answered with its answers gets the test form instead — only
+// when the tree says so (``test_form === true``, DD-SP-BD); a backend that does
+// not send the flag leaves the file form, exactly as before.
 export function PortalMaterialPanel({
   item,
   courseLanguage = null,
@@ -187,14 +191,23 @@ export function PortalMaterialPanel({
               {item.task_type === 'project' && item.base && (
                 <ProjectBaseSection taskId={item.id} base={item.base} />
               )}
-              <PortalSubmitForm
-                taskId={item.id}
-                taskType={item.task_type}
-                courseLanguage={courseLanguage}
-                base={item.base}
-                listedIds={listedIds}
-                onSubmitted={handleSubmitted}
-              />
+              {item.test_form === true ? (
+                <PortalTestForm
+                  taskId={item.id}
+                  courseLanguage={courseLanguage}
+                  listedIds={listedIds}
+                  onSubmitted={handleSubmitted}
+                />
+              ) : (
+                <PortalSubmitForm
+                  taskId={item.id}
+                  taskType={item.task_type}
+                  courseLanguage={courseLanguage}
+                  base={item.base}
+                  listedIds={listedIds}
+                  onSubmitted={handleSubmitted}
+                />
+              )}
               <PortalSubmissionsList
                 taskId={item.id}
                 reloadKey={attemptsReload}

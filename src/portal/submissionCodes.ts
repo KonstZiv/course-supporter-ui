@@ -7,6 +7,10 @@
 //   UPPER_SNAKE (project)        ARCHIVE_ONLY / BASE_NOT_READY /
 //                                MISSING_BASE_ECHO / UNKNOWN_BASE_ECHO — the
 //                                project preflight (KD18 P5)
+//   UPPER_SNAKE (test)           TEST_ANSWERS_REQUIRED / TEST_FORM_UNAVAILABLE /
+//                                NOT_A_TEST_TASK / TEST_VERSION_CHANGED /
+//                                TEST_NOT_READY / ANSWERS_DO_NOT_MATCH_TEST —
+//                                the doors of a test (task 07)
 //
 // Both reach the same handler, so both resolve through this one lookup. The key
 // spaces are disjoint by case, so the order of the two checks carries no
@@ -35,7 +39,7 @@
 // dictionary
 // is submit-time only.
 
-import { PortalApiError } from './api/portalClient'
+import { doorRefusal, PortalApiError } from './api/portalClient'
 import { articlePhrase, reasonArticle, UNKNOWN_REASON } from './rejectionReasons'
 
 const SUBMISSION_CODES: Record<string, string> = {
@@ -52,6 +56,25 @@ const SUBMISSION_CODES: Record<string, string> = {
     'Базовий проєкт оновився, відколи ви відкрили завдання. Подачу неможливо ' +
     'звірити зі старою версією. Оновіть сторінку, завантажте новий базовий ' +
     'проєкт і спробуйте ще раз.',
+  // Task 07 — the doors of a test. Worded for the student from the error index
+  // of the documentation site (``/uk/errors/``): what happened, and what the
+  // student can do about it. The server's ``details`` never reaches the screen.
+  TEST_ANSWERS_REQUIRED:
+    'Це завдання — тест: на нього відповідають у формі тесту, файл не ' +
+    'приймається. Оновіть сторінку — зʼявиться форма тесту.',
+  TEST_FORM_UNAVAILABLE:
+    'Цей тест поки що приймає роботу файлом. Оновіть сторінку — зʼявиться ' +
+    'форма для файла.',
+  NOT_A_TEST_TASK:
+    'Це завдання не є тестом. Оновіть сторінку й надішліть роботу файлом.',
+  TEST_VERSION_CHANGED:
+    'Тест оновився, поки ви відповідали, і відповіді на стару версію не ' +
+    'приймаються. Позначте відповіді в новій версії тесту й надішліть знову.',
+  TEST_NOT_READY:
+    'Тест ще не готовий приймати відповіді. Спробуйте трохи згодом.',
+  ANSWERS_DO_NOT_MATCH_TEST:
+    'Відповіді не збігаються з питаннями тесту. Оновіть сторінку й надішліть ' +
+    'відповіді ще раз.',
   // Task 05 — the one refusal an answer about a review can meet. Not a door
   // code: the student reaches it from the review panel, not from the submit
   // form. It lives here because this is where a code becomes a sentence, and a
@@ -113,14 +136,9 @@ const TOUCH_STATUS_PHRASES: Record<number, string> = {
 // ``submitErrorMessage`` and the same rule: the backend's own English strings
 // are read at no point.
 export function touchErrorMessage(err: unknown): string {
+  const refusal = doorRefusal(err)
+  if (refusal !== null) return submissionCodePhrase(refusal.code)
   if (err instanceof PortalApiError) {
-    const detail = (err.body as { detail?: unknown } | null)?.detail
-    if (detail !== null && typeof detail === 'object') {
-      const d = detail as { code?: unknown }
-      if (typeof d.code === 'string') {
-        return submissionCodePhrase(d.code)
-      }
-    }
     return (
       TOUCH_STATUS_PHRASES[err.status] ??
       'Не вдалося зберегти відповідь. Спробуйте ще раз.'
@@ -130,14 +148,9 @@ export function touchErrorMessage(err: unknown): string {
 }
 
 export function submitErrorMessage(err: unknown): string {
+  const refusal = doorRefusal(err)
+  if (refusal !== null) return submissionCodePhrase(refusal.code)
   if (err instanceof PortalApiError) {
-    const detail = (err.body as { detail?: unknown } | null)?.detail
-    if (detail !== null && typeof detail === 'object') {
-      const d = detail as { code?: unknown }
-      if (typeof d.code === 'string') {
-        return submissionCodePhrase(d.code)
-      }
-    }
     return STATUS_PHRASES[err.status] ?? articlePhrase(UNKNOWN_REASON)
   }
   return 'Не вдалося надіслати. Перевірте зʼєднання та спробуйте ще раз.'
