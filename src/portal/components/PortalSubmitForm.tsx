@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { Loader2, Upload, CheckCircle2, Info, AlertCircle } from 'lucide-react'
 import { portalApi, PortalApiError } from '../api/portalClient'
 import type {
@@ -10,6 +10,7 @@ import { getPortalLanguages } from '../languages'
 import { formatFileSize } from '../rejectionReasons'
 import { getSubmissionPolicy, policyFor } from '../submissionPolicy'
 import { submitErrorMessage } from '../submissionCodes'
+import { formatCount, noteLength, STUDENT_NOTE_MAX_CHARS } from '../studentNote'
 
 type SubmitState = 'idle' | 'submitting' | 'success' | 'duplicate' | 'error'
 
@@ -127,6 +128,13 @@ export function PortalSubmitForm({
   // BASE_NOT_READY stays the authoritative backstop for a render↔submit race.
   const baseNotReady = base != null && base.state !== 'ready'
 
+  // The comment's cap (hotfix 6), counted as the server counts it. Held softly:
+  // a longer comment stays in the field whole — a pasted question is never cut
+  // short without the student seeing it — and the form will not send it.
+  const noteChars = noteLength(note)
+  const noteTooLong = noteChars > STUDENT_NOTE_MAX_CHARS
+  const noteCounterId = useId()
+
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFile(e.target.files?.[0] ?? null)
     setState('idle')
@@ -150,6 +158,7 @@ export function PortalSubmitForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!file || state === 'submitting') return // corrective 4: lock — no double POST
+    if (noteTooLong) return // the button is off too; this holds an Enter submit
     // Client size preflight (corrective 2); the server re-checks (422). The
     // cap and the number in the sentence both come from the policy for this
     // assignment kind — a project is allowed ten times what a single file is,
@@ -267,14 +276,33 @@ export function PortalSubmitForm({
           ))}
         </select>
       </label>
-      <textarea
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        placeholder="Коментар або питання (необовʼязково)"
-        aria-label="Коментар"
-        rows={2}
-        className="input"
-      />
+      <div>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Коментар або питання (необовʼязково)"
+          aria-label="Коментар"
+          aria-describedby={noteCounterId}
+          aria-invalid={noteTooLong || undefined}
+          rows={2}
+          className="input"
+        />
+        <div
+          id={noteCounterId}
+          className={`mt-1 flex items-start justify-between gap-3 text-xs ${
+            noteTooLong ? 'text-coral' : 'text-ink-muted'
+          }`}
+        >
+          <span aria-live="polite">
+            {noteTooLong &&
+              `Коментар задовгий — максимум ${formatCount(STUDENT_NOTE_MAX_CHARS)} знаків. ` +
+                'Скоротіть його, щоб надіслати рішення.'}
+          </span>
+          <span className="shrink-0 tabular-nums">
+            {formatCount(noteChars)} / {formatCount(STUDENT_NOTE_MAX_CHARS)}
+          </span>
+        </div>
+      </div>
       {message && (
         <div className={`flex items-start gap-2 p-3 rounded-xl text-sm ${tone}`}>
           <Icon size={16} className="shrink-0 mt-0.5" />
@@ -284,7 +312,11 @@ export function PortalSubmitForm({
       <button
         type="submit"
         disabled={
-          !file || state === 'submitting' || state === 'duplicate' || baseNotReady
+          !file ||
+          state === 'submitting' ||
+          state === 'duplicate' ||
+          baseNotReady ||
+          noteTooLong
         }
         title={baseNotReady ? 'Базовий проєкт ще не готовий.' : undefined}
         className="btn-primary"
