@@ -4,7 +4,8 @@ import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { BookOpen, Layers, Paperclip } from 'lucide-react'
 import type { FlowNodeData } from '../../../utils/treeToFlow'
 import { SummaryBadge } from '../SummaryBadge'
-import { phaseVocab, phasePillClass } from '../../../utils/stateVocabulary'
+import { pillVocab, phasePillClass } from '../../../utils/stateVocabulary'
+import { documentLabel } from '../../../utils/documentLabel'
 
 export const CourseRootNode = memo(function CourseRootNode({
   data,
@@ -64,7 +65,7 @@ export const CourseRootNode = memo(function CourseRootNode({
       {data.authored_documents.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-3">
           {data.authored_documents.slice(0, 4).map((m) => {
-            const v = phaseVocab(m.processing_phase)
+            const v = pillVocab(m)
             return (
               <span
                 key={m.id}
@@ -72,9 +73,9 @@ export const CourseRootNode = memo(function CourseRootNode({
                   'text-[11px] px-2 py-0.5 rounded-full font-medium',
                   phasePillClass(v),
                 )}
-                title={`${m.filename || m.source_url || m.source_type} — ${v.label}`}
+                title={`${documentLabel(m)} — ${v.label}`}
               >
-                {m.filename?.slice(0, 18) || m.source_url?.slice(0, 18) || m.source_type}
+                {documentLabel(m).slice(0, 18)}
               </span>
             )
           })}

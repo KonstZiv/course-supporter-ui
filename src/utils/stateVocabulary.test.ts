@@ -5,6 +5,7 @@ import {
   JOB_STATE_LABEL,
   JOB_KIND_LABEL,
   phaseVocab,
+  pillVocab,
   phaseBadgeClass,
   phasePillClass,
   jobStateWordClass,
@@ -77,6 +78,22 @@ describe('phaseVocab — total lookup', () => {
     const entry = phaseVocab('brand_new_phase' as ProcessingPhase)
     expect(entry.label).toBe('—')
     expect(entry.tone).toBe('muted')
+  })
+})
+
+describe('pillVocab — a canvas pill', () => {
+  it("keeps a test neutral and names it, since the tree does not say whether it is published", () => {
+    expect(pillVocab({ source_type: 'test_object', processing_phase: 'ready' })).toEqual({
+      label: 'тест',
+      tone: 'muted',
+      pulse: false,
+    })
+  })
+
+  it('gives any other material its phase', () => {
+    expect(pillVocab({ source_type: 'text', processing_phase: 'ready' })).toBe(
+      PHASE_VOCAB.ready,
+    )
   })
 })
 

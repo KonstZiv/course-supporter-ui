@@ -1,6 +1,13 @@
 // ─── Enums ───
 
-export type SourceType = 'video' | 'presentation' | 'text' | 'web' | 'audio' | 'code'
+export type SourceType =
+  | 'video'
+  | 'presentation'
+  | 'text'
+  | 'web'
+  | 'audio'
+  | 'code'
+  | 'test_object'
 // The three states the server actually derives (backend ``MaterialState``:
 // PENDING > READY > ERROR — orm.py). ``raw`` / ``integrity_broken`` were phantom
 // UI-only values the wire never carries (deferred to Phase 2.x); narrowed
@@ -101,6 +108,8 @@ export interface AuthoredDocumentSummary {
   task_type: AssignmentType | null
   order: number
   filename: string | null
+  // The name both trees show (task 07b); null for a document without one.
+  title: string | null
   source_url: string
   language: string | null
   state: DocumentState
@@ -241,6 +250,8 @@ export interface AuthoredDocumentResponse {
   task_type: AssignmentType | null
   order: number
   filename: string | null
+  // The name both trees show (task 07b); null for a document without one.
+  title: string | null
   source_url: string
   language: string | null
   state: DocumentState
@@ -256,6 +267,141 @@ export interface AuthoredDocumentResponse {
   error_category: string | null
   created_at: string
   updated_at: string
+}
+
+// ─── Test written in the system (tasks 07b, 07c) ───
+// A ``test_object`` document read and written through its own routes
+// (``src/api/tests.ts``). The responses mirror the OpenAPI schemas of the same
+// names. The request body and the coded refusals are not in the OpenAPI — the
+// routes read the raw body and refuse through ``HTTPException`` — so their
+// source is the backend code named at each.
+
+export type DraftCheckState = 'not_checked' | 'in_progress' | 'ready' | 'failed'
+
+export type IncompleteCode =
+  | 'TEST_NO_QUESTIONS'
+  | 'TEST_TEXT_EMPTY'
+  | 'TEST_OPTIONS_COUNT'
+  | 'TEST_NO_CORRECT_OPTION'
+
+export interface WrittenTestOption {
+  // The letter a publication would give it now, in the course's alphabet.
+  label: string
+  text: string
+  correct: boolean
+}
+
+export interface WrittenTestQuestion {
+  // Its place from 1, as a string: the key of the check's explanations and
+  // doubts.
+  number: string
+  text: string
+  options: WrittenTestOption[]
+  // The author's own explanation.
+  explanation: string | null
+}
+
+export interface WrittenTestDraft {
+  pass_threshold: number | null
+  questions: WrittenTestQuestion[]
+}
+
+export interface WrittenTestVersion {
+  number: number
+  // The visible digest — the ``version`` a student is shown.
+  version: string
+  published_at: string
+}
+
+// A place the draft is not finished at, counted from 1: ``question`` is null
+// for a test with no questions, ``option`` is set only for an option's own
+// empty text.
+export interface WrittenTestIncompletePlace {
+  code: IncompleteCode
+  question: number | null
+  option: number | null
+}
+
+// What the check of the draft as it stands found. The explanations and doubts
+// are the model's, by question number, and empty until ``ready``; ``doubts``
+// names only the doubted questions.
+export interface WrittenTestCheck {
+  state: DraftCheckState
+  explanations: Record<string, string>
+  doubts: Record<string, boolean>
+}
+
+export interface WrittenTestResponse {
+  id: string
+  course_node_id: string
+  title: string | null
+  // The course language (ISO 639-3) the letters are in.
+  language: string
+  draft: WrittenTestDraft
+  // The version in force; null before the first publication.
+  published: WrittenTestVersion | null
+  course_root_id: string
+  // Whether a publication now would give a new version; true before the first
+  // one. A new title is no change.
+  unpublished_changes: boolean
+  // Every unfinished place, in reading order — the same entries a refused
+  // check or publication lists.
+  incomplete: WrittenTestIncompletePlace[]
+  check: WrittenTestCheck
+}
+
+export interface WrittenTestPublicationResponse {
+  // True for a new version (201); false when the draft equals the version in
+  // force (200).
+  created: boolean
+  published: WrittenTestVersion
+}
+
+// The draft a test route takes as JSON — the fields of backend
+// ``homework/test_yaml.py`` (``_TEST_FIELDS``, ``_QUESTION_FIELDS``,
+// ``_OPTION_FIELDS``). Creating a test needs its title; a title given on a
+// replacement renames the test.
+export interface WrittenTestBody {
+  title?: string
+  // Left out when unset: the route refuses ``null`` (TEST_FIELD_INVALID).
+  pass_threshold?: number
+  questions: WrittenTestBodyQuestion[]
+}
+
+export interface WrittenTestBodyQuestion {
+  text: string
+  options: WrittenTestBodyOption[]
+  // The route reads an empty explanation as none.
+  explanation?: string
+}
+
+export interface WrittenTestBodyOption {
+  text: string
+  correct: boolean
+}
+
+// Where a refusal of the format points (backend ``RefusalPlace``): counted
+// from 1, null when unknown. ``line`` and ``column`` are in a YAML file;
+// ``question`` and ``option`` are positions in the draft sent.
+export interface TestRefusalPlace {
+  line: number | null
+  column: number | null
+  question: number | null
+  option: number | null
+}
+
+// A coded refusal of a test route, out of FastAPI's ``detail`` envelope
+// (backend ``api/routes/_author_shared.py``, ``test_objects.py``). ``place``
+// comes with a refusal of the format (422 or 413, ``TEST_*``), ``incomplete``
+// with ``TEST_DRAFT_INCOMPLETE``, ``category`` with ``SECURITY_REJECTED``;
+// each is null for a refusal without it. ``details`` is English for the
+// developer — never shown to the author.
+export interface TestRefusal {
+  code: string
+  details: string
+  place: TestRefusalPlace | null
+  incomplete: WrittenTestIncompletePlace[] | null
+  category: string | null
 }
 
 // ─── Project base (KD18 P6) ───

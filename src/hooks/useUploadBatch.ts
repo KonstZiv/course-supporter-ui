@@ -19,7 +19,10 @@ import { authoredRejectionMessage } from '../utils/apiError'
 // fields with separate components.
 
 export interface UploadTask {
-  /** File name, for the failure fallback text (Е8). */
+  /**
+   * File name, for the failure texts: the fallback (Е8), and a YAML file
+   * refused as a test, whose words name the file (task 07c).
+   */
   label: string
   /** Sends one file; the cycle feeds it the per-file progress callback. */
   send: (onProgress: (progress: UploadProgress) => void) => Promise<unknown>
@@ -99,7 +102,7 @@ export function useUploadBatch() {
             hooks.onFileQueued?.() // Е9 — a visible row after the FIRST file, not the last
           } catch (err) {
             batchFailures.push(
-              authoredRejectionMessage(err) ??
+              authoredRejectionMessage(err, task.label) ??
                 `${task.label}: не вдалося надіслати файл (код ${
                   err instanceof ApiError ? err.status : 'unknown'
                 })`,

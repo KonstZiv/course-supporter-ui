@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Modal } from './Modal'
 import { CODE_ELIGIBLE_TEXT_EXTENSIONS } from '../../utils/uploadRouting'
+import { isYamlFileName } from '../../utils/testDraft'
 import type { AssignmentType, MaterialRole } from '../../types/api'
 import { TASK_TYPE_OPTIONS, formatAudioDuration } from './uploadConfirmMeta'
 
@@ -18,6 +19,11 @@ import { TASK_TYPE_OPTIONS, formatAudioDuration } from './uploadConfirmMeta'
 // taken verbatim), distinguishable only by the author. The description-only
 // note mirrors the backend typicality contract (F2/F7): typical/library
 // files and files over 4 MiB enter the material as description only.
+//
+// Test axis (task 07c): a YAML file with the «Тест» kind becomes a test
+// written in the system — the server reads its questions and keeps no file,
+// and its role is always educational (it does not read the one sent). Any
+// other file or a link with that kind would be refused, so it is not sent.
 
 export interface UploadConfirmFile {
   name: string
@@ -50,15 +56,26 @@ export function UploadConfirmDialog({
   const [role, setRole] = useState<MaterialRole | null>(null)
   const [taskType, setTaskType] = useState<AssignmentType | null>(null)
   const [asCode, setAsCode] = useState(false)
+  const hintId = useId()
 
   const reset = () => {
     setRole(null)
     setTaskType(null)
     setAsCode(false)
   }
+
+  const isTest = taskType === 'test'
+  const yamlOnly =
+    !linkUrl && files.length > 0 && files.every((f) => isYamlFileName(f.name))
+  const testFromYaml = isTest && yamlOnly
+  const testRefused = isTest && !yamlOnly
+  // Shown, not stored: the author's own pick comes back if they change the
+  // kind again.
+  const chosenRole: MaterialRole | null = testFromYaml ? 'educational' : role
+
   const handleConfirm = () => {
-    if (role) {
-      onConfirm(role, taskType, asCode)
+    if (chosenRole && !testRefused) {
+      onConfirm(chosenRole, taskType, asCode)
       reset()
     }
   }
@@ -90,29 +107,39 @@ export function UploadConfirmDialog({
         Оберіть тип документа перед завантаженням:
       </p>
 
-      <div className="flex gap-3 mb-6">
+      <div className={`flex gap-3 ${testFromYaml ? 'mb-2' : 'mb-6'}`}>
         <button
+          type="button"
           onClick={() => setRole('educational')}
+          disabled={testFromYaml}
+          aria-pressed={chosenRole === 'educational'}
+          aria-describedby={testFromYaml ? `${hintId}-role` : undefined}
           className={`
             flex-1 rounded-xl border-2 p-4 text-center transition-all
-            ${role === 'educational'
+            disabled:cursor-not-allowed
+            ${chosenRole === 'educational'
               ? 'border-navy bg-navy/5 shadow-sm'
               : 'border-canvas-dark hover:border-navy/40'}
           `}
         >
           <span className="text-2xl block mb-1">📚</span>
-          <span className="text-sm font-medium text-ink">Учбовий</span>
+          <span className="text-sm font-medium text-ink">Навчальний</span>
           <span className="text-[11px] text-ink-muted block mt-0.5">
             Доносить інформацію студенту
           </span>
         </button>
         <button
+          type="button"
           onClick={() => setRole('methodological')}
+          disabled={testFromYaml}
+          aria-pressed={chosenRole === 'methodological'}
+          aria-describedby={testFromYaml ? `${hintId}-role` : undefined}
           className={`
             flex-1 rounded-xl border-2 p-4 text-center transition-all
-            ${role === 'methodological'
+            disabled:cursor-not-allowed disabled:opacity-50
+            ${chosenRole === 'methodological'
               ? 'border-plum bg-plum/5 shadow-sm'
-              : 'border-canvas-dark hover:border-plum/40'}
+              : 'border-canvas-dark hover:border-plum/40 disabled:hover:border-canvas-dark'}
           `}
         >
           <span className="text-2xl block mb-1">📋</span>
@@ -122,6 +149,11 @@ export function UploadConfirmDialog({
           </span>
         </button>
       </div>
+      {testFromYaml && (
+        <p id={`${hintId}-role`} className="text-xs text-ink-muted mb-6">
+          Тест завжди навчальний.
+        </p>
+      )}
 
       <div className="mb-4">
         <p className="text-sm text-ink-muted mb-2">
@@ -175,13 +207,32 @@ export function UploadConfirmDialog({
         </label>
       )}
 
-      {codeActive && (
+      {/* One note at a time: the «Тест» kind decides how the file is read,
+          so it replaces the code note. */}
+      {testFromYaml ? (
         <div className="rounded-lg bg-navy/5 border border-navy/15 p-3 mb-4 text-[12px] text-ink-muted">
-          Код-матеріал: ваші власні файли увійдуть до уроку повністю. Типові й
-          службові файли — залежності, стандартні бібліотеки, згенеровані й
-          завеликі — залишаться лише згадкою в структурі проєкту. Після обробки
-          ви зможете уточнити роль кожного файла.
+          Тест із файла YAML: питання, варіанти й позначки буде прочитано з
+          файла, сам файл не зберігається. Студенти побачать тест лише після
+          публікації; відкрити його можна кнопкою «Відкрити тест» у рядку
+          матеріалу.
         </div>
+      ) : testRefused ? (
+        <div
+          id={`${hintId}-refused`}
+          className="rounded-lg bg-navy/5 border border-navy/15 p-3 mb-4 text-[12px] text-ink-muted"
+        >
+          Тест завантажується лише файлом YAML (.yaml чи .yml). Оберіть інший
+          вид завдання або завантажте файл YAML.
+        </div>
+      ) : (
+        codeActive && (
+          <div className="rounded-lg bg-navy/5 border border-navy/15 p-3 mb-4 text-[12px] text-ink-muted">
+            Код-матеріал: ваші власні файли увійдуть до уроку повністю. Типові й
+            службові файли — залежності, стандартні бібліотеки, згенеровані й
+            завеликі — залишаться лише згадкою в структурі проєкту. Після обробки
+            ви зможете уточнити роль кожного файла.
+          </div>
+        )
       )}
 
       <div className="flex justify-end gap-2">
@@ -191,7 +242,8 @@ export function UploadConfirmDialog({
         <button
           className="btn-primary btn-sm"
           onClick={handleConfirm}
-          disabled={role === null}
+          disabled={chosenRole === null || testRefused}
+          aria-describedby={testRefused ? `${hintId}-refused` : undefined}
         >
           Завантажити
         </button>

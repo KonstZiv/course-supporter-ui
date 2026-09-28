@@ -43,6 +43,7 @@ function makeDoc(fileRoles: FileRoles | null): AuthoredDocumentResponse {
     task_type: null,
     order: 0,
     filename: 'lesson.zip',
+    title: null,
     source_url: 's3://x/lesson.zip',
     language: 'ukr',
     state: 'ready',

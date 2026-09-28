@@ -12,6 +12,8 @@ import { DocumentStructureBlock } from './DocumentStructureBlock'
 import { UploadConfirmDialog } from '../ui/UploadConfirmDialog'
 import { ProjectBaseSection } from './ProjectBaseSection'
 import { sourceTypeMeta } from '../../utils/sourceTypeIcon'
+import { documentLabel } from '../../utils/documentLabel'
+import { newTestPath, testEditorPath } from '../../utils/testAddress'
 import { authoredRejectionMessage } from '../../utils/apiError'
 import { validateUploadFiles } from '../../utils/uploadValidation'
 import { useUploadBatch, type UploadTask } from '../../hooks/useUploadBatch'
@@ -34,8 +36,10 @@ import {
   Globe,
   AudioLines,
   File as FileIcon,
+  ListChecks,
   Loader2,
   Link2,
+  AlertCircle,
 } from 'lucide-react'
 import { useDropzone } from 'react-dropzone'
 import { findNode } from '../../utils/tree'
@@ -46,7 +50,7 @@ import type {
 } from '../../types/api'
 
 const iconMap: Record<string, typeof FileText> = {
-  FileText, Video, FileImage, Globe, AudioLines, File: FileIcon,
+  FileText, Video, FileImage, Globe, AudioLines, ListChecks, File: FileIcon,
 }
 
 /* ── Main panel ── */
@@ -87,6 +91,9 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
   } = useUploadBatch()
   const [linkUrl, setLinkUrl] = useState('')
   const [addingLink, setAddingLink] = useState(false)
+  // What the last action on a material row could not do; stays until the
+  // author closes it or tries again.
+  const [actionError, setActionError] = useState<string | null>(null)
 
   // Upload confirmation state
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
@@ -234,8 +241,27 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
 
   const handleDelete = useCallback(
     async (mat: AuthoredDocumentSummary) => {
-      if (!confirm(`Видалити «${mat.filename || mat.source_url || mat.source_type}»?`)) return
-      await documentsApi.delete(mat.id)
+      const name = documentLabel(mat)
+      // The same route hides a test: its students lose it and keep their
+      // attempts, so the question names both (PRE-FLIGHT §21.5).
+      const isTest = mat.source_type === 'test_object'
+      const question = isTest
+        ? `Приховати тест «${name}»? Студенти більше не побачать його в курсі; ` +
+          'спроби, які вже зроблено, збережуться. Скасувати приховування в ' +
+          'програмі автора не можна.'
+        : `Видалити «${name}»?`
+      if (!confirm(question)) return
+      setActionError(null)
+      try {
+        await documentsApi.delete(mat.id)
+      } catch {
+        setActionError(
+          isTest
+            ? `Не вдалося приховати тест «${name}». Спробуйте ще раз.`
+            : `Не вдалося видалити «${name}». Спробуйте ще раз.`,
+        )
+        return
+      }
       await refresh()
     },
     [refresh],
@@ -243,6 +269,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
 
   const handleRetry = useCallback(
     async (mat: AuthoredDocumentSummary) => {
+      const name = documentLabel(mat)
       // `force=true` is required to reprocess a material that already
       // reached `ready` (e.g. after changing the course/material language).
       // For error-state materials, force is harmless and still works.
@@ -250,13 +277,22 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
       if (
         force &&
         !confirm(
-          `Перезапустити обробку «${mat.filename || mat.source_url || mat.source_type}»? ` +
+          `Перезапустити обробку «${name}»? ` +
             'Поточний результат буде замінено новим.',
         )
       ) {
         return
       }
-      await documentsApi.retry(mat.id, force)
+      setActionError(null)
+      try {
+        await documentsApi.retry(mat.id, force)
+      } catch {
+        setActionError(
+          `Не вдалося запустити обробку «${name}». Спробуйте ще раз; якщо ` +
+            'повториться, напишіть нам.',
+        )
+        return
+      }
       await refresh()
       requestRefresh() // Д10 — wake the shell poll for the re-queued job
     },
@@ -385,7 +421,42 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
             {addingLink ? <Loader2 size={14} className="animate-spin" /> : 'Додати'}
           </button>
         </div>
+
+        {/* A test is written in the editor rather than uploaded; a YAML file
+            still comes in through the drop area above. */}
+        <button
+          type="button"
+          className="btn-secondary btn-sm w-full justify-center mt-3"
+          onClick={() => navigate(newTestPath(node.id, tree?.id ?? null))}
+        >
+          <ListChecks size={14} />
+          Новий тест
+        </button>
       </div>
+
+      {/* Outside the scrolling list, so it is seen whichever row was used. */}
+      {actionError && (
+        <div className="px-4 pt-4">
+          <div
+            role="alert"
+            className="border border-coral/40 bg-coral-pale rounded-xl p-3 flex gap-2"
+          >
+            <AlertCircle size={16} className="text-coral shrink-0 mt-0.5" />
+            <p className="min-w-0 flex-1 text-sm text-ink break-words">
+              {actionError}
+            </p>
+            <button
+              type="button"
+              onClick={() => setActionError(null)}
+              aria-label="Закрити повідомлення"
+              className="shrink-0 p-1 rounded-lg text-coral hover:bg-coral/10
+                         transition-colors cursor-pointer self-start"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Materials list */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
@@ -398,6 +469,9 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
             const meta = sourceTypeMeta(mat.source_type)
             const Icon = iconMap[meta.icon] || FileIcon
             const isMethodological = mat.material_role === 'methodological'
+            // A test is written, never processed: no phase to show, nothing
+            // to reprocess, and its role is fixed (decisions 13 and 19).
+            const isTest = mat.source_type === 'test_object'
             // Д1: the live job of THIS material from the shared store (anchor =
             // material_id). Its movement/duration is the same the strip shows.
             const liveJob = workItems.find(
@@ -414,27 +488,41 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-ink truncate">
-                    {mat.filename || mat.source_url || mat.source_type}
+                    {documentLabel(mat)}
                   </p>
                   {/* Д9: below the panel's narrow width the status badge, the
                       role toggle and the confirm-roles button overran the right
                       edge (measured 327 at 320); flex-wrap lets the trailing
                       control drop to the next line instead of clipping. */}
                   <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                    <StatusBadge phase={mat.processing_phase} />
-                    <button
-                      onClick={() => handleToggleRole(mat)}
-                      className={`
-                        text-[10px] px-1.5 py-0.5 rounded font-medium cursor-pointer
-                        transition-colors
-                        ${isMethodological
-                          ? 'bg-plum/10 text-plum hover:bg-plum/20'
-                          : 'bg-navy/6 text-ink-muted hover:bg-navy/12'}
-                      `}
-                      title="Натисніть щоб змінити тип"
-                    >
-                      {isMethodological ? '📋 методичний' : '📚 учбовий'}
-                    </button>
+                    {!isTest && <StatusBadge phase={mat.processing_phase} />}
+                    {!isTest && (
+                      <button
+                        onClick={() => handleToggleRole(mat)}
+                        className={`
+                          text-[10px] px-1.5 py-0.5 rounded font-medium cursor-pointer
+                          transition-colors
+                          ${isMethodological
+                            ? 'bg-plum/10 text-plum hover:bg-plum/20'
+                            : 'bg-navy/6 text-ink-muted hover:bg-navy/12'}
+                        `}
+                        title="Натисніть щоб змінити тип"
+                      >
+                        {isMethodological ? '📋 методичний' : '📚 навчальний'}
+                      </button>
+                    )}
+                    {isTest && (
+                      <button
+                        type="button"
+                        onClick={() => navigate(testEditorPath(mat.id))}
+                        className="text-[10px] px-1.5 py-0.5 rounded font-medium
+                                   bg-navy text-white hover:bg-navy-light
+                                   transition-colors cursor-pointer"
+                        title="Відкрити тест у редакторі"
+                      >
+                        Відкрити тест
+                      </button>
+                    )}
                     {mat.processing_phase === 'awaiting_author' && (
                       <button
                         onClick={() =>
@@ -463,7 +551,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                   )}
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {(mat.state === 'error' || mat.state === 'ready') && (
+                  {!isTest && (mat.state === 'error' || mat.state === 'ready') && (
                     <button
                       onClick={() => handleRetry(mat)}
                       className="p-1.5 rounded-lg hover:bg-amber-pale transition-colors"
@@ -479,7 +567,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                   <button
                     onClick={() => handleDelete(mat)}
                     className="p-1.5 rounded-lg hover:bg-coral-pale transition-colors"
-                    title="Видалити"
+                    title={isTest ? 'Приховати тест' : 'Видалити'}
                   >
                     <Trash2 size={14} className="text-coral" />
                   </button>

@@ -87,6 +87,31 @@ describe('authoredRejectionMessage', () => {
     expect(msg).not.toContain('archive uploads')
   })
 
+  it('words a refused YAML test with its place', () => {
+    // The backend's own refusal of a YAML file whose option names a field twice.
+    const err = new ApiError(422, 'x', {
+      detail: {
+        code: 'TEST_YAML_DUPLICATE_KEY',
+        details: "question 1, option 2: 'correct' is given twice",
+        place: { line: 9, column: 9, question: 1, option: 2 },
+      },
+    })
+    const msg = authoredRejectionMessage(err, 'змінні.yaml')
+    expect(msg).toBe(
+      'змінні.yaml: тест не прочитано — одне поле записано двічі — лишіть ' +
+        'один запис — рядок 9, стовпчик 9 (питання 1, варіант 2)',
+    )
+    expect(msg).not.toContain('given twice')
+    // A test's code that is no reason of a file still gets the generic phrase.
+    const reserved = new ApiError(422, 'x', {
+      detail: {
+        code: 'TEST_OBJECT_SOURCE_RESERVED',
+        details: "source_type 'test_object' is not for a client to name",
+      },
+    })
+    expect(authoredRejectionMessage(reserved)).toBe(ingestErrorMessage(null))
+  })
+
   it('returns null for a code-less envelope (the caller fallback takes over)', () => {
     expect(
       authoredRejectionMessage(
