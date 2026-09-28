@@ -323,27 +323,38 @@ describe('NodeDetailPanel — a test written in the system (task 07c)', () => {
     expect(navigateMock).toHaveBeenCalledWith('/test/test-1/edit')
   })
 
-  // Task Б2: beside the name, the editor's own chip for whether students see
-  // the test; nothing when the tree does not say.
+  // Task Б2: beside the name, the editor's own chips for whether students see
+  // the test, as its toolbar shows them — ``changed`` is two; capitalised as
+  // the editor writes them.
+  const EDITOR_WORDS = ['Не опубліковано', 'Опубліковано', 'Є неопубліковані зміни']
   it.each([
-    ['draft', 'Не опубліковано', 'bg-canvas-dark', undefined],
-    ['published', 'Опубліковано', 'bg-forest-pale', 'Студенти бачать цю версію тесту'],
+    ['draft', [['Не опубліковано', 'bg-canvas-dark', undefined]]],
+    ['published', [['Опубліковано', 'bg-forest-pale', 'Студенти бачать цю версію тесту']]],
     [
       'changed',
-      'Є неопубліковані зміни',
-      'bg-navy-pale',
-      'Чернетка відрізняється від версії, яку бачать студенти',
+      [
+        ['Опубліковано', 'bg-forest-pale', 'Студенти бачать цю версію тесту'],
+        [
+          'Є неопубліковані зміни',
+          'bg-navy-pale',
+          'Чернетка відрізняється від версії, яку бачать студенти',
+        ],
+      ],
     ],
-  ] as const)('shows a %s test as «%s» beside its name', (state, label, tone, hint) => {
+  ] as const)('shows a %s test with the editor\'s chips beside its name', (state, chips) => {
     seed(makeNode({ authored_documents: [makeTest({ test_state: state })] }))
     render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
 
-    const chip = within(rowOf('Змінні')).getByText(label)
-    expect(chip).toHaveClass(tone)
-    if (hint === undefined) expect(chip).not.toHaveAttribute('title')
-    else expect(chip).toHaveAttribute('title', hint)
-    for (const other of ['Не опубліковано', 'Опубліковано', 'Є неопубліковані зміни']) {
-      if (other !== label) expect(within(rowOf('Змінні')).queryByText(other)).toBeNull()
+    const row = rowOf('Змінні')
+    const shown = within(row)
+      .queryAllByText((_, el) => EDITOR_WORDS.includes(el?.textContent ?? '') && el?.tagName === 'SPAN')
+      .map((el) => el.textContent)
+    expect(shown).toEqual(chips.map(([label]) => label))
+    for (const [label, tone, hint] of chips) {
+      const chip = within(row).getByText(label)
+      expect(chip).toHaveClass(tone)
+      if (hint === undefined) expect(chip).not.toHaveAttribute('title')
+      else expect(chip).toHaveAttribute('title', hint)
     }
   })
 

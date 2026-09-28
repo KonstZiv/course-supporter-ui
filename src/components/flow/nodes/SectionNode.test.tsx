@@ -90,15 +90,34 @@ describe('SectionNode — a test\'s publication state', () => {
   }
 
   it.each([
-    ['draft', 'Змінні — Не опубліковано', ['bg-canvas-dark', 'text-ink-muted']],
-    ['published', 'Змінні — Опубліковано', ['text-forest']],
-    ['changed', 'Змінні — Є неопубліковані зміни', ['text-navy']],
+    ['draft', 'Змінні — не опубліковано', ['bg-canvas-dark', 'text-ink-muted']],
+    ['published', 'Змінні — опубліковано', ['text-forest']],
+    ['changed', 'Змінні — є неопубліковані зміни', ['text-navy']],
     [null, 'Змінні — тест', ['bg-canvas-dark', 'text-ink-muted']],
   ] as const)('marks a %s test: %s', (state, hint, classes) => {
     card({ authored_documents: [test(state)] })
     const pill = screen.getByText('Змінні')
     expect(pill).toHaveAttribute('title', hint)
     expect(pill).toHaveClass(...classes)
+  })
+
+  it('lower-cases the editor\'s word after the dash, and only a test\'s', () => {
+    const lecture: AuthoredDocumentSummary = {
+      ...test(),
+      id: 'doc-1',
+      source_type: 'text',
+      task_type: null,
+      title: null,
+      filename: 'lecture.md',
+      source_url: 's3://bucket/lecture.md',
+    }
+    card({ authored_documents: [test('changed'), lecture] })
+    expect(screen.getByText('Змінні')).toHaveAttribute(
+      'title',
+      'Змінні — є неопубліковані зміни',
+    )
+    // A material's phase word keeps its capital, as before.
+    expect(screen.getByText('lecture.md')).toHaveAttribute('title', 'lecture.md — Готово')
   })
 
   it('keeps the neutral pill when an older backend sends no test_state', () => {

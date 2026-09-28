@@ -11,6 +11,8 @@ import {
   phasePillClass,
   jobStateWordClass,
   TEST_STATE_VOCAB,
+  pillHint,
+  testStateChips,
 } from './stateVocabulary'
 
 // Second witness for totality (mirrors the backend ``_JOB_STATE_BY_STATUS``
@@ -120,6 +122,36 @@ describe('pillVocab — a canvas pill', () => {
     expect(pillVocab({ source_type: 'text', processing_phase: 'ready' })).toBe(
       PHASE_VOCAB.ready,
     )
+  })
+})
+
+describe('a test in the tree — hint and panel chips (task Б2)', () => {
+  it('lower-cases a test state after the dash, leaving the editor\'s word as it is', () => {
+    const test = { source_type: 'test_object' }
+    expect(pillHint(test, 'Змінні', { label: TEXTS.notPublished, tone: 'muted', pulse: false })).toBe(
+      'Змінні — не опубліковано',
+    )
+    expect(TEXTS.notPublished).toBe('Не опубліковано')
+    expect(pillHint(test, 'Змінні', { label: 'тест', tone: 'muted', pulse: false })).toBe(
+      'Змінні — тест',
+    )
+  })
+
+  it('keeps a material\'s phase word as it was', () => {
+    expect(pillHint({ source_type: 'text' }, 'lecture.md', PHASE_VOCAB.ready)).toBe(
+      'lecture.md — Готово',
+    )
+  })
+
+  it('gives the panel the editor\'s chips: two for changed, none when the tree does not say', () => {
+    expect(testStateChips('draft')).toEqual([TEST_STATE_VOCAB.draft])
+    expect(testStateChips('published')).toEqual([TEST_STATE_VOCAB.published])
+    expect(testStateChips('changed')).toEqual([
+      TEST_STATE_VOCAB.published,
+      TEST_STATE_VOCAB.changed,
+    ])
+    expect(testStateChips(null)).toEqual([])
+    expect(testStateChips(undefined)).toEqual([])
   })
 })
 

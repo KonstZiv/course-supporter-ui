@@ -93,6 +93,20 @@ export function testStateVocab(state: TestState | null | undefined): TestStateVo
   return (state && TEST_STATE_VOCAB[state]) || null
 }
 
+// The node panel shows a test's state as the editor's toolbar does: ``changed``
+// is two chips there — «Опубліковано» and «Є неопубліковані зміни» beside it —
+// so it is two in the panel too. The canvas pill has room for one (above).
+const TEST_STATE_CHIPS: Record<TestState, TestStateVocabEntry[]> = {
+  draft: [TEST_STATE_VOCAB.draft],
+  published: [TEST_STATE_VOCAB.published],
+  changed: [TEST_STATE_VOCAB.published, TEST_STATE_VOCAB.changed],
+}
+
+/** The editor's chips for a test's state, in its order; none when the tree does not say. */
+export function testStateChips(state: TestState | null | undefined): TestStateVocabEntry[] {
+  return (state && TEST_STATE_CHIPS[state]) || []
+}
+
 /** A canvas pill's word and tone: a test's publication state, any other material's phase. */
 export function pillVocab(document: {
   source_type: string
@@ -187,4 +201,23 @@ const JOB_STATE_WORD_TONE: Record<JobState, string> = {
 /** Work-state word classes (strip rows) — colour/motion on the word, never a chip. */
 export function jobStateWordClass(state: JobState): string {
   return JOB_STATE_WORD_TONE[state]
+}
+
+/**
+ * A canvas pill's hint: «{name} — {state}». A test's state is the editor's
+ * word, which stands capitalised on its own chip; after the dash it continues
+ * the sentence, so it is lower-cased here — the word in ``editorTexts`` stays
+ * as it is («Змінні — не опубліковано»). A material's phase word is kept as it
+ * was.
+ */
+export function pillHint(
+  document: { source_type: string },
+  name: string,
+  entry: PhaseVocabEntry,
+): string {
+  const state =
+    document.source_type === 'test_object'
+      ? entry.label.charAt(0).toLocaleLowerCase('uk') + entry.label.slice(1)
+      : entry.label
+  return `${name} — ${state}`
 }
