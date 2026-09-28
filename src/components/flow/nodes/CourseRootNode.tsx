@@ -73,7 +73,7 @@ export const CourseRootNode = memo(function CourseRootNode({
                   'text-[11px] px-2 py-0.5 rounded-full font-medium',
                   phasePillClass(v),
                 )}
-                title={pillHint(m, documentLabel(m), v)}
+                title={pillHint(documentLabel(m), v)}
               >
                 {documentLabel(m).slice(0, 18)}
               </span>

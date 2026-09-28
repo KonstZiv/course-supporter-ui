@@ -204,20 +204,13 @@ export function jobStateWordClass(state: JobState): string {
 }
 
 /**
- * A canvas pill's hint: «{name} — {state}». A test's state is the editor's
- * word, which stands capitalised on its own chip; after the dash it continues
- * the sentence, so it is lower-cased here — the word in ``editorTexts`` stays
- * as it is («Змінні — не опубліковано»). A material's phase word is kept as it
- * was.
+ * A canvas pill's hint: «{name} — {state}». The state word — a test's editor
+ * word or a material's phase word — stands capitalised on its own chip; after
+ * the dash it continues the sentence, so it is lower-cased here, for every
+ * pill. The words themselves (``editorTexts``, ``PHASE_VOCAB``) stay as they
+ * are («Змінні — не опубліковано», «lecture.md — готово»).
  */
-export function pillHint(
-  document: { source_type: string },
-  name: string,
-  entry: PhaseVocabEntry,
-): string {
-  const state =
-    document.source_type === 'test_object'
-      ? entry.label.charAt(0).toLocaleLowerCase('uk') + entry.label.slice(1)
-      : entry.label
+export function pillHint(name: string, entry: PhaseVocabEntry): string {
+  const state = entry.label.charAt(0).toLocaleLowerCase('uk') + entry.label.slice(1)
   return `${name} — ${state}`
 }

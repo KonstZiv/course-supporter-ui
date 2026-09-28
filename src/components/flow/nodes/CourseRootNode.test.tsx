@@ -101,7 +101,7 @@ describe('CourseRootNode — a test\'s publication state', () => {
     expect(pill).toHaveClass(...classes)
   })
 
-  it('lower-cases the editor\'s word after the dash, and only a test\'s', () => {
+  it('lower-cases the state word after the dash, a test\'s and a material\'s', () => {
     const lecture: AuthoredDocumentSummary = {
       ...test(),
       id: 'doc-1',
@@ -116,8 +116,8 @@ describe('CourseRootNode — a test\'s publication state', () => {
       'title',
       'Змінні — є неопубліковані зміни',
     )
-    // A material's phase word keeps its capital, as before.
-    expect(screen.getByText('lecture.md')).toHaveAttribute('title', 'lecture.md — Готово')
+    // A material's phase word is lower-cased after the dash too.
+    expect(screen.getByText('lecture.md')).toHaveAttribute('title', 'lecture.md — готово')
   })
 
   it('keeps the neutral pill when an older backend sends no test_state', () => {

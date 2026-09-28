@@ -127,20 +127,18 @@ describe('pillVocab — a canvas pill', () => {
 
 describe('a test in the tree — hint and panel chips (task Б2)', () => {
   it('lower-cases a test state after the dash, leaving the editor\'s word as it is', () => {
-    const test = { source_type: 'test_object' }
-    expect(pillHint(test, 'Змінні', { label: TEXTS.notPublished, tone: 'muted', pulse: false })).toBe(
+    expect(pillHint('Змінні', { label: TEXTS.notPublished, tone: 'muted', pulse: false })).toBe(
       'Змінні — не опубліковано',
     )
     expect(TEXTS.notPublished).toBe('Не опубліковано')
-    expect(pillHint(test, 'Змінні', { label: 'тест', tone: 'muted', pulse: false })).toBe(
+    expect(pillHint('Змінні', { label: 'тест', tone: 'muted', pulse: false })).toBe(
       'Змінні — тест',
     )
   })
 
-  it('keeps a material\'s phase word as it was', () => {
-    expect(pillHint({ source_type: 'text' }, 'lecture.md', PHASE_VOCAB.ready)).toBe(
-      'lecture.md — Готово',
-    )
+  it('lower-cases a material\'s phase word after the dash too, leaving the vocabulary as it is', () => {
+    expect(pillHint('lecture.md', PHASE_VOCAB.ready)).toBe('lecture.md — готово')
+    expect(PHASE_VOCAB.ready.label).toBe('Готово')
   })
 
   it('gives the panel the editor\'s chips: two for changed, none when the tree does not say', () => {

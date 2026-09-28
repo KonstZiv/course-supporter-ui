@@ -87,7 +87,7 @@ export const SectionNode = memo(function SectionNode({
                   'inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-medium',
                   phasePillClass(v),
                 )}
-                title={pillHint(m, documentLabel(m), v)}
+                title={pillHint(documentLabel(m), v)}
               >
                 <Paperclip size={9} />
                 {documentLabel(m).slice(0, 14)}
