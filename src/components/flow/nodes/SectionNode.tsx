@@ -4,7 +4,7 @@ import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { FolderOpen, Paperclip } from 'lucide-react'
 import type { FlowNodeData } from '../../../utils/treeToFlow'
 import { SummaryBadge } from '../SummaryBadge'
-import { pillVocab, phasePillClass } from '../../../utils/stateVocabulary'
+import { pillHint, pillVocab, phasePillClass } from '../../../utils/stateVocabulary'
 import { documentLabel } from '../../../utils/documentLabel'
 
 export const SectionNode = memo(function SectionNode({
@@ -87,7 +87,7 @@ export const SectionNode = memo(function SectionNode({
                   'inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-medium',
                   phasePillClass(v),
                 )}
-                title={`${documentLabel(m)} — ${v.label}`}
+                title={pillHint(documentLabel(m), v)}
               >
                 <Paperclip size={9} />
                 {documentLabel(m).slice(0, 14)}

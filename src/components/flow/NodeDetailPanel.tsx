@@ -5,6 +5,8 @@ import { useWorkListStore } from '../../stores/workList'
 import { documentsApi } from '../../api/documents'
 import { nodesApi } from '../../api/nodes'
 import { StatusBadge } from '../ui/StatusBadge'
+import { Chip } from '../testEditor/Chip'
+import { testStateChips } from '../../utils/stateVocabulary'
 import { MaterialProgressDetail } from './MaterialProgressDetail'
 import { UploadProgressView } from '../activity/UploadProgressView'
 import { UploadFailuresView } from '../activity/UploadFailuresView'
@@ -472,6 +474,10 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
             // A test is written, never processed: no phase to show, nothing
             // to reprocess, and its role is fixed (decisions 13 and 19).
             const isTest = mat.source_type === 'test_object'
+            // Б2: whether students see it — the editor's own chips, as its
+            // toolbar shows them (``changed`` is two); none when the tree does
+            // not say (an older backend, an unread state).
+            const testChips = isTest ? testStateChips(mat.test_state) : []
             // Д1: the live job of THIS material from the shared store (anchor =
             // material_id). Its movement/duration is the same the strip shows.
             const liveJob = workItems.find(
@@ -496,6 +502,11 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                       control drop to the next line instead of clipping. */}
                   <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                     {!isTest && <StatusBadge phase={mat.processing_phase} />}
+                    {testChips.map((chip) => (
+                      <Chip key={chip.label} tone={chip.chipTone} title={chip.hint}>
+                        {chip.label}
+                      </Chip>
+                    ))}
                     {!isTest && (
                       <button
                         onClick={() => handleToggleRole(mat)}

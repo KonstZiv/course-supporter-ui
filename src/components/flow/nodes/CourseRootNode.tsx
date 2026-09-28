@@ -4,7 +4,7 @@ import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { BookOpen, Layers, Paperclip } from 'lucide-react'
 import type { FlowNodeData } from '../../../utils/treeToFlow'
 import { SummaryBadge } from '../SummaryBadge'
-import { pillVocab, phasePillClass } from '../../../utils/stateVocabulary'
+import { pillHint, pillVocab, phasePillClass } from '../../../utils/stateVocabulary'
 import { documentLabel } from '../../../utils/documentLabel'
 
 export const CourseRootNode = memo(function CourseRootNode({
@@ -73,7 +73,7 @@ export const CourseRootNode = memo(function CourseRootNode({
                   'text-[11px] px-2 py-0.5 rounded-full font-medium',
                   phasePillClass(v),
                 )}
-                title={`${documentLabel(m)} — ${v.label}`}
+                title={pillHint(documentLabel(m), v)}
               >
                 {documentLabel(m).slice(0, 18)}
               </span>

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import type { ProcessingPhase, JobState, AuthorJobType } from '../types/api'
+import type { ProcessingPhase, JobState, AuthorJobType, TestState } from '../types/api'
+import { TEXTS } from '../components/testEditor/editorTexts'
 import {
   PHASE_VOCAB,
   JOB_STATE_LABEL,
@@ -9,6 +10,9 @@ import {
   phaseBadgeClass,
   phasePillClass,
   jobStateWordClass,
+  TEST_STATE_VOCAB,
+  pillHint,
+  testStateChips,
 } from './stateVocabulary'
 
 // Second witness for totality (mirrors the backend ``_JOB_STATE_BY_STATUS``
@@ -82,7 +86,7 @@ describe('phaseVocab — total lookup', () => {
 })
 
 describe('pillVocab — a canvas pill', () => {
-  it("keeps a test neutral and names it, since the tree does not say whether it is published", () => {
+  it('keeps a test neutral and names it when the tree does not say whether it is published (an older backend)', () => {
     expect(pillVocab({ source_type: 'test_object', processing_phase: 'ready' })).toEqual({
       label: 'тест',
       tone: 'muted',
@@ -90,10 +94,62 @@ describe('pillVocab — a canvas pill', () => {
     })
   })
 
+  it.each([
+    ['draft', 'Не опубліковано', 'muted'],
+    ['published', 'Опубліковано', 'ready'],
+    ['changed', 'Є неопубліковані зміни', 'awaiting'],
+  ] as const)('gives a %s test the editor\'s word %s', (state, label, tone) => {
+    expect(
+      pillVocab({ source_type: 'test_object', processing_phase: 'ready', test_state: state }),
+    ).toEqual({ label, tone, pulse: false })
+  })
+
+  it('keeps a test with a null or unknown state neutral', () => {
+    for (const test_state of [null, 'brand_new' as TestState]) {
+      expect(
+        pillVocab({ source_type: 'test_object', processing_phase: 'ready', test_state }).label,
+      ).toBe('тест')
+    }
+  })
+
+  it('takes the words from the test editor, not a copy of them', () => {
+    expect(TEST_STATE_VOCAB.draft.label).toBe(TEXTS.notPublished)
+    expect(TEST_STATE_VOCAB.published.label).toBe(TEXTS.published)
+    expect(TEST_STATE_VOCAB.changed.label).toBe(TEXTS.unpublishedChanges)
+  })
+
   it('gives any other material its phase', () => {
     expect(pillVocab({ source_type: 'text', processing_phase: 'ready' })).toBe(
       PHASE_VOCAB.ready,
     )
+  })
+})
+
+describe('a test in the tree — hint and panel chips (task Б2)', () => {
+  it('lower-cases a test state after the dash, leaving the editor\'s word as it is', () => {
+    expect(pillHint('Змінні', { label: TEXTS.notPublished, tone: 'muted', pulse: false })).toBe(
+      'Змінні — не опубліковано',
+    )
+    expect(TEXTS.notPublished).toBe('Не опубліковано')
+    expect(pillHint('Змінні', { label: 'тест', tone: 'muted', pulse: false })).toBe(
+      'Змінні — тест',
+    )
+  })
+
+  it('lower-cases a material\'s phase word after the dash too, leaving the vocabulary as it is', () => {
+    expect(pillHint('lecture.md', PHASE_VOCAB.ready)).toBe('lecture.md — готово')
+    expect(PHASE_VOCAB.ready.label).toBe('Готово')
+  })
+
+  it('gives the panel the editor\'s chips: two for changed, none when the tree does not say', () => {
+    expect(testStateChips('draft')).toEqual([TEST_STATE_VOCAB.draft])
+    expect(testStateChips('published')).toEqual([TEST_STATE_VOCAB.published])
+    expect(testStateChips('changed')).toEqual([
+      TEST_STATE_VOCAB.published,
+      TEST_STATE_VOCAB.changed,
+    ])
+    expect(testStateChips(null)).toEqual([])
+    expect(testStateChips(undefined)).toEqual([])
   })
 })
 
