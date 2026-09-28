@@ -397,6 +397,53 @@ describe('TestEditorPage', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Змінні й типи' })).toBeInTheDocument()
   })
 
+  it('sends no poll while a save is under way, so no answer can undo the newer save', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const RUNNING = { state: 'in_progress' as const, explanations: {}, doubts: {} }
+      // The opening read and the first poll of the running check answer at
+      // once. Any later poll — one asked during the save — would bring what the
+      // server held before it, and come back only after the save has answered.
+      let answerLatePoll: (test: WrittenTestResponse) => void = () => {}
+      tests.get
+        .mockImplementation(
+          () => new Promise<WrittenTestResponse>((resolve) => (answerLatePoll = resolve)),
+        )
+        .mockResolvedValueOnce(reading({ check: RUNNING }))
+        .mockResolvedValueOnce(reading({ check: RUNNING }))
+      renderAt('/test/t1/edit')
+      await screen.findByRole('region', { name: 'Питання 1' })
+      await waitFor(() => expect(tests.get).toHaveBeenCalledTimes(2))
+
+      let answerSave: (test: WrittenTestResponse) => void = () => {}
+      tests.replace.mockImplementation(
+        () => new Promise<WrittenTestResponse>((resolve) => (answerSave = resolve)),
+      )
+      fireEvent.change(screen.getByLabelText('Назва тесту'), {
+        target: { value: 'Змінні й типи' },
+      })
+      fireEvent.click(button('Зберегти чернетку'))
+      await waitFor(() => expect(tests.replace).toHaveBeenCalledTimes(1))
+
+      // The poll's next step comes due while the save is under way.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(4000)
+      })
+      expect(tests.get).toHaveBeenCalledTimes(2)
+
+      await act(async () =>
+        answerSave(reading({ title: 'Змінні й типи', check: RUNNING })),
+      )
+      await act(async () => answerLatePoll(reading({ check: RUNNING })))
+      expect(screen.getByText('Усі зміни збережено')).toBeInTheDocument()
+      expect(
+        screen.getByRole('heading', { level: 1, name: 'Змінні й типи' }),
+      ).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('explains a collision with a running check instead of failing silently', async () => {
     await openTest()
     tests.check.mockRejectedValue(

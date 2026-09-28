@@ -301,6 +301,10 @@ export function useTestEditor(address: EditorAddress) {
     async () => {
       const id = savedIdRef.current
       if (id === null) return true
+      // No request while an action is under way: the server could read the
+      // test before the action is stored and answer after the action has.
+      // The next step asks again.
+      if (busyRef.current !== null) return false
       const actionsBefore = actionsRef.current
       try {
         const fresh = await testsApi.get(id)
