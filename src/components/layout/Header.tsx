@@ -1,5 +1,4 @@
-import { Link, useLocation } from 'react-router-dom'
-import { useAuthStore } from '../../stores/auth'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   BookOpen,
   ClipboardCheck,
@@ -32,8 +31,8 @@ export function Header({
 }: {
   stripItems?: JobListItemResponse[]
 }) {
-  const logout = useAuthStore((s) => s.logout)
   const location = useLocation()
+  const navigate = useNavigate()
 
   const linkClass = (active: boolean) =>
     clsx(
@@ -100,8 +99,10 @@ export function Header({
               <span className="hidden lg:inline">{label}</span>
             </Link>
           ))}
+          {/* A move to /logout, not the key dropped here: a page that holds
+              unsaved changes asks before the move, as for any other (task 07c). */}
           <button
-            onClick={logout}
+            onClick={() => navigate('/logout')}
             aria-label="Вийти"
             title="Вийти"
             className="flex items-center gap-2 px-2 sm:px-4 py-2 rounded-xl text-sm font-medium

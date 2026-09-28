@@ -193,6 +193,26 @@ export function hasUnsavedChanges(local: TestDraft, saved: TestDraft): boolean {
   return comparable(local) !== comparable(saved)
 }
 
+/**
+ * Whether saving ``local`` would change what a check of ``saved`` read — a
+ * question's or an option's text, a mark, their order — so a finished check
+ * would no longer hold. The title, the pass mark and own explanations are no
+ * part of it (backend ``version_digests``: the content and answers digests).
+ */
+export function changesCheckedContent(
+  local: TestDraft,
+  saved: TestDraft,
+): boolean {
+  const read = (draft: TestDraft) =>
+    JSON.stringify(
+      draftBody(draft).questions.map(({ text, options }) => ({
+        text,
+        options,
+      })),
+    )
+  return read(local) !== read(saved)
+}
+
 function comparable(draft: TestDraft): string {
   const passThreshold = passThresholdValue(draft.passThreshold)
   return JSON.stringify([
@@ -213,33 +233,40 @@ export function incompletePlaces(
   if (draft.questions.length === 0) {
     return [{ code: 'TEST_NO_QUESTIONS', question: null, option: null }]
   }
+  return draft.questions.flatMap((question, index) =>
+    questionPlaces(question, index + 1),
+  )
+}
+
+/** The unfinished places of one question, at its ``number`` in the draft. */
+export function questionPlaces(
+  question: DraftQuestion,
+  number: number,
+): WrittenTestIncompletePlace[] {
   const places: WrittenTestIncompletePlace[] = []
-  draft.questions.forEach((question, index) => {
-    const number = index + 1
-    if (!question.text.trim()) {
-      places.push({ code: 'TEST_TEXT_EMPTY', question: number, option: null })
-    }
-    question.options.forEach((option, position) => {
-      if (!option.text.trim()) {
-        places.push({
-          code: 'TEST_TEXT_EMPTY',
-          question: number,
-          option: position + 1,
-        })
-      }
-    })
-    if (question.options.length < MIN_OPTIONS) {
-      places.push({ code: 'TEST_OPTIONS_COUNT', question: number, option: null })
-    }
-    const marked = question.options.some((option) => option.correct)
-    if (question.options.length > 0 && !marked) {
+  if (!question.text.trim()) {
+    places.push({ code: 'TEST_TEXT_EMPTY', question: number, option: null })
+  }
+  question.options.forEach((option, position) => {
+    if (!option.text.trim()) {
       places.push({
-        code: 'TEST_NO_CORRECT_OPTION',
+        code: 'TEST_TEXT_EMPTY',
         question: number,
-        option: null,
+        option: position + 1,
       })
     }
   })
+  if (question.options.length < MIN_OPTIONS) {
+    places.push({ code: 'TEST_OPTIONS_COUNT', question: number, option: null })
+  }
+  const marked = question.options.some((option) => option.correct)
+  if (question.options.length > 0 && !marked) {
+    places.push({
+      code: 'TEST_NO_CORRECT_OPTION',
+      question: number,
+      option: null,
+    })
+  }
   return places
 }
 
@@ -273,25 +300,29 @@ export function fieldProblems(draft: TestDraft): FieldProblem[] {
   if (passThresholdValue(draft.passThreshold) === 'invalid') {
     problems.push({ field: 'pass_threshold', kind: 'invalid' })
   }
-  for (const question of draft.questions) {
-    const questionKey = question.key
-    if (chars(question.text) > TEST_LIMITS.questionChars) {
-      problems.push({ field: 'question', questionKey, kind: 'too_long' })
+  return [...problems, ...draft.questions.flatMap(questionProblems)]
+}
+
+/** What one question's texts break of the format's limits. */
+export function questionProblems(question: DraftQuestion): FieldProblem[] {
+  const problems: FieldProblem[] = []
+  const questionKey = question.key
+  if (chars(question.text) > TEST_LIMITS.questionChars) {
+    problems.push({ field: 'question', questionKey, kind: 'too_long' })
+  }
+  for (const option of question.options) {
+    if (chars(option.text) > TEST_LIMITS.optionChars) {
+      problems.push({
+        field: 'option',
+        questionKey,
+        optionKey: option.key,
+        kind: 'too_long',
+      })
     }
-    for (const option of question.options) {
-      if (chars(option.text) > TEST_LIMITS.optionChars) {
-        problems.push({
-          field: 'option',
-          questionKey,
-          optionKey: option.key,
-          kind: 'too_long',
-        })
-      }
-    }
-    const explanation = question.explanation ?? ''
-    if (chars(explanation) > TEST_LIMITS.explanationChars) {
-      problems.push({ field: 'explanation', questionKey, kind: 'too_long' })
-    }
+  }
+  const explanation = question.explanation ?? ''
+  if (chars(explanation) > TEST_LIMITS.explanationChars) {
+    problems.push({ field: 'explanation', questionKey, kind: 'too_long' })
   }
   return problems
 }

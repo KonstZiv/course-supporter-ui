@@ -26,7 +26,7 @@ export type TestAction =
   | 'hide'
 
 export const NOT_SAVED_SEE_BELOW =
-  'Чернетку не збережено: виправте позначене нижче.'
+  'Чернетку не збережено: виправте позначене червоним нижче.'
 export const BACK_TO_COURSES = 'До списку курсів'
 export const POLLING_FAILED =
   'Не вдалося оновити стан перевірки. Оновіть сторінку.'

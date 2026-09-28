@@ -9,6 +9,7 @@ import {
   addQuestion,
   canAddOption,
   canAddQuestion,
+  changesCheckedContent,
   draftAfterSave,
   draftBody,
   draftFromServer,
@@ -435,6 +436,31 @@ describe('testDraft', () => {
     const refusedMark = setSettings(unset, { passThreshold: 'abc' })
     expect(hasUnsavedChanges(refusedMark, unset)).toBe(true)
     expect(hasUnsavedChanges(emptyDraft(), emptyDraft())).toBe(false)
+  })
+
+  it('sees whether a change undoes a finished check', () => {
+    const saved = draftFromServer(reading(QUESTIONS))
+    const [first, second] = saved.questions
+    const option = first!.options[1]!
+    // What a check reads: texts, marks and their order.
+    for (const changed of [
+      setQuestion(saved, first!.key, { text: 'Що виведе print(2)?' }),
+      setOption(saved, first!.key, option.key, { text: '22' }),
+      setOption(saved, first!.key, option.key, { correct: true }),
+      moveQuestion(saved, first!.key, 'down'),
+      addOption(saved, first!.key),
+      removeQuestion(saved, second!.key),
+    ]) {
+      expect(changesCheckedContent(changed, saved)).toBe(true)
+    }
+    // What it does not: the title, the pass mark, own explanations, spaces.
+    for (const kept of [
+      setSettings(saved, { title: 'Інша назва', passThreshold: '90' }),
+      setQuestion(saved, second!.key, { explanation: 'Своє пояснення.' }),
+      setQuestion(saved, first!.key, { text: ' Що виведе print(1 + 1)? ' }),
+    ]) {
+      expect(changesCheckedContent(kept, saved)).toBe(false)
+    }
   })
 
   it('lists what is unfinished as the server does', () => {
