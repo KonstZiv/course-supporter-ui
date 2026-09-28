@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   FolderPlus,
+  ListChecks,
   Pencil,
   Sparkles,
   Trash2,
@@ -17,6 +18,8 @@ import {
   UPLOAD_ACCEPT_ATTR,
 } from '../../utils/uploadRouting'
 import { validateUploadFiles } from '../../utils/uploadValidation'
+import { documentLabel } from '../../utils/documentLabel'
+import { newTestPath } from '../../utils/testAddress'
 import { useCourseStore } from '../../stores/course'
 import { useWorkListStore } from '../../stores/workList'
 import { useUploadBatch, type UploadTask } from '../../hooks/useUploadBatch'
@@ -44,6 +47,12 @@ interface Props {
   onGenerate: (nodeId: string, nodeTitle: string) => void
 }
 
+// What «Обробити матеріали» has to tell once its loop is done: that nothing
+// had failed, or which materials the server refused to start.
+type ProcessNotice =
+  | { kind: 'nothing_failed' }
+  | { kind: 'refused'; names: string[] }
+
 /* ── Pipeline step descriptions ── */
 
 const PIPELINE_INFO: Record<string, { title: string; description: string }> = {
@@ -55,7 +64,8 @@ const PIPELINE_INFO: Record<string, { title: string; description: string }> = {
       'Шар 2 — створення макроінформації (summary, теми, ключові концепти) та впорядкування ' +
       'основного тексту БЕЗ стиснення і втрат. Кожен матеріал отримує структурований outline.\n\n' +
       'Обидва шари генеруються автоматично при завантаженні матеріалу. ' +
-      'Цей пункт дозволяє примусово перезапустити обробку.',
+      'Цей пункт повторює обробку матеріалів, що завершилася помилкою. ' +
+      'Готовий матеріал обробляють наново кнопкою в його рядку.',
   },
   generate: {
     title: 'Шар 3: Опис вузла (NodeSummary)',
@@ -73,6 +83,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
   const [showRename, setShowRename] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const [showPipelineInfo, setShowPipelineInfo] = useState<string | null>(null)
+  const [processNotice, setProcessNotice] = useState<ProcessNotice | null>(null)
   const [pendingUpload, setPendingUpload] = useState<File[]>([])
   const [newTitle, setNewTitle] = useState('')
   const [renameTitle, setRenameTitle] = useState(position.nodeTitle)
@@ -82,6 +93,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
   const [hoveredInfo, setHoveredInfo] = useState<string | null>(null)
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const refreshTree = useRefreshTree()
+  const courseId = useCourseStore((s) => s.tree?.id ?? null)
   const requestRefresh = useWorkListStore((s) => s.requestRefresh)
   const {
     state: uploadState,
@@ -100,6 +112,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
         showAdd ||
         showRename ||
         showPipelineInfo ||
+        processNotice ||
         pendingUpload.length ||
         uploadState.active
       )
@@ -113,6 +126,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
     showAdd,
     showRename,
     showPipelineInfo,
+    processNotice,
     pendingUpload.length,
     uploadState.active,
   ])
@@ -193,21 +207,46 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
   }, [position, refreshTree, onClose, navigate])
 
   const processMaterials = useCallback(async () => {
-    // Re-trigger ingestion for all materials in this node
     setBusy(true)
     try {
       const documents = await documentsApi.list(position.nodeId)
-      for (const doc of documents) {
-        if (doc.state === 'error' || doc.state === 'ready') {
+      // Only a failed material is started again (answer 23.2): a ready one is
+      // refused without force, which this item does not send. A test is never
+      // processed, so it is never failed and falls out here too.
+      const failed = documents.filter((doc) => doc.state === 'error')
+      if (failed.length === 0) {
+        setProcessNotice({ kind: 'nothing_failed' })
+        return
+      }
+      // One refusal does not stop the rest; the author reads them together.
+      const refused: string[] = []
+      for (const doc of failed) {
+        try {
           await documentsApi.retry(doc.id)
+        } catch {
+          refused.push(documentLabel(doc))
         }
       }
       await refreshTree()
-      onClose()
+      if (refused.length > 0) {
+        setProcessNotice({ kind: 'refused', names: refused })
+      } else {
+        onClose()
+      }
     } finally {
       setBusy(false)
     }
   }, [position.nodeId, refreshTree, onClose])
+
+  const closeProcessNotice = useCallback(() => {
+    setProcessNotice(null)
+    onClose()
+  }, [onClose])
+
+  const openNewTest = useCallback(() => {
+    navigate(newTestPath(position.nodeId, courseId))
+    onClose()
+  }, [navigate, position.nodeId, courseId, onClose])
 
   // Trigger NodeSummary generation. Same channel as ``processMaterials`` — a
   // local handler fired from the menu item — but the produced job_id / 422
@@ -307,6 +346,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
   const items: MenuItem[] = [
     { icon: FolderPlus, label: 'Додати підрозділ', action: () => setShowAdd(true) },
     { icon: Upload, label: 'Завантажити матеріал', action: triggerUpload },
+    { icon: ListChecks, label: 'Новий тест', action: openNewTest },
     // ── Pipeline steps ──
     {
       icon: Zap,
@@ -452,6 +492,38 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
             className="btn-secondary btn-sm"
             onClick={() => setShowPipelineInfo(null)}
           >
+            Зрозуміло
+          </button>
+        </div>
+      </Modal>
+
+      {/* What «Обробити матеріали» could not do, or why it did nothing. */}
+      <Modal
+        open={processNotice !== null}
+        onClose={closeProcessNotice}
+        title={
+          processNotice?.kind === 'refused'
+            ? 'Не все вдалося запустити'
+            : 'Обробити матеріали'
+        }
+      >
+        {processNotice?.kind === 'refused' ? (
+          <ul className="space-y-1 text-sm text-ink">
+            {processNotice.names.map((name, i) => (
+              // Two materials may share a name; the list never reorders.
+              <li key={i} className="break-words">
+                {name} — не вдалося запустити обробку — спробуйте ще раз
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-ink leading-relaxed">
+            Матеріалів із помилкою в цьому розділі немає. Готовий матеріал
+            обробляють наново кнопкою в його рядку.
+          </p>
+        )}
+        <div className="flex justify-end mt-4">
+          <button className="btn-secondary btn-sm" onClick={closeProcessNotice}>
             Зрозуміло
           </button>
         </div>

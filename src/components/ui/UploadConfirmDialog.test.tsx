@@ -66,3 +66,78 @@ describe('UploadConfirmDialog — code axis', () => {
     expect(onConfirm).toHaveBeenCalledWith('methodological', null, false)
   })
 })
+
+describe('UploadConfirmDialog — a YAML test (task 07c)', () => {
+  it('explains a YAML file uploaded as a test and keeps its role educational', () => {
+    const onConfirm = renderDialog([{ name: 'Змінні.YML', sourceType: 'code' }])
+    // A methodological pick is set aside, not lost.
+    fireEvent.click(screen.getByText('Методичний'))
+    fireEvent.click(screen.getByRole('button', { name: 'Тест' }))
+
+    expect(
+      screen.getByText(
+        'Тест із файла YAML: питання, варіанти й позначки буде прочитано з ' +
+          'файла, сам файл не зберігається. Студенти побачать тест лише після ' +
+          'публікації; відкрити його можна кнопкою «Відкрити тест» у рядку ' +
+          'матеріалу.',
+      ),
+    ).toBeInTheDocument()
+    // The code note would describe a different reading of the same file.
+    expect(screen.queryByText(/Код-матеріал/)).toBeNull()
+    const educational = screen.getByRole('button', { name: /Учбовий/ })
+    const methodological = screen.getByRole('button', { name: /Методичний/ })
+    expect(educational).toHaveAttribute('aria-pressed', 'true')
+    expect(educational).toBeDisabled()
+    expect(educational).toHaveAccessibleDescription('Тест завжди навчальний.')
+    expect(methodological).toHaveAttribute('aria-pressed', 'false')
+    expect(methodological).toBeDisabled()
+
+    fireEvent.click(screen.getByText('Завантажити'))
+    expect(onConfirm).toHaveBeenCalledExactlyOnceWith('educational', 'test', false)
+  })
+
+  it('does not upload a test from a file that is not YAML', () => {
+    const refusal =
+      'Тест завантажується лише файлом YAML (.yaml чи .yml). Оберіть інший ' +
+      'вид завдання або завантажте файл YAML.'
+    const onConfirm = renderDialog([
+      { name: 'quiz.yaml', sourceType: 'code' },
+      { name: 'quiz.json', sourceType: 'code' },
+    ])
+    fireEvent.click(screen.getByText('Учбовий'))
+    fireEvent.click(screen.getByRole('button', { name: 'Тест' }))
+
+    const upload = screen.getByRole('button', { name: 'Завантажити' })
+    expect(upload).toBeDisabled()
+    expect(upload).toHaveAccessibleDescription(refusal)
+    // The author's own role stays theirs to change.
+    expect(screen.getByRole('button', { name: /Методичний/ })).toBeEnabled()
+    fireEvent.click(upload)
+    expect(onConfirm).not.toHaveBeenCalled()
+
+    // Another kind lifts the refusal.
+    fireEvent.click(screen.getByRole('button', { name: 'Завдання' }))
+    expect(screen.queryByText(refusal)).toBeNull()
+    expect(upload).toBeEnabled()
+  })
+
+  it('does not upload a test from a link', () => {
+    const onConfirm = vi.fn()
+    render(
+      <UploadConfirmDialog
+        open
+        files={[]}
+        linkUrl="https://example.com/quiz.yaml"
+        onConfirm={onConfirm}
+        onCancel={vi.fn()}
+      />,
+    )
+    fireEvent.click(screen.getByText('Учбовий'))
+    fireEvent.click(screen.getByRole('button', { name: 'Тест' }))
+
+    expect(screen.getByRole('button', { name: 'Завантажити' })).toBeDisabled()
+    expect(
+      screen.getByText(/Тест завантажується лише файлом YAML/),
+    ).toBeInTheDocument()
+  })
+})

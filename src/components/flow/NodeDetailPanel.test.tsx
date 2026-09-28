@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { NodeDetailPanel } from './NodeDetailPanel'
 import { useCourseStore } from '../../stores/course'
-import { documentsApi } from '../../api/documents'
+import { documentsApi, type AuthoredDocumentCreateResponse } from '../../api/documents'
+import { nodesApi } from '../../api/nodes'
 import { ApiError } from '../../api/client'
 import type { AuthoredDocumentSummary, NodeWithDocuments } from '../../types/api'
 
@@ -231,5 +232,216 @@ describe('NodeDetailPanel — link rejection is shown, never swallowed', () => {
         'Не вдалося додати матеріал за посиланням. Спробуйте ще раз.',
       ),
     ).not.toBeInTheDocument()
+  })
+})
+
+describe('NodeDetailPanel — a test written in the system (task 07c)', () => {
+  beforeEach(() => {
+    useCourseStore.getState().reset()
+    vi.clearAllMocks()
+    navigateMock.mockReset()
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // A test as the tree carries it: named by its title, no file, the service
+  // link every written test shares, ready from its first moment.
+  function makeTest(
+    overrides: Partial<AuthoredDocumentSummary> = {},
+  ): AuthoredDocumentSummary {
+    return makeDoc({
+      id: 'test-1',
+      source_type: 'test_object',
+      task_type: 'test',
+      filename: null,
+      title: 'Змінні',
+      source_url: 'test-object:',
+      state: 'ready',
+      processing_phase: 'ready',
+      ...overrides,
+    })
+  }
+
+  const LESSON = makeDoc({
+    id: 'doc-2',
+    source_type: 'presentation',
+    filename: 'lesson.pdf',
+    source_url: 's3://bucket/lesson.pdf',
+    state: 'ready',
+    processing_phase: 'ready',
+  })
+
+  // The row of one material: its actions live beside the name.
+  function rowOf(name: string): HTMLElement {
+    return screen.getByText(name).closest('.group') as HTMLElement
+  }
+
+  it('shows a test by its title with an open button and without reprocessing or a role switch', () => {
+    seed(makeNode({ authored_documents: [makeTest()] }))
+    render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
+
+    const row = rowOf('Змінні')
+    expect(screen.queryByText('test-object:')).toBeNull()
+    // Its own icon, not the generic file.
+    expect(row.querySelector('.lucide-list-checks')).not.toBeNull()
+    // Never processed: no «Готово», nothing to reprocess, a fixed role.
+    expect(within(row).queryByText('Готово')).toBeNull()
+    expect(within(row).queryByTitle('Натисніть щоб змінити тип')).toBeNull()
+    expect(within(row).queryByTitle('Повторити обробку')).toBeNull()
+    expect(within(row).queryByTitle('Перезапустити обробку (force)')).toBeNull()
+    expect(
+      within(row).getByRole('button', { name: 'Приховати тест' }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(within(row).getByRole('button', { name: 'Відкрити тест' }))
+    expect(navigateMock).toHaveBeenCalledWith('/test/test-1/edit')
+  })
+
+  it('asks before hiding a test, naming what students lose and keep', async () => {
+    const ask = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    seed(makeNode({ authored_documents: [makeTest()] }))
+    render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Приховати тест' }))
+    expect(ask).toHaveBeenCalledExactlyOnceWith(
+      'Приховати тест «Змінні»? Студенти більше не побачать його в курсі; ' +
+        'спроби, які вже зроблено, збережуться. Скасувати приховування в ' +
+        'програмі автора не можна.',
+    )
+    expect(documentsApi.delete).not.toHaveBeenCalled()
+
+    ask.mockReturnValue(true)
+    vi.mocked(documentsApi.delete).mockResolvedValue(undefined)
+    vi.spyOn(nodesApi, 'getDetail').mockResolvedValue(makeNode())
+    fireEvent.click(screen.getByRole('button', { name: 'Приховати тест' }))
+
+    await waitFor(() => expect(screen.queryByText('Змінні')).toBeNull())
+    expect(documentsApi.delete).toHaveBeenCalledExactlyOnceWith('test-1')
+  })
+
+  it('shows a refused reprocessing instead of swallowing it', async () => {
+    seed(
+      makeNode({
+        authored_documents: [
+          makeDoc({
+            id: 'doc-err',
+            source_type: 'presentation',
+            filename: 'lesson.pdf',
+            source_url: 's3://bucket/lesson.pdf',
+            state: 'error',
+            processing_phase: 'error',
+            error_message: 'conversion failed',
+          }),
+        ],
+      }),
+    )
+    vi.mocked(documentsApi.retry).mockRejectedValue(
+      new ApiError(409, 'API error 409', null),
+    )
+    render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Повторити обробку' }))
+
+    const notice = await screen.findByRole('alert')
+    expect(notice).toHaveTextContent(
+      'Не вдалося запустити обробку «lesson.pdf». Спробуйте ще раз; якщо ' +
+        'повториться, напишіть нам.',
+    )
+    expect(documentsApi.retry).toHaveBeenCalledExactlyOnceWith('doc-err', false)
+    fireEvent.click(
+      within(notice).getByRole('button', { name: 'Закрити повідомлення' }),
+    )
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('shows a refused hiding or deletion instead of swallowing it', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    vi.mocked(documentsApi.delete).mockRejectedValue(new TypeError('Failed to fetch'))
+    seed(makeNode({ authored_documents: [makeTest(), LESSON] }))
+    render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Приховати тест' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Не вдалося приховати тест «Змінні». Спробуйте ще раз.',
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Видалити' }))
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Не вдалося видалити «lesson.pdf». Спробуйте ще раз.',
+      ),
+    )
+    // Both rows are still there: nothing was hidden or deleted.
+    expect(screen.getByText('Змінні')).toBeInTheDocument()
+    expect(screen.getByText('lesson.pdf')).toBeInTheDocument()
+  })
+
+  it('opens a new test in the editor from the panel', () => {
+    const section = makeNode({ id: 'node-2', parent_id: 'root-1', title: 'Розділ' })
+    useCourseStore.setState({
+      tree: makeNode({ id: 'root-1', children: [section] }),
+      selectedNodeId: 'node-2',
+      loading: false,
+      error: null,
+    })
+    render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Новий тест' }))
+
+    expect(navigateMock).toHaveBeenCalledExactlyOnceWith(
+      '/test/new?node=node-2&course=root-1',
+    )
+  })
+
+  it('uploads a YAML file as a test and shows it by its title, with no work to follow', async () => {
+    seed(makeNode())
+    const answer: AuthoredDocumentCreateResponse = {
+      id: 'test-1',
+      course_node_id: 'node-1',
+      source_type: 'test_object',
+      material_role: 'educational',
+      task_type: 'test',
+      source_url: 'test-object:',
+      filename: null,
+      language: 'ukr',
+      order: 0,
+      state: 'ready',
+      processing_phase: 'ready',
+      job_id: null,
+      warnings: [],
+      processing_estimate: null,
+      created_at: '',
+    }
+    vi.mocked(documentsApi.upload).mockResolvedValue(answer)
+    vi.spyOn(nodesApi, 'getDetail').mockResolvedValue(
+      makeNode({ authored_documents: [makeTest()] }),
+    )
+    const { container } = render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
+
+    // The visible picker; the drop area keeps its own hidden input first.
+    const picker = container.querySelectorAll('input[type=file]')[1]!
+    const file = new File(['title: Змінні\n'], 'quiz.yaml', {
+      type: 'application/yaml',
+    })
+    fireEvent.change(picker, { target: { files: [file] } })
+    fireEvent.click(await screen.findByRole('button', { name: 'Тест' }))
+    expect(screen.getByText('Тест завжди навчальний.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Завантажити' }))
+
+    expect(
+      await screen.findByRole('button', { name: 'Відкрити тест' }),
+    ).toBeInTheDocument()
+    expect(documentsApi.upload).toHaveBeenCalledExactlyOnceWith(
+      'node-1',
+      file,
+      'code',
+      'educational',
+      null,
+      'test',
+      expect.any(Function),
+    )
+    expect(screen.getByText('Змінні')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 })

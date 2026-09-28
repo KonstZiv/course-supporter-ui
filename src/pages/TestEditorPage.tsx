@@ -39,6 +39,7 @@ import {
   yamlFileProblem,
   type TestDraft,
 } from '../utils/testDraft'
+import { testEditorPath } from '../utils/testAddress'
 import { optionLetters } from '../utils/testLetters'
 import {
   BACK_TO_COURSES,
@@ -206,7 +207,7 @@ export function TestEditorPage() {
     const created = await editor.save()
     if (created !== null) {
       allowNextMove()
-      navigate(`/test/${created}/edit`, { replace: true })
+      navigate(testEditorPath(created), { replace: true })
     }
   }
 

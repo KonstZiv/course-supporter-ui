@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import type { WrittenTestResponse } from '../types/api'
 
@@ -327,6 +327,46 @@ describe('TestEditorPage', () => {
     expect(button('Перевірити моделлю')).toHaveAccessibleDescription(
       'Чернетку вже перевірено.',
     )
+  })
+
+  it('drops a poll answer that comes back while the draft is being saved', async () => {
+    const RUNNING = { state: 'in_progress' as const, explanations: {}, doubts: {} }
+    // The opening read; then the first poll of the running check, held back
+    // until the save is under way.
+    let answerPoll: (test: WrittenTestResponse) => void = () => {}
+    tests.get
+      .mockResolvedValueOnce(reading({ check: RUNNING }))
+      .mockImplementationOnce(
+        () => new Promise<WrittenTestResponse>((resolve) => (answerPoll = resolve)),
+      )
+    renderAt('/test/t1/edit')
+    await screen.findByRole('region', { name: 'Питання 1' })
+    await waitFor(() => expect(tests.get).toHaveBeenCalledTimes(2))
+
+    let answerSave: (test: WrittenTestResponse) => void = () => {}
+    tests.replace.mockImplementation(
+      () => new Promise<WrittenTestResponse>((resolve) => (answerSave = resolve)),
+    )
+    fireEvent.change(screen.getByLabelText('Назва тесту'), {
+      target: { value: 'Змінні й типи' },
+    })
+    fireEvent.click(button('Зберегти чернетку'))
+    await waitFor(() => expect(tests.replace).toHaveBeenCalledTimes(1))
+
+    // The poll comes back mid-save with what it read before the save: the old
+    // title, and the check finished meanwhile. The page keeps what it has.
+    await act(async () => answerPoll(reading({ check: READY })))
+    expect(screen.getByText('Перевірка йде…')).toBeInTheDocument()
+    expect(screen.queryByText('Перевірено моделлю')).toBeNull()
+    expect(screen.queryByText(/Пояснення моделі готові/)).toBeNull()
+
+    await act(async () =>
+      answerSave(reading({ title: 'Змінні й типи', check: RUNNING })),
+    )
+    expect(screen.getByText('Чернетку збережено.')).toBeInTheDocument()
+    expect(screen.getByText('Усі зміни збережено')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Змінні й типи' })).toBeInTheDocument()
+    expect(screen.getByText('Перевірка йде…')).toBeInTheDocument()
   })
 
   it('explains a collision with a running check instead of failing silently', async () => {

@@ -335,12 +335,17 @@ export function canAddOption(question: DraftQuestion): boolean {
   return question.options.length < TEST_LIMITS.options
 }
 
+/** A YAML file by its name — `.yaml` or `.yml` in any case, as the server reads it. */
+export function isYamlFileName(name: string): boolean {
+  return /\.ya?ml$/i.test(name)
+}
+
 /** Why a file cannot replace the draft, found before it is sent; or null. */
 export function yamlFileProblem(file: {
   name: string
   size: number
 }): 'not_yaml' | 'too_large' | null {
-  if (!/\.ya?ml$/i.test(file.name)) return 'not_yaml'
+  if (!isYamlFileName(file.name)) return 'not_yaml'
   return file.size > TEST_LIMITS.yamlFileBytes ? 'too_large' : null
 }
 

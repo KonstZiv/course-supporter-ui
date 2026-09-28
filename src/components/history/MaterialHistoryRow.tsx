@@ -8,6 +8,7 @@ import {
   Globe,
   AudioLines,
   FileCode,
+  ListChecks,
   File as FileIcon,
 } from 'lucide-react'
 import type {
@@ -28,7 +29,7 @@ import { relativeTime } from '../../utils/relativeTime'
 import { sourceTypeMeta } from '../../utils/sourceTypeIcon'
 
 // Icon-name → component, curated to keep the bundle small (same pattern as
-// NodeDetailPanel). Total over the six names sourceTypeMeta can return; anything
+// NodeDetailPanel). Total over the seven names sourceTypeMeta can return; anything
 // else falls to the generic file icon.
 const ICON_BY_NAME: Record<string, typeof FileIcon> = {
   Video,
@@ -37,6 +38,7 @@ const ICON_BY_NAME: Record<string, typeof FileIcon> = {
   Globe,
   AudioLines,
   FileCode,
+  ListChecks,
   File: FileIcon,
 }
 

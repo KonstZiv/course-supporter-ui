@@ -5,6 +5,7 @@ import { FolderOpen, Paperclip } from 'lucide-react'
 import type { FlowNodeData } from '../../../utils/treeToFlow'
 import { SummaryBadge } from '../SummaryBadge'
 import { phaseVocab, phasePillClass } from '../../../utils/stateVocabulary'
+import { documentLabel } from '../../../utils/documentLabel'
 
 export const SectionNode = memo(function SectionNode({
   data,
@@ -86,10 +87,10 @@ export const SectionNode = memo(function SectionNode({
                   'inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-medium',
                   phasePillClass(v),
                 )}
-                title={`${m.filename || m.source_url || m.source_type} — ${v.label}`}
+                title={`${documentLabel(m)} — ${v.label}`}
               >
                 <Paperclip size={9} />
-                {m.filename?.slice(0, 14) || m.source_url?.slice(0, 14) || m.source_type}
+                {documentLabel(m).slice(0, 14)}
               </span>
             )
           })}

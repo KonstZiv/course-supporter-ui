@@ -4,7 +4,9 @@ import { MaterialHistoryRow } from './MaterialHistoryRow'
 import type {
   JobListItemResponse,
   MaterialHistoryItemResponse,
+  SourceType,
 } from '../../types/api'
+import { sourceTypeMeta } from '../../utils/sourceTypeIcon'
 
 const NOW = Date.parse('2026-08-08T12:00:00Z')
 
@@ -143,5 +145,40 @@ describe('MaterialHistoryRow — chip has its own column (§3 Г8 п.5)', () => 
     // The chip lives in its own column — never inside the name cell (a chip in the
     // name flow is what made the left edge ragged; Г8 п.5).
     expect(nameCell.contains(chip)).toBe(false)
+  })
+})
+
+describe('MaterialHistoryRow — every kind has its own icon (task 07c)', () => {
+  // A hand-written witness, never derived from SourceType. A test is never
+  // processed, so today it does not reach the history at all; the icon map
+  // stays whole over what sourceTypeMeta can name all the same.
+  const KINDS: SourceType[] = [
+    'video',
+    'presentation',
+    'text',
+    'web',
+    'audio',
+    'code',
+    'test_object',
+  ]
+
+  it('never falls to the generic file icon for a known kind', () => {
+    render(
+      <table>
+        <tbody>
+          {KINDS.map((kind) => (
+            <MaterialHistoryRow
+              key={kind}
+              item={item({ material_id: kind, material_source_type: kind })}
+              now={NOW}
+            />
+          ))}
+        </tbody>
+      </table>,
+    )
+    for (const kind of KINDS) {
+      const icon = screen.getByRole('img', { name: sourceTypeMeta(kind).label })
+      expect(icon, kind).not.toHaveClass('lucide-file')
+    }
   })
 })
