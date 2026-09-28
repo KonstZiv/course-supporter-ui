@@ -1,5 +1,7 @@
 import { ApiError } from '../api/client'
+import { testRefusal } from '../api/tests'
 import { ingestErrorMessage } from './ingestErrors'
+import { yamlFileRefusalWords } from './testRefusals'
 
 /**
  * Extracts the human-readable rejection message from a backend
@@ -32,6 +34,9 @@ export function rejectionDetail(err: unknown): string | null {
  *     the author;
  *   * ``INTAKE_*`` (video duration / probe) → the backend's ready
  *     product-language ``details`` verbatim (that family already speaks uk);
+ *   * a YAML file refused as a test (``TEST_*`` with a file's reason, task
+ *     07c) → its words with its line, column, question and option, under
+ *     ``fileName`` when the caller gives one (``utils/testRefusals.ts``);
  *   * any OTHER recognised-code rejection → the generic phrase, so an
  *     unfamiliar family degrades to a polite sentence, never a raw / technical
  *     ``details`` (e.g. the English ``ARCHIVE_REQUIRES_CODE`` text). This is
@@ -43,7 +48,10 @@ export function rejectionDetail(err: unknown): string | null {
  * caller's own context fallback (file label / link message) takes over. It is
  * therefore the sole door for rejection TEXTS; it never returns raw.
  */
-export function authoredRejectionMessage(err: unknown): string | null {
+export function authoredRejectionMessage(
+  err: unknown,
+  fileName?: string,
+): string | null {
   if (!(err instanceof ApiError)) return null
   const detail = (err.body as { detail?: unknown } | null)?.detail
   if (!detail || typeof detail !== 'object') return null
@@ -58,6 +66,11 @@ export function authoredRejectionMessage(err: unknown): string | null {
     const details =
       'details' in detail ? (detail as { details?: unknown }).details : null
     return typeof details === 'string' ? details : ingestErrorMessage(null)
+  }
+  if (code.startsWith('TEST_')) {
+    const refusal = testRefusal(err.body)
+    const words = refusal && yamlFileRefusalWords(refusal, fileName)
+    if (words) return words
   }
   // A recognised envelope with a code we have no specific text for degrades to
   // the generic phrase — never the raw ``details``.

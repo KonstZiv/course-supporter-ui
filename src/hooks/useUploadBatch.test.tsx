@@ -135,6 +135,34 @@ describe('useUploadBatch (the one upload cycle, Е2/Е9)', () => {
     expect(result.current.state.active).toBe(false)
   })
 
+  it('names the file in the words of a YAML file refused as a test', async () => {
+    const tasks: UploadTask[] = [
+      {
+        label: 'змінні.yaml',
+        send: () =>
+          Promise.reject(
+            // The backend's own refusal of a YAML file cut off mid-list.
+            new ApiError(422, 'x', {
+              detail: {
+                code: 'TEST_YAML_UNREADABLE',
+                details:
+                  "the file is not YAML: expected the node content, but found '<stream end>'",
+                place: { line: 5, column: 1, question: null, option: null },
+              },
+            }),
+          ),
+      },
+    ]
+    const { result } = renderHook(() => useUploadBatch())
+    await act(async () => {
+      await result.current.run(tasks)
+    })
+    expect(result.current.failures).toEqual([
+      'змінні.yaml: тест не прочитано — файл не читається як YAML — перевірте ' +
+        'відступи, двокрапки й лапки — рядок 5, стовпчик 1',
+    ])
+  })
+
   it('falls back to product-language text when no reason is given (Е8)', async () => {
     const tasks: UploadTask[] = [
       { label: 'x.mp4', send: () => Promise.reject(new ApiError(500, 'x', null)) },
