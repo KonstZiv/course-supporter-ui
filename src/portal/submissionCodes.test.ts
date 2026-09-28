@@ -83,3 +83,30 @@ describe('submissionCodePhrase — unknown codes (DD-SP-D)', () => {
     expect(submissionCodePhrase.length).toBe(1)
   })
 })
+
+describe('submissionCodePhrase — the student comment (hotfix 6)', () => {
+  it('STUDENT_NOTE_TOO_LONG names the cap and asks to shorten', () => {
+    // ``\s``: the number is grouped with a no-break space.
+    expect(submissionCodePhrase('STUDENT_NOTE_TOO_LONG')).toMatch(
+      /^Коментар задовгий — максимум 2\s000 знаків\. Скоротіть його/,
+    )
+  })
+
+  it('STUDENT_NOTE_REJECTED names both screens and what to do', () => {
+    const phrase = submissionCodePhrase('STUDENT_NOTE_REJECTED')
+    expect(phrase).toMatch(/^Коментар не прийнято/)
+    expect(phrase).toMatch(/приховані чи підмінені символи/)
+    expect(phrase).toMatch(/інструкції, адресовані системі перевірки/)
+    expect(phrase).toMatch(/Приберіть їх і надішліть знову\.$/)
+  })
+
+  it('gives each code a sentence of its own, neither of them the generic', () => {
+    const phrases = ['STUDENT_NOTE_TOO_LONG', 'STUDENT_NOTE_REJECTED'].map(
+      submissionCodePhrase,
+    )
+    expect(new Set(phrases).size).toBe(2)
+    for (const phrase of phrases) {
+      expect(phrase).not.toBe(submissionCodePhrase('SOME_NEW_CODE'))
+    }
+  })
+})

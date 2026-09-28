@@ -11,6 +11,8 @@
 //                                NOT_A_TEST_TASK / TEST_VERSION_CHANGED /
 //                                TEST_NOT_READY / ANSWERS_DO_NOT_MATCH_TEST —
 //                                the doors of a test (task 07)
+//   UPPER_SNAKE (comment)        STUDENT_NOTE_TOO_LONG / STUDENT_NOTE_REJECTED —
+//                                the door of the student's comment (hotfix 6)
 //
 // Both reach the same handler, so both resolve through this one lookup. The key
 // spaces are disjoint by case, so the order of the two checks carries no
@@ -41,6 +43,7 @@
 
 import { doorRefusal, PortalApiError } from './api/portalClient'
 import { articlePhrase, reasonArticle, UNKNOWN_REASON } from './rejectionReasons'
+import { formatCount, STUDENT_NOTE_MAX_CHARS } from './studentNote'
 
 const SUBMISSION_CODES: Record<string, string> = {
   ARCHIVE_ONLY:
@@ -75,6 +78,18 @@ const SUBMISSION_CODES: Record<string, string> = {
   ANSWERS_DO_NOT_MATCH_TEST:
     'Відповіді не збігаються з питаннями тесту. Оновіть сторінку й надішліть ' +
     'відповіді ще раз.',
+  // Hotfix 6 — the student's comment, refused before anything is stored. The
+  // screens are the ones a text file meets, so the words follow the file's
+  // (``suspicious_unicode`` and ``prompt_injection`` in rejectionReasons.ts);
+  // the category the server names in ``details`` is not read here.
+  STUDENT_NOTE_TOO_LONG:
+    `Коментар задовгий — максимум ${formatCount(STUDENT_NOTE_MAX_CHARS)} знаків. ` +
+    'Скоротіть його й надішліть знову.',
+  STUDENT_NOTE_REJECTED:
+    'Коментар не прийнято: у ньому є приховані чи підмінені символи або ' +
+    'інструкції, адресовані системі перевірки. Такі символи часто приносить ' +
+    'текст, скопійований з іншої програми, і деякі емодзі. Приберіть їх і ' +
+    'надішліть знову.',
   // Task 05 — the one refusal an answer about a review can meet. Not a door
   // code: the student reaches it from the review panel, not from the submit
   // form. It lives here because this is where a code becomes a sentence, and a

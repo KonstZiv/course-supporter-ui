@@ -724,3 +724,99 @@ describe('PortalSubmitForm — після подачі (крок Д)', () => {
     expect(submitBtn()).toBeEnabled()
   })
 })
+
+describe('PortalSubmitForm — коментар (гаряче виправлення 6)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    resetPortalLanguages()
+    resetSubmissionPolicy()
+    mockedLanguages.mockResolvedValue({ items: LANGUAGES, total: LANGUAGES.length })
+    mockedMe.mockResolvedValue(me())
+    mockedPolicy.mockResolvedValue(POLICY)
+    mockedSubmit.mockResolvedValue({
+      submission_id: 'sub-1',
+      status: 'received',
+      duplicate: false,
+    })
+  })
+
+  const noteField = () => screen.getByLabelText('Коментар') as HTMLTextAreaElement
+  const typeNote = (value: string) => fireEvent.change(noteField(), { target: { value } })
+  const sentNote = () => (mockedSubmit.mock.calls[0]![1] as FormData).get('student_note')
+
+  it('counts the comment under the field as the student types', () => {
+    renderForm()
+    expect(screen.getByText('0 / 2 000')).toBeInTheDocument()
+    typeNote('питання')
+    expect(screen.getByText('7 / 2 000')).toBeInTheDocument()
+  })
+
+  it('sends a comment at the cap, without its edges', async () => {
+    renderForm()
+    typeNote(`  ${'я'.repeat(2000)}\n`)
+    pickFile()
+    expect(screen.getByText('2 000 / 2 000')).toBeInTheDocument()
+    expect(submitBtn()).toBeEnabled()
+    fireEvent.click(submitBtn())
+    await waitFor(() => expect(mockedSubmit).toHaveBeenCalledTimes(1))
+    expect(sentNote()).toBe('я'.repeat(2000))
+  })
+
+  it('counts an emoji once, as the server does', () => {
+    renderForm()
+    typeNote('🙂'.repeat(2000))
+    pickFile()
+    expect(screen.getByText('2 000 / 2 000')).toBeInTheDocument()
+    expect(submitBtn()).toBeEnabled()
+  })
+
+  it('keeps a longer comment whole, says why, and does not send it', () => {
+    renderForm()
+    const long = 'я'.repeat(2001)
+    typeNote(long)
+    pickFile()
+    // Nothing is cut: the student sees all of it and decides what to drop.
+    expect(noteField().value).toBe(long)
+    expect(screen.getByText('2 001 / 2 000')).toBeInTheDocument()
+    expect(
+      screen.getByText(/^Коментар задовгий — максимум 2\s000 знаків\./),
+    ).toBeInTheDocument()
+    expect(noteField()).toHaveAttribute('aria-invalid', 'true')
+    expect(submitBtn()).toBeDisabled()
+    // Past the disabled button — an Enter submit reaches the handler itself.
+    fireEvent.submit(submitBtn().closest('form') as HTMLFormElement)
+    expect(mockedSubmit).not.toHaveBeenCalled()
+  })
+
+  it('shows the door phrase when the server refuses the comment, and keeps it', async () => {
+    mockedSubmit.mockRejectedValue(
+      new PortalApiError(422, 'x', {
+        detail: {
+          code: 'STUDENT_NOTE_REJECTED',
+          details: 'prompt_injection: the comment did not pass a text check.',
+        },
+      }),
+    )
+    renderForm()
+    typeNote('питання')
+    pickFile()
+    fireEvent.click(submitBtn())
+    await waitFor(() =>
+      expect(screen.getByText(/^Коментар не прийнято/)).toBeInTheDocument(),
+    )
+    // The student fixes the comment where it is; the server's words stay out.
+    expect(noteField().value).toBe('питання')
+    expect(screen.queryByText(/prompt_injection/)).not.toBeInTheDocument()
+  })
+
+  it('counts from zero again once the attempt is sent', async () => {
+    renderForm()
+    typeNote('питання')
+    pickFile()
+    fireEvent.click(submitBtn())
+    await waitFor(() => {
+      expect(screen.getByText('Рішення надіслано — очікує перевірки.')).toBeInTheDocument()
+    })
+    expect(screen.getByText('0 / 2 000')).toBeInTheDocument()
+  })
+})
