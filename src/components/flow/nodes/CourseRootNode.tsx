@@ -4,7 +4,7 @@ import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { BookOpen, Layers, Paperclip } from 'lucide-react'
 import type { FlowNodeData } from '../../../utils/treeToFlow'
 import { SummaryBadge } from '../SummaryBadge'
-import { phaseVocab, phasePillClass } from '../../../utils/stateVocabulary'
+import { pillVocab, phasePillClass } from '../../../utils/stateVocabulary'
 import { documentLabel } from '../../../utils/documentLabel'
 
 export const CourseRootNode = memo(function CourseRootNode({
@@ -65,7 +65,7 @@ export const CourseRootNode = memo(function CourseRootNode({
       {data.authored_documents.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-3">
           {data.authored_documents.slice(0, 4).map((m) => {
-            const v = phaseVocab(m.processing_phase)
+            const v = pillVocab(m)
             return (
               <span
                 key={m.id}

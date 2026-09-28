@@ -57,5 +57,7 @@ describe('SectionNode', () => {
     })
     expect(screen.getByText('Змінні')).toBeInTheDocument()
     expect(screen.queryByText(/test-object/)).toBeNull()
+    // Never processed, and its publication is not in the tree: no «Готово».
+    expect(screen.getByText('Змінні')).toHaveAttribute('title', 'Змінні — тест')
   })
 })

@@ -73,6 +73,10 @@ export function useTestEditor(address: EditorAddress) {
   savedIdRef.current = saved?.id ?? null
   const busyRef = useRef(busy)
   busyRef.current = busy
+  // Bumped at the start of every action. A poll answer is kept only when no
+  // action began while it was on its way: one that did answers with a newer
+  // state, whether it is still under way or already done.
+  const actionsRef = useRef(0)
 
   const { documentId } = address
   const nodeId = address.documentId === undefined ? address.nodeId : null
@@ -155,6 +159,7 @@ export function useTestEditor(address: EditorAddress) {
       setErrorsShown((n) => n + 1)
       return null
     }
+    actionsRef.current += 1
     setBusy('save')
     setBanner(null)
     try {
@@ -182,6 +187,7 @@ export function useTestEditor(address: EditorAddress) {
 
   const check = useCallback(async () => {
     if (saved === null) return
+    actionsRef.current += 1
     setBusy('check')
     setBanner(null)
     try {
@@ -199,6 +205,7 @@ export function useTestEditor(address: EditorAddress) {
 
   const publish = useCallback(async () => {
     if (saved === null) return
+    actionsRef.current += 1
     setBusy('publish')
     setBanner(null)
     try {
@@ -227,6 +234,7 @@ export function useTestEditor(address: EditorAddress) {
   /** The saved draft as a YAML file, named by the test. */
   const exportYaml = useCallback(async () => {
     if (saved === null) return
+    actionsRef.current += 1
     setBusy('export')
     setBanner(null)
     try {
@@ -249,6 +257,7 @@ export function useTestEditor(address: EditorAddress) {
   const replaceWithYaml = useCallback(
     async (file: File) => {
       if (saved === null) return
+      actionsRef.current += 1
       setBusy('replace')
       setBanner(null)
       setServerMark(null)
@@ -269,6 +278,7 @@ export function useTestEditor(address: EditorAddress) {
   /** Hide the test; resolves to true once it is hidden. */
   const hide = useCallback(async (): Promise<boolean> => {
     if (saved === null) return false
+    actionsRef.current += 1
     setBusy('hide')
     setBanner(null)
     try {
@@ -291,11 +301,14 @@ export function useTestEditor(address: EditorAddress) {
     async () => {
       const id = savedIdRef.current
       if (id === null) return true
+      const actionsBefore = actionsRef.current
       try {
         const fresh = await testsApi.get(id)
         // A save, a replacement or a publication in flight answers with the
         // newer draft; a poll answer read before it must not undo it.
         if (busyRef.current !== null) return false
+        // Nor once that action is done, if it began after this answer was asked.
+        if (actionsRef.current !== actionsBefore) return false
         setSaved(fresh)
         setBanner((current) => (current === POLLING_FAILED ? null : current))
         if (fresh.check.state === 'ready') {

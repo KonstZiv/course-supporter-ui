@@ -17,8 +17,9 @@ import type { ProcessingPhase, JobState, AuthorJobType } from '../types/api'
 // + section pill + root pill). Each surface owns its visual density; the tone +
 // pulse identity lives here once. ``queued`` and ``processing`` share the
 // ``busy`` tone (amber) and differ ONLY by the pulse — "amber = busy, pulse =
-// active" (PROBE-B q6). ``muted`` is the forward-compat fallback tone, never a
-// real phase.
+// active" (PROBE-B q6). ``muted`` is the neutral tone: the forward-compat
+// fallback for an unknown phase, and a test's canvas pill, which has no phase
+// to show.
 export type PhaseTone = 'busy' | 'awaiting' | 'ready' | 'error' | 'muted'
 
 export interface PhaseVocabEntry {
@@ -43,6 +44,22 @@ const UNKNOWN_PHASE: PhaseVocabEntry = { label: '—', tone: 'muted', pulse: fal
 /** Total lookup: a known phase → its entry, anything else → the muted fallback. */
 export function phaseVocab(phase: ProcessingPhase): PhaseVocabEntry {
   return PHASE_VOCAB[phase] ?? UNKNOWN_PHASE
+}
+
+// A test written in the system is never processed, so its phase is always
+// ``ready`` — on a canvas pill that reads as "done". Whether students see it
+// is its publication's to say, and the tree does not carry that yet: the pill
+// stays neutral and says what the document is (task 07c).
+const TEST_PILL: PhaseVocabEntry = { label: 'тест', tone: 'muted', pulse: false }
+
+/** A canvas pill's word and tone: a test's own, any other material's phase. */
+export function pillVocab(document: {
+  source_type: string
+  processing_phase: ProcessingPhase
+}): PhaseVocabEntry {
+  return document.source_type === 'test_object'
+    ? TEST_PILL
+    : phaseVocab(document.processing_phase)
 }
 
 // Work-state axis — six values, words only. Read by every work-state surface

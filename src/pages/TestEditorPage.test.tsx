@@ -369,6 +369,34 @@ describe('TestEditorPage', () => {
     expect(screen.getByText('Перевірка йде…')).toBeInTheDocument()
   })
 
+  it('keeps a newer save when a poll answer asked before it comes back after it', async () => {
+    const RUNNING = { state: 'in_progress' as const, explanations: {}, doubts: {} }
+    // The opening read; then the first poll of the running check, held back
+    // until the save has answered.
+    let answerPoll: (test: WrittenTestResponse) => void = () => {}
+    tests.get
+      .mockResolvedValueOnce(reading({ check: RUNNING }))
+      .mockImplementationOnce(
+        () => new Promise<WrittenTestResponse>((resolve) => (answerPoll = resolve)),
+      )
+    renderAt('/test/t1/edit')
+    await screen.findByRole('region', { name: 'Питання 1' })
+    await waitFor(() => expect(tests.get).toHaveBeenCalledTimes(2))
+
+    tests.replace.mockResolvedValue(reading({ title: 'Змінні й типи', check: RUNNING }))
+    fireEvent.change(screen.getByLabelText('Назва тесту'), {
+      target: { value: 'Змінні й типи' },
+    })
+    fireEvent.click(button('Зберегти чернетку'))
+    expect(await screen.findByText('Чернетку збережено.')).toBeInTheDocument()
+
+    // Only now does the poll come back, with what it read before the save.
+    await act(async () => answerPoll(reading({ check: RUNNING })))
+    expect(screen.getByText('Усі зміни збережено')).toBeInTheDocument()
+    expect(screen.queryByText('Є незбережені зміни')).toBeNull()
+    expect(screen.getByRole('heading', { level: 1, name: 'Змінні й типи' })).toBeInTheDocument()
+  })
+
   it('explains a collision with a running check instead of failing silently', async () => {
     await openTest()
     tests.check.mockRejectedValue(

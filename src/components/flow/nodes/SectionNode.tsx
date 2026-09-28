@@ -4,7 +4,7 @@ import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { FolderOpen, Paperclip } from 'lucide-react'
 import type { FlowNodeData } from '../../../utils/treeToFlow'
 import { SummaryBadge } from '../SummaryBadge'
-import { phaseVocab, phasePillClass } from '../../../utils/stateVocabulary'
+import { pillVocab, phasePillClass } from '../../../utils/stateVocabulary'
 import { documentLabel } from '../../../utils/documentLabel'
 
 export const SectionNode = memo(function SectionNode({
@@ -79,7 +79,7 @@ export const SectionNode = memo(function SectionNode({
       {docs.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2">
           {docs.slice(0, 5).map((m) => {
-            const v = phaseVocab(m.processing_phase)
+            const v = pillVocab(m)
             return (
               <span
                 key={m.id}

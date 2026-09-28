@@ -123,7 +123,7 @@ export function UploadConfirmDialog({
           `}
         >
           <span className="text-2xl block mb-1">📚</span>
-          <span className="text-sm font-medium text-ink">Учбовий</span>
+          <span className="text-sm font-medium text-ink">Навчальний</span>
           <span className="text-[11px] text-ink-muted block mt-0.5">
             Доносить інформацію студенту
           </span>

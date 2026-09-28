@@ -161,6 +161,31 @@ describe('NodeDetailPanel — awaiting_author entry (№21 UI2)', () => {
   })
 })
 
+describe("NodeDetailPanel — a material's role", () => {
+  beforeEach(() => {
+    useCourseStore.getState().reset()
+  })
+
+  it('calls the roles «навчальний» and «методичний»', () => {
+    seed(
+      makeNode({
+        authored_documents: [
+          makeDoc({ id: 'doc-1', filename: 'lesson.pdf', processing_phase: 'ready' }),
+          makeDoc({
+            id: 'doc-2',
+            filename: 'plan.pdf',
+            material_role: 'methodological',
+            processing_phase: 'ready',
+          }),
+        ],
+      }),
+    )
+    render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
+    expect(screen.getByText('📚 навчальний')).toBeInTheDocument()
+    expect(screen.getByText('📋 методичний')).toBeInTheDocument()
+  })
+})
+
 describe('NodeDetailPanel — link rejection is shown, never swallowed', () => {
   beforeEach(() => {
     useCourseStore.getState().reset()
@@ -177,7 +202,7 @@ describe('NodeDetailPanel — link rejection is shown, never swallowed', () => {
       { target: { value: url } },
     )
     fireEvent.click(screen.getByText('Додати'))
-    fireEvent.click(screen.getByText('Учбовий'))
+    fireEvent.click(screen.getByText('Навчальний'))
     fireEvent.click(screen.getByText('Завантажити'))
   }
 

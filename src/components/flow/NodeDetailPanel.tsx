@@ -508,7 +508,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                         `}
                         title="Натисніть щоб змінити тип"
                       >
-                        {isMethodological ? '📋 методичний' : '📚 учбовий'}
+                        {isMethodological ? '📋 методичний' : '📚 навчальний'}
                       </button>
                     )}
                     {isTest && (
