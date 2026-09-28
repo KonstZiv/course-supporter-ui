@@ -1,0 +1,36 @@
+/*
+ * The author program's own styles, loaded by src/main.tsx alone: the portal
+ * shares index.css and keeps its look (task 07c, decision 16, question 23.1-б).
+ *
+ * A button that cannot be pressed looks like one: dimmed, with a not-allowed
+ * cursor and no hover or press effect. The variants take the base through
+ * @apply rather than the .btn class, so each is listed.
+ */
+.btn:disabled,
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-accent:disabled,
+.btn-danger:disabled,
+.btn-ghost:disabled {
+  @apply cursor-not-allowed opacity-50 active:scale-100;
+}
+
+.btn-primary:disabled {
+  @apply hover:bg-navy;
+}
+
+.btn-secondary:disabled {
+  @apply hover:bg-canvas-dark;
+}
+
+.btn-accent:disabled {
+  @apply hover:bg-amber;
+}
+
+.btn-danger:disabled {
+  @apply hover:bg-coral;
+}
+
+.btn-ghost:disabled {
+  @apply hover:bg-transparent;
+}
