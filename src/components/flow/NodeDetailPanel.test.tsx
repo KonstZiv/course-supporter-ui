@@ -323,6 +323,49 @@ describe('NodeDetailPanel — a test written in the system (task 07c)', () => {
     expect(navigateMock).toHaveBeenCalledWith('/test/test-1/edit')
   })
 
+  // Task Б2: beside the name, the editor's own chip for whether students see
+  // the test; nothing when the tree does not say.
+  it.each([
+    ['draft', 'Не опубліковано', 'bg-canvas-dark', undefined],
+    ['published', 'Опубліковано', 'bg-forest-pale', 'Студенти бачать цю версію тесту'],
+    [
+      'changed',
+      'Є неопубліковані зміни',
+      'bg-navy-pale',
+      'Чернетка відрізняється від версії, яку бачать студенти',
+    ],
+  ] as const)('shows a %s test as «%s» beside its name', (state, label, tone, hint) => {
+    seed(makeNode({ authored_documents: [makeTest({ test_state: state })] }))
+    render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
+
+    const chip = within(rowOf('Змінні')).getByText(label)
+    expect(chip).toHaveClass(tone)
+    if (hint === undefined) expect(chip).not.toHaveAttribute('title')
+    else expect(chip).toHaveAttribute('title', hint)
+    for (const other of ['Не опубліковано', 'Опубліковано', 'Є неопубліковані зміни']) {
+      if (other !== label) expect(within(rowOf('Змінні')).queryByText(other)).toBeNull()
+    }
+  })
+
+  it.each([
+    ['null', null],
+    ['absent (an older backend)', undefined],
+  ] as const)('shows no publication chip for a test whose state is %s', (_, state) => {
+    const test = makeTest()
+    seed(
+      makeNode({
+        authored_documents: [state === undefined ? test : { ...test, test_state: state }],
+      }),
+    )
+    render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
+
+    const row = rowOf('Змінні')
+    for (const word of ['Не опубліковано', 'Опубліковано', 'Є неопубліковані зміни']) {
+      expect(within(row).queryByText(word)).toBeNull()
+    }
+    expect(within(row).getByRole('button', { name: 'Відкрити тест' })).toBeInTheDocument()
+  })
+
   it('asks before hiding a test, naming what students lose and keep', async () => {
     const ask = vi.spyOn(window, 'confirm').mockReturnValue(false)
     seed(makeNode({ authored_documents: [makeTest()] }))

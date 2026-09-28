@@ -122,7 +122,17 @@ export interface AuthoredDocumentSummary {
   error_message: string | null
   error_category: string | null
   created_at: string
+  // A test written in the system, as the author's tree marks it (backend
+  // ``AuthoredDocumentSummaryResponse.test_state``, task Б2): ``draft`` — never
+  // published; ``published`` — the draft equals the latest version;
+  // ``changed`` — published, and the draft differs from it. ``null`` for any
+  // other document and for a test whose state could not be read. Optional: a
+  // backend without the field reads as ``null``.
+  test_state?: TestState | null
 }
+
+// A test's publication state on the author's tree (task Б2).
+export type TestState = 'draft' | 'published' | 'changed'
 
 // Methodist summary badge state surfaced per-node on the tree-feed
 // (Task 3.2.5b commit-1): ``none`` (no summary), ``draft`` (generated, not

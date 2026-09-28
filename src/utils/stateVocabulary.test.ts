@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import type { ProcessingPhase, JobState, AuthorJobType } from '../types/api'
+import type { ProcessingPhase, JobState, AuthorJobType, TestState } from '../types/api'
+import { TEXTS } from '../components/testEditor/editorTexts'
 import {
   PHASE_VOCAB,
   JOB_STATE_LABEL,
@@ -9,6 +10,7 @@ import {
   phaseBadgeClass,
   phasePillClass,
   jobStateWordClass,
+  TEST_STATE_VOCAB,
 } from './stateVocabulary'
 
 // Second witness for totality (mirrors the backend ``_JOB_STATE_BY_STATUS``
@@ -82,12 +84,36 @@ describe('phaseVocab — total lookup', () => {
 })
 
 describe('pillVocab — a canvas pill', () => {
-  it("keeps a test neutral and names it, since the tree does not say whether it is published", () => {
+  it('keeps a test neutral and names it when the tree does not say whether it is published (an older backend)', () => {
     expect(pillVocab({ source_type: 'test_object', processing_phase: 'ready' })).toEqual({
       label: 'тест',
       tone: 'muted',
       pulse: false,
     })
+  })
+
+  it.each([
+    ['draft', 'Не опубліковано', 'muted'],
+    ['published', 'Опубліковано', 'ready'],
+    ['changed', 'Є неопубліковані зміни', 'awaiting'],
+  ] as const)('gives a %s test the editor\'s word %s', (state, label, tone) => {
+    expect(
+      pillVocab({ source_type: 'test_object', processing_phase: 'ready', test_state: state }),
+    ).toEqual({ label, tone, pulse: false })
+  })
+
+  it('keeps a test with a null or unknown state neutral', () => {
+    for (const test_state of [null, 'brand_new' as TestState]) {
+      expect(
+        pillVocab({ source_type: 'test_object', processing_phase: 'ready', test_state }).label,
+      ).toBe('тест')
+    }
+  })
+
+  it('takes the words from the test editor, not a copy of them', () => {
+    expect(TEST_STATE_VOCAB.draft.label).toBe(TEXTS.notPublished)
+    expect(TEST_STATE_VOCAB.published.label).toBe(TEXTS.published)
+    expect(TEST_STATE_VOCAB.changed.label).toBe(TEXTS.unpublishedChanges)
   })
 
   it('gives any other material its phase', () => {

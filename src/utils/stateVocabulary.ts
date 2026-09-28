@@ -1,5 +1,7 @@
 import { clsx } from 'clsx'
-import type { ProcessingPhase, JobState, AuthorJobType } from '../types/api'
+import type { ProcessingPhase, JobState, AuthorJobType, TestState } from '../types/api'
+import { TEXTS } from '../components/testEditor/editorTexts'
+import type { Tone } from '../components/testEditor/Chip'
 
 // Single source of the author-facing vocabulary — one map per axis (TASK-B §2,
 // step Г Г4). Every surface that shows an axis reads its word (and, for the
@@ -48,18 +50,60 @@ export function phaseVocab(phase: ProcessingPhase): PhaseVocabEntry {
 
 // A test written in the system is never processed, so its phase is always
 // ``ready`` — on a canvas pill that reads as "done". Whether students see it
-// is its publication's to say, and the tree does not carry that yet: the pill
-// stays neutral and says what the document is (task 07c).
+// is its publication's to say: the tree carries it as ``test_state`` (task Б2).
+// A tree without it — an older backend, or a test whose state could not be
+// read — keeps the neutral pill that says what the document is (task 07c).
 const TEST_PILL: PhaseVocabEntry = { label: 'тест', tone: 'muted', pulse: false }
 
-/** A canvas pill's word and tone: a test's own, any other material's phase. */
+export interface TestStateVocabEntry {
+  label: string
+  // The hint the editor's own chip carries for this state, if any.
+  hint?: string
+  // The editor's chip tone (``EditorToolbar``) …
+  chipTone: Tone
+  // … and the same colour on the canvas pill's ladder: neutral ↔ muted,
+  // forest ↔ ready, navy ↔ awaiting (the same pale/ink pairs).
+  pillTone: PhaseTone
+}
+
+// A test's publication state in the words and tones of the test editor's
+// toolbar (``components/testEditor/editorTexts.ts``, ``EditorToolbar.tsx``) —
+// taken from there, never retyped, so the tree and the editor cannot drift.
+// The editor shows ``changed`` as «Опубліковано» with «Є неопубліковані зміни»
+// beside it; one pill has room for one word, and the second is the one that
+// tells ``changed`` from ``published``.
+export const TEST_STATE_VOCAB: Record<TestState, TestStateVocabEntry> = {
+  draft: { label: TEXTS.notPublished, chipTone: 'neutral', pillTone: 'muted' },
+  published: {
+    label: TEXTS.published,
+    hint: TEXTS.publishedHint,
+    chipTone: 'forest',
+    pillTone: 'ready',
+  },
+  changed: {
+    label: TEXTS.unpublishedChanges,
+    hint: TEXTS.unpublishedChangesHint,
+    chipTone: 'navy',
+    pillTone: 'awaiting',
+  },
+}
+
+/** A test's state entry, or ``null`` when the tree does not say (absent/null/unknown). */
+export function testStateVocab(state: TestState | null | undefined): TestStateVocabEntry | null {
+  return (state && TEST_STATE_VOCAB[state]) || null
+}
+
+/** A canvas pill's word and tone: a test's publication state, any other material's phase. */
 export function pillVocab(document: {
   source_type: string
   processing_phase: ProcessingPhase
+  test_state?: TestState | null
 }): PhaseVocabEntry {
-  return document.source_type === 'test_object'
+  if (document.source_type !== 'test_object') return phaseVocab(document.processing_phase)
+  const state = testStateVocab(document.test_state)
+  return state === null
     ? TEST_PILL
-    : phaseVocab(document.processing_phase)
+    : { label: state.label, tone: state.pillTone, pulse: false }
 }
 
 // Work-state axis — six values, words only. Read by every work-state surface
