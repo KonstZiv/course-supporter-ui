@@ -11,6 +11,7 @@ const ALL_SOURCE_TYPES: SourceType[] = [
   'web',
   'audio',
   'code',
+  'test_object',
 ]
 
 describe('sourceTypeMeta', () => {

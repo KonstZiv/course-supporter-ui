@@ -77,6 +77,7 @@ function makeDoc(
     task_type: null,
     order: 0,
     filename: 'lesson.zip',
+    title: null,
     source_url: 's3://bucket/lesson.zip',
     language: 'ukr',
     state: 'ready',

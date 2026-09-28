@@ -17,6 +17,10 @@ export function sourceTypeMeta(type: string) {
       // ``text-ink-muted`` (#8A8A9A), so a deleted code material stays readable by
       // its icon alone (Р7 / step-Г visual pass Г8).
       return { label: 'Код', icon: 'FileCode', color: 'text-ink' }
+    case 'test_object':
+      // The same strong neutral as code: the palette has no chromatic hue
+      // left for a seventh kind (task 07c).
+      return { label: 'Тест', icon: 'ListChecks', color: 'text-ink' }
     default:
       return { label: type, icon: 'File', color: 'text-ink-muted' }
   }

@@ -49,41 +49,68 @@ export function apiErrorFromBody(
   return new ApiError(status, `API error ${status}`, body)
 }
 
-async function request<T>(
+interface Outgoing {
+  method?: string
+  body?: BodyInit
+  contentType?: string
+}
+
+/**
+ * The one step every call of this client takes: the key, the URL and a
+ * refusal turned into ``ApiError`` with its body. Reading the answer is the
+ * caller's — JSON for most routes, text for a file a route serves.
+ */
+async function send(
   path: string,
-  options: RequestInit = {},
-): Promise<T> {
-  const apiKey = resolveApiKeyOrThrow()
-
-  const url = apiUrl(path)
+  { contentType, ...init }: Outgoing = {},
+): Promise<Response> {
   const headers: Record<string, string> = {
-    'X-API-Key': apiKey,
-    ...((options.headers as Record<string, string>) || {}),
+    'X-API-Key': resolveApiKeyOrThrow(),
   }
+  if (contentType) headers['Content-Type'] = contentType
 
-  // Don't set Content-Type for FormData (browser sets it with boundary)
-  if (!(options.body instanceof FormData)) {
-    headers['Content-Type'] = 'application/json'
-  }
-
-  const res = await fetch(url, { ...options, headers })
+  const res = await fetch(apiUrl(path), { ...init, headers })
 
   if (!res.ok) {
     throw apiErrorFromBody(res.status, await res.text().catch(() => null))
   }
+  return res
+}
 
+async function readJson<T>(res: Response): Promise<T> {
   if (res.status === 204) return undefined as T
   return res.json()
 }
 
+async function request<T>(
+  path: string,
+  init: Omit<Outgoing, 'contentType'> = {},
+): Promise<T> {
+  // Don't set Content-Type for FormData (browser sets it with boundary)
+  const contentType =
+    init.body instanceof FormData ? undefined : 'application/json'
+  return readJson<T>(await send(path, { ...init, contentType }))
+}
+
 export const api = {
   get: <T>(path: string) => request<T>(path),
+
+  /** GET an answer that is text, not JSON — a file a route serves. */
+  getText: async (path: string): Promise<string> =>
+    (await send(path)).text(),
 
   post: <T>(path: string, body?: unknown) =>
     request<T>(path, {
       method: 'POST',
       body: body instanceof FormData ? body : JSON.stringify(body),
     }),
+
+  put: <T>(path: string, body: unknown) =>
+    request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
+
+  /** PUT a body that is not JSON under its own type; the answer is JSON. */
+  putText: async <T>(path: string, body: Blob | string, contentType: string) =>
+    readJson<T>(await send(path, { method: 'PUT', body, contentType })),
 
   patch: <T>(path: string, body: unknown) =>
     request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),

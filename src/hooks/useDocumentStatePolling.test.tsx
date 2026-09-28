@@ -25,6 +25,7 @@ function makeDocument(phase: ProcessingPhase): AuthoredDocumentSummary {
     task_type: null,
     order: 0,
     filename: 'file.txt',
+    title: null,
     source_url: 'https://example/file.txt',
     language: null,
     // The coarse axis is irrelevant to the poll now; keep it plausible
