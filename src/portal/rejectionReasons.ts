@@ -221,6 +221,11 @@ const IN_ARCHIVE: Record<string, ReasonArticle> = {
   charset_violation: { what: 'Кодування не розпізнано.' },
   nested_archive: { what: 'Архів усередині архіву.' },
   over_budget: { what: 'Завеликий для перевірки.' },
+  may_contain_secrets: {
+    what: 'Файл не відкривали: такі файли зазвичай містять секрети — ключі чи паролі.',
+    action:
+      'Не додавайте їх до роботи; якщо потрібен приклад, покладіть файл .env.example без справжніх значень.',
+  },
 }
 
 const DOCUMENT_IN_ARCHIVE: ReasonArticle = {
