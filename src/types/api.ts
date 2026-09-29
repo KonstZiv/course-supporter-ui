@@ -442,7 +442,11 @@ export interface ProjectBaseAttachResponse {
 // GET /documents/{id}/base/manifest — the typed P1 Manifest (DD-6-V). Fetched
 // ONLY when state='ready' (the route is READY-only, 404 otherwise).
 export type EntryClass = 'text' | 'document' | 'binary'
-export type ExcludedReason = 'denylist_dir' | 'magic_mismatch' | 'nested_archive'
+export type ExcludedReason =
+  | 'denylist_dir'
+  | 'magic_mismatch'
+  | 'nested_archive'
+  | 'may_contain_secrets'
 
 export interface ManifestEntry {
   path: string

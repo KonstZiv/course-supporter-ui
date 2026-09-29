@@ -25,6 +25,9 @@ const REASON_LABEL: Record<ExcludedReason, string> = {
   denylist_dir: 'службова тека',
   magic_mismatch: 'невідповідність типу',
   nested_archive: 'вкладений архів',
+  may_contain_secrets:
+    'Файл не відкривали: такі файли зазвичай містять секрети — ключі чи паролі. ' +
+    'Не кладіть їх у матеріали курсу; для прикладу підійде файл .env.example без справжніх значень.',
 }
 
 interface DirNode {
@@ -127,7 +130,7 @@ export function BaseManifestView({ manifest }: { manifest: ProjectBaseManifest }
               >
                 <span className="truncate text-ink">{e.path}</span>
                 <span className="text-[10px] px-1 rounded bg-coral-pale text-coral shrink-0">
-                  {REASON_LABEL[e.reason]}
+                  {REASON_LABEL[e.reason] ?? 'Причину не вказано.'}
                 </span>
                 <span className="text-[10px] shrink-0">
                   {e.entries} · {formatBytes(e.size)}

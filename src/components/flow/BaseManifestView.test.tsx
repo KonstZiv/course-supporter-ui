@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { BaseManifestView } from './BaseManifestView'
-import type { ProjectBaseManifest } from '../../types/api'
+import type { ExcludedReason, ProjectBaseManifest } from '../../types/api'
 
 const manifest: ProjectBaseManifest = {
   schema: 1,
@@ -35,6 +35,42 @@ describe('BaseManifestView', () => {
     expect(screen.getByText('node_modules/')).toBeInTheDocument()
     expect(screen.getByText('службова тека')).toBeInTheDocument()
     expect(screen.getByText(/42/)).toBeInTheDocument()
+  })
+
+  it('names why a secrets file was left out', () => {
+    render(
+      <BaseManifestView
+        manifest={{
+          ...manifest,
+          excluded: [{ path: '.env', reason: 'may_contain_secrets', entries: 1, size: 64 }],
+        }}
+      />,
+    )
+    expect(
+      screen.getByText(
+        'Файл не відкривали: такі файли зазвичай містять секрети — ключі чи паролі. ' +
+          'Не кладіть їх у матеріали курсу; для прикладу підійде файл .env.example без справжніх значень.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('an unknown reason still gets a label, never an empty one', () => {
+    render(
+      <BaseManifestView
+        manifest={{
+          ...manifest,
+          excluded: [
+            {
+              path: 'x.bin',
+              reason: 'reason_from_the_future' as ExcludedReason,
+              entries: 1,
+              size: 1,
+            },
+          ],
+        }}
+      />,
+    )
+    expect(screen.getByText('Причину не вказано.')).toBeInTheDocument()
   })
 
   it('renders totals', () => {
