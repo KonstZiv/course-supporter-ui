@@ -202,6 +202,13 @@ describe('notOpenedPhrase — one file inside an archive', () => {
     )
   })
 
+  it('may_contain_secrets → the ratified line, action included', () => {
+    expect(notOpenedPhrase(skipped('.env', 'may_contain_secrets'))).toBe(
+      'Файл не відкривали: такі файли зазвичай містять секрети — ключі чи паролі. ' +
+        'Не додавайте їх до роботи; якщо потрібен приклад, покладіть файл .env.example без справжніх значень.',
+    )
+  })
+
   it('is TOTAL — an unknown reason still yields a line, never undefined', () => {
     expect(notOpenedPhrase(skipped('a.py', 'reason_from_the_future'))).toBe(
       'Причину не вказано.',
