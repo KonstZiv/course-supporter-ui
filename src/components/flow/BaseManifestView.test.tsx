@@ -46,12 +46,7 @@ describe('BaseManifestView', () => {
         }}
       />,
     )
-    expect(
-      screen.getByText(
-        'Файл не відкривали: такі файли зазвичай містять секрети — ключі чи паролі. ' +
-          'Не кладіть їх у матеріали курсу; для прикладу підійде файл .env.example без справжніх значень.',
-      ),
-    ).toBeInTheDocument()
+    expect(screen.getByText('можливі секрети')).toBeInTheDocument()
   })
 
   it('an unknown reason still gets a label, never an empty one', () => {

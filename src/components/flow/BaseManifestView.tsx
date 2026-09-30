@@ -25,9 +25,7 @@ const REASON_LABEL: Record<ExcludedReason, string> = {
   denylist_dir: 'службова тека',
   magic_mismatch: 'невідповідність типу',
   nested_archive: 'вкладений архів',
-  may_contain_secrets:
-    'Файл не відкривали: такі файли зазвичай містять секрети — ключі чи паролі. ' +
-    'Не кладіть їх у матеріали курсу; для прикладу підійде файл .env.example без справжніх значень.',
+  may_contain_secrets: 'можливі секрети',
 }
 
 interface DirNode {
