@@ -6,7 +6,9 @@ import type {
   HomeworkTaskCostResponse,
 } from '../types/api'
 
-// vision §3 KD5 cost-reporting surface (post-0.7 backend contract).
+// vision §3 KD5 cost-reporting surface (backend contract after BIL-C,
+// #600: every figure also carries its exact / estimated / unknown split,
+// typed and shown on no screen — see `CostByKind`).
 //
 // Two surfaces:
 // * `summary` — the tenant-wide ingestion cost dashboard (0.UI). The

@@ -1,11 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { HomeworkCostPage } from './HomeworkCostPage'
+import type {
+  HomeworkCostResponse,
+  HomeworkCourseCostResponse,
+  HomeworkTaskCostResponse,
+} from '../types/api'
 
 // Covers the 6.HC-UI contract: all-time fetch on mount (no from/to →
 // backend tenant fallback), total render, and — the load-bearing bit —
 // lazy fetch-on-expand for the drill tree (L2 tasks are NOT fetched until
 // the course row is expanded) plus the is_deleted marker.
+// `satisfies` makes tsc hold each mocked response to its contract type —
+// an untyped `vi.mock` factory would let the fixtures drift silently.
 vi.mock('../api/cost', () => ({
   costApi: {
     homework: vi.fn(() =>
@@ -13,11 +20,22 @@ vi.mock('../api/cost', () => ({
         from: '2026-01-01',
         to: '2026-04-30',
         total_usd: 80.25,
+        total_by_kind: { exact_usd: 74.75, estimated_usd: 5.5, unknown_calls: 2 },
         by_course: [
-          { course_node_id: 'c1', course_title: 'Course Alpha', cost_usd: 55.5 },
-          { course_node_id: 'c2', course_title: 'Course Beta', cost_usd: 24.75 },
+          {
+            course_node_id: 'c1',
+            course_title: 'Course Alpha',
+            cost_usd: 55.5,
+            by_kind: { exact_usd: 50, estimated_usd: 5.5, unknown_calls: 0 },
+          },
+          {
+            course_node_id: 'c2',
+            course_title: 'Course Beta',
+            cost_usd: 24.75,
+            by_kind: { exact_usd: 24.75, estimated_usd: 0, unknown_calls: 2 },
+          },
         ],
-      }),
+      } satisfies HomeworkCostResponse),
     ),
     homeworkCourse: vi.fn(() =>
       Promise.resolve({
@@ -30,15 +48,17 @@ vi.mock('../api/cost', () => ({
             task_label: 'hw1.pdf',
             is_deleted: false,
             cost_usd: 35,
+            by_kind: { exact_usd: 35, estimated_usd: 0, unknown_calls: 0 },
           },
           {
             authored_document_id: 't2',
             task_label: 'deleted-hw.pdf',
             is_deleted: true,
             cost_usd: 12,
+            by_kind: { exact_usd: 10, estimated_usd: 2, unknown_calls: 1 },
           },
         ],
-      }),
+      } satisfies HomeworkCourseCostResponse),
     ),
     homeworkTask: vi.fn(() =>
       Promise.resolve({
@@ -46,9 +66,14 @@ vi.mock('../api/cost', () => ({
         from: '2026-01-01',
         to: '2026-04-30',
         by_student: [
-          { student_id: 's1', student_display: 'Іван Порталенко', cost_usd: 30 },
+          {
+            student_id: 's1',
+            student_display: 'Іван Порталенко',
+            cost_usd: 30,
+            by_kind: { exact_usd: 28.5, estimated_usd: 1.5, unknown_calls: 0 },
+          },
         ],
-      }),
+      } satisfies HomeworkTaskCostResponse),
     ),
   },
 }))
