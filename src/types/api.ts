@@ -773,36 +773,62 @@ export interface NodeSummaryFinalUpdate {
   common_mistakes?: string[] | null
 }
 
-// ─── Cost (vision §3 KD5, post-0.7 contract) ───
+// ─── Cost (vision §3 KD5; contract after BIL-C, #600) ───
 //
 // Tenant-wide cost summary. Backend always echoes resolved `from`/`to`
 // (Tenant.created_at fallback for `from`, today UTC for `to`) so both
 // fields are required on the wire. KD5 invariant:
 //   total_usd == sum(by_course.cost_usd) + unattributed_cost_usd
-// where `unattributed_cost_usd` aggregates ESCs whose Job has no
+// and the same for each field of the `*_by_kind` splits, where
+// `unattributed_cost_usd` aggregates ESCs whose Job has no
 // course_node_id (orphan jobs).
+//
+// Every money figure of a cost report travels with its `CostByKind`
+// split (`total_by_kind` / `unattributed_by_kind` on a response,
+// `by_kind` on a row), and the figure itself is `exact_usd +
+// estimated_usd` of that split. No screen reads the split; it is typed
+// because the contract carries it, so a field never arrives unnoticed.
 //
 // Drill-down (`CourseCostResponse`, `ByNodeEntry`, `ByActionEntry`) is
 // out of scope for 0.UI — Phase 1+ task adds the per-course view and
 // the corresponding types here. Keep this block minimal until then.
 
+export interface CostByKind {
+  /**
+   * Sums from every usage detail the provider reported, at the prices in
+   * force at the call.
+   */
+  exact_usd: number
+  /**
+   * Sums under a named approximation — e.g. a failed call's input counted
+   * by us, cached tokens without a cached price.
+   */
+  estimated_usd: number
+  /** Paid calls with no defensible sum: counted, never summed as zero. */
+  unknown_calls: number
+}
+
 export interface ByCourseEntry {
   course_node_id: string
   course_title: string
   cost_usd: number
+  by_kind: CostByKind
 }
 
 export interface ByProviderEntry {
   provider: string
   model_id: string
   cost_usd: number
+  by_kind: CostByKind
 }
 
 export interface CostSummaryResponse {
   from: string
   to: string
   total_usd: number
+  total_by_kind: CostByKind
   unattributed_cost_usd: number
+  unattributed_by_kind: CostByKind
   by_course: ByCourseEntry[]
   by_provider: ByProviderEntry[]
 }
@@ -821,14 +847,16 @@ export interface CostSummaryResponse {
 // has no `unattributed_cost_usd` / `by_provider`, and the breakdowns add
 // `is_deleted` (soft-deleted task, shown not hidden) / `task_label`
 // (backend-composed) / `student_display` (backend-composed fallback —
-// display_name → login → external_id; the FE renders it verbatim).
-// Shapes verified against the backend `main` OpenAPI snapshot at the
-// 6.HC-UI pre-flight.
+// display_name → login → external_id → id; the FE renders it verbatim).
+// Money figures carry the same `CostByKind` split as the summary.
+// Shapes verified field by field against the live `/openapi.json` after
+// BIL-C (#600).
 
 export interface HomeworkByCourseEntry {
   course_node_id: string
   course_title: string
   cost_usd: number
+  by_kind: CostByKind
 }
 
 export interface HomeworkByTaskEntry {
@@ -836,18 +864,21 @@ export interface HomeworkByTaskEntry {
   task_label: string
   is_deleted: boolean
   cost_usd: number
+  by_kind: CostByKind
 }
 
 export interface HomeworkByStudentEntry {
   student_id: string
   student_display: string
   cost_usd: number
+  by_kind: CostByKind
 }
 
 export interface HomeworkCostResponse {
   from: string
   to: string
   total_usd: number
+  total_by_kind: CostByKind
   by_course: HomeworkByCourseEntry[]
 }
 
