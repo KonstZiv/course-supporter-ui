@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { STORAGE_KEYS } from '../privacy/surface'
 
 interface AuthState {
   apiKey: string | null
@@ -9,15 +10,15 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  apiKey: localStorage.getItem('cs_api_key'),
+  apiKey: localStorage.getItem(STORAGE_KEYS.authorApiKey),
   connected: false,
   setApiKey: (key) => {
-    localStorage.setItem('cs_api_key', key)
+    localStorage.setItem(STORAGE_KEYS.authorApiKey, key)
     set({ apiKey: key })
   },
   setConnected: (ok) => set({ connected: ok }),
   logout: () => {
-    localStorage.removeItem('cs_api_key')
+    localStorage.removeItem(STORAGE_KEYS.authorApiKey)
     set({ apiKey: null, connected: false })
   },
 }))

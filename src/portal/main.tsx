@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { PortalApp } from './App'
+import '../fonts'
 import '../index.css'
 
 // Portal SPA entry point (Phase 6 / T4b, c1) — a SECOND Vite input

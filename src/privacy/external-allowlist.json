@@ -1,0 +1,17 @@
+{
+  "about": "Перелік виключень для двох перевірок конфіденційності: src/privacy/externalAddresses.test.ts (адреси у вихідному коді, збіг за початком адреси) і scripts/check-dist-external.mjs (зібрані сторінки, збіг за хостом). Запис додають свідомо — лише разом з оновленням політики конфіденційності або коли адреса не є зверненням. Поле checks: source — вихідний код, dist — зібрані сторінки.",
+  "entries": [
+    {
+      "address": "https://www.youtube.com/embed/",
+      "checks": ["source"],
+      "reason": "Портал вбудовує відео YouTube в iframe (src/portal/components/youtube.ts, PortalMaterialView.tsx): браузер студента звертається до серверів Google.",
+      "note": "рішення щодо політики очікується — див. знахідку З1"
+    },
+    {
+      "address": "https://youtu.be/...",
+      "checks": ["source"],
+      "reason": "Текст-підказка в полі адреси відео в програмі автора (src/components/flow/NodeDetailPanel.tsx).",
+      "note": "текст підказки, не запит"
+    }
+  ]
+}

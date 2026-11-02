@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { STORAGE_KEYS } from '../../privacy/surface'
 
 // Portal student session store (Phase 6 / T4b, ratify Q5). Mirrors the
 // author app's localStorage-backed Zustand pattern (``stores/auth.ts``) but
@@ -12,10 +13,10 @@ import { create } from 'zustand'
 // timer — invalidation is lazy, centralised in ``portalClient`` (any bearer
 // call returning 401 → ``clear()`` + redirect to login).
 
-const TOKEN_KEY = 'cs_portal_token'
-const TENANT_KEY = 'cs_portal_tenant'
-const STUDENT_KEY = 'cs_portal_student'
-const NAME_KEY = 'cs_portal_name'
+const TOKEN_KEY = STORAGE_KEYS.portalToken
+const TENANT_KEY = STORAGE_KEYS.portalTenant
+const STUDENT_KEY = STORAGE_KEYS.portalStudent
+const NAME_KEY = STORAGE_KEYS.portalName
 
 interface SessionData {
   token: string
