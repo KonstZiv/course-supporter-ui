@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "check:privacy": "node scripts/check-dist-external.mjs"
   },
   "dependencies": {
     "@dagrejs/dagre": "^1.1.4",

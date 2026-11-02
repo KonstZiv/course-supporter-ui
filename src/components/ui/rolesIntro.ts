@@ -7,6 +7,8 @@
 // edits. Text is operator-approved and reproduced verbatim; the confirm screen
 // renders it both as an acknowledge-gated first-visit modal and as a voluntary
 // reopen via the permanent «Навіщо це?» link.
+import { STORAGE_KEYS } from '../../privacy/surface'
+
 export const ROLES_INTRO = {
   title: 'Навіщо це?',
   paragraphs: [
@@ -48,7 +50,7 @@ export const ROLES_INTRO = {
 // sync across devices or browsers, and is lost when the user clears site
 // storage. A durable cross-device flag would need a backend profile field
 // (a separate, out-of-scope decision).
-const SEEN_KEY = 'cs_roles_intro_seen'
+const SEEN_KEY = STORAGE_KEYS.rolesIntroSeen
 
 export function hasSeenRolesIntro(): boolean {
   try {

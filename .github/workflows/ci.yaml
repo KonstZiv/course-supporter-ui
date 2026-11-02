@@ -82,3 +82,8 @@ jobs:
       # entry would otherwise merge green and silently break the deploy.
       - name: Build
         run: npm run build
+
+      # The privacy policy promises the apps load nothing from third-party
+      # servers; fails on any external address in the built HTML and CSS.
+      - name: "Privacy: no external requests in built pages"
+        run: npm run check:privacy
