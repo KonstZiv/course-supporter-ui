@@ -49,6 +49,8 @@ export function youtubeEmbedUrl(raw: string): string | null {
   if (!/^[A-Za-z0-9_-]{11}$/.test(id)) return null
 
   const start = parseStart(u)
-  const base = `https://www.youtube.com/embed/${id}`
+  // Privacy-enhanced embed host (З1): mounted only after a click, see
+  // YoutubeClickToPlay.tsx.
+  const base = `https://www.youtube-nocookie.com/embed/${id}`
   return start !== null ? `${base}?start=${start}` : base
 }
