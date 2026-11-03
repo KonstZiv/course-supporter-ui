@@ -1,4 +1,6 @@
 import { AlertCircle, X } from 'lucide-react'
+import { ContactAdmin } from '../ui/ContactAdmin'
+import type { LetterContext } from '../../utils/contactAdmin'
 
 // What did not arrive, and why — the author's own surface (step Г2 §2.5,
 // closing DD-2.2-AG).
@@ -21,9 +23,11 @@ import { AlertCircle, X } from 'lucide-react'
 export function UploadFailuresView({
   failures,
   onDismiss,
+  context,
 }: {
   failures: string[]
   onDismiss: () => void
+  context?: LetterContext
 }) {
   if (failures.length === 0) return null
   return (
@@ -34,7 +38,9 @@ export function UploadFailuresView({
       <AlertCircle size={16} className="text-coral shrink-0 mt-0.5" />
       <div className="min-w-0 flex-1 space-y-1.5">
         <p className="text-sm font-medium text-coral">
-          {failures.length === 1 ? 'Файл не завантажено' : 'Деякі файли не завантажено'}
+          {failures.length === 1
+            ? 'Файл не завантажено'
+            : 'Деякі файли не завантажено'}
         </p>
         <ul className="space-y-1">
           {failures.map((message, i) => (
@@ -48,7 +54,13 @@ export function UploadFailuresView({
               // have to survive.
               className="text-sm text-ink whitespace-pre-line break-words"
             >
-              {message}
+              <div>{message}</div>
+              <ContactAdmin
+                message={message}
+                context={context}
+                fallback="after-click"
+                compact
+              />
             </li>
           ))}
         </ul>

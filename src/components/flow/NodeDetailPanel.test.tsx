@@ -427,6 +427,17 @@ describe('NodeDetailPanel — a test written in the system (task 07c)', () => {
       'Не вдалося запустити обробку «lesson.pdf». Спробуйте ще раз; якщо ' +
         'повториться, напишіть нам.',
     )
+    const adminLink = within(notice).getByRole('link', {
+      name: 'Написати адміністраторові платформи',
+    })
+    expect(adminLink).toHaveAttribute(
+      'href',
+      expect.stringContaining('mailto:support@pythoncourse.me?subject='),
+    )
+    const href = adminLink.getAttribute('href')!
+    const body = decodeURIComponent(href.slice(href.indexOf('&body=') + 6))
+    expect(body).toContain('Не вдалося запустити обробку «lesson.pdf».')
+    expect(body).toContain('Матеріал: lesson.pdf')
     expect(documentsApi.retry).toHaveBeenCalledExactlyOnceWith('doc-err', false)
     fireEvent.click(
       within(notice).getByRole('button', { name: 'Закрити повідомлення' }),
@@ -441,9 +452,15 @@ describe('NodeDetailPanel — a test written in the system (task 07c)', () => {
     render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Приховати тест' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(
+    const hideAlert = await screen.findByRole('alert')
+    expect(hideAlert).toHaveTextContent(
       'Не вдалося приховати тест «Змінні». Спробуйте ще раз.',
     )
+    expect(
+      within(hideAlert).queryByRole('link', {
+        name: 'Написати адміністраторові платформи',
+      }),
+    ).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: 'Видалити' }))
     await waitFor(() =>
@@ -451,9 +468,65 @@ describe('NodeDetailPanel — a test written in the system (task 07c)', () => {
         'Не вдалося видалити «lesson.pdf». Спробуйте ще раз.',
       ),
     )
+    expect(
+      within(screen.getByRole('alert')).queryByRole('link', {
+        name: 'Написати адміністраторові платформи',
+      }),
+    ).toBeNull()
     // Both rows are still there: nothing was hidden or deleted.
     expect(screen.getByText('Змінні')).toBeInTheDocument()
     expect(screen.getByText('lesson.pdf')).toBeInTheDocument()
+  })
+
+  it('renders ContactAdmin button in material card with error for pipeline_failure and prompt_injection', async () => {
+    seed(
+      makeNode({
+        title: 'Розділ 1',
+        authored_documents: [
+          makeDoc({
+            id: 'doc-pipe',
+            filename: 'lecture.pdf',
+            processing_phase: 'error',
+            error_category: 'pipeline_failure',
+          }),
+          makeDoc({
+            id: 'doc-prompt',
+            filename: 'prompt.pdf',
+            processing_phase: 'error',
+            error_category: 'prompt_injection',
+          }),
+          makeDoc({
+            id: 'doc-empty',
+            filename: 'empty.pdf',
+            processing_phase: 'error',
+            error_category: 'empty_document',
+          }),
+        ],
+      }),
+    )
+    render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
+
+    const adminLinks = screen.getAllByRole('link', {
+      name: 'Написати адміністраторові платформи',
+    })
+    expect(adminLinks).toHaveLength(2)
+
+    const pipeHref = adminLinks[0]!.getAttribute('href')!
+    const pipeBody = decodeURIComponent(
+      pipeHref.slice(pipeHref.indexOf('&body=') + 6),
+    )
+    expect(pipeBody).toContain(
+      'Не вдалося обробити цей матеріал — спробуйте ще раз.',
+    )
+    expect(pipeBody).toContain('Розділ: Розділ 1')
+    expect(pipeBody).toContain('Матеріал: lecture.pdf')
+
+    const promptHref = adminLinks[1]!.getAttribute('href')!
+    const promptBody = decodeURIComponent(
+      promptHref.slice(promptHref.indexOf('&body=') + 6),
+    )
+    expect(promptBody).toContain('Матеріал не пройшов перевірку безпеки вмісту.')
+    expect(promptBody).toContain('Матеріал: prompt.pdf')
   })
 
   it('opens a new test in the editor from the panel', () => {

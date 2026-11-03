@@ -126,6 +126,19 @@ describe('router', () => {
     expect(
       screen.getByRole('button', { name: 'Оновити сторінку' }),
     ).toBeInTheDocument()
+    const adminLink = screen.getByRole('link', {
+      name: 'Написати адміністраторові платформи',
+    })
+    expect(adminLink).toBeInTheDocument()
+    expect(adminLink).toHaveAttribute(
+      'href',
+      expect.stringContaining('mailto:support@pythoncourse.me?subject='),
+    )
+    const href = adminLink.getAttribute('href')!
+    const body = decodeURIComponent(href.slice(href.indexOf('&body=') + 6))
+    expect(body).toContain(
+      'Сторінку не вдалося показати. Оновіть її; якщо повториться, напишіть нам.',
+    )
     expect(screen.queryByRole('heading', { name: 'page: help' })).toBeNull()
     // The author is not shown the error; the console keeps it.
     expect(logged).toHaveBeenCalledWith('Page failed to render', expect.any(Error))

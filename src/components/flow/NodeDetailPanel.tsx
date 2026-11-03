@@ -10,6 +10,7 @@ import { testStateChips } from '../../utils/stateVocabulary'
 import { MaterialProgressDetail } from './MaterialProgressDetail'
 import { UploadProgressView } from '../activity/UploadProgressView'
 import { UploadFailuresView } from '../activity/UploadFailuresView'
+import { ContactAdmin } from '../ui/ContactAdmin'
 import { DocumentStructureBlock } from './DocumentStructureBlock'
 import { UploadConfirmDialog } from '../ui/UploadConfirmDialog'
 import { ProjectBaseSection } from './ProjectBaseSection'
@@ -95,7 +96,10 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
   const [addingLink, setAddingLink] = useState(false)
   // What the last action on a material row could not do; stays until the
   // author closes it or tries again.
-  const [actionError, setActionError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<{
+    message: string
+    materialName: string | null
+  } | null>(null)
 
   // Upload confirmation state
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
@@ -257,11 +261,12 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
       try {
         await documentsApi.delete(mat.id)
       } catch {
-        setActionError(
-          isTest
+        setActionError({
+          message: isTest
             ? `Не вдалося приховати тест «${name}». Спробуйте ще раз.`
             : `Не вдалося видалити «${name}». Спробуйте ще раз.`,
-        )
+          materialName: name,
+        })
         return
       }
       await refresh()
@@ -289,10 +294,12 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
       try {
         await documentsApi.retry(mat.id, force)
       } catch {
-        setActionError(
-          `Не вдалося запустити обробку «${name}». Спробуйте ще раз; якщо ` +
+        setActionError({
+          message:
+            `Не вдалося запустити обробку «${name}». Спробуйте ще раз; якщо ` +
             'повториться, напишіть нам.',
-        )
+          materialName: name,
+        })
         return
       }
       await refresh()
@@ -356,6 +363,10 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
         <UploadFailuresView
           failures={uploadFailures}
           onDismiss={dismissFailures}
+          context={{
+            course: tree?.title ?? null,
+            section: node.title ?? null,
+          }}
         />
         {uploadState.active ? (
           <UploadProgressView state={uploadState} />
@@ -444,9 +455,20 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
             className="border border-coral/40 bg-coral-pale rounded-xl p-3 flex gap-2"
           >
             <AlertCircle size={16} className="text-coral shrink-0 mt-0.5" />
-            <p className="min-w-0 flex-1 text-sm text-ink break-words">
-              {actionError}
-            </p>
+            <div className="min-w-0 flex-1 space-y-2">
+              <p className="text-sm text-ink break-words">
+                {actionError.message}
+              </p>
+              <ContactAdmin
+                message={actionError.message}
+                context={{
+                  course: tree?.title ?? null,
+                  section: node.title ?? null,
+                  material: actionError.materialName,
+                }}
+                fallback="after-click"
+              />
+            </div>
             <button
               type="button"
               onClick={() => setActionError(null)}
@@ -549,9 +571,21 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                     )}
                   </div>
                   {mat.processing_phase === 'error' && (mat.error_category || mat.error_message) && (
-                    <p className="text-xs text-coral mt-1 line-clamp-2">
-                      {ingestErrorMessage(mat.error_category)}
-                    </p>
+                    <>
+                      <p className="text-xs text-coral mt-1 line-clamp-2">
+                        {ingestErrorMessage(mat.error_category)}
+                      </p>
+                      <ContactAdmin
+                        message={ingestErrorMessage(mat.error_category)}
+                        context={{
+                          course: tree?.title ?? null,
+                          section: node.title ?? null,
+                          material: documentLabel(mat),
+                        }}
+                        fallback="after-click"
+                        compact
+                      />
+                    </>
                   )}
                   <MaterialProgressDetail job={liveJob} now={now} />
                   {/* §2.6: only a code material has a structure to show, and
