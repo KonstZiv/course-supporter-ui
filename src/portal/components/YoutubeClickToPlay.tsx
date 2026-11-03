@@ -49,7 +49,7 @@ export function YoutubeClickToPlay({
             <Play size={16} />
             Відтворити відео
           </button>
-          <p className="text-sm text-ink-muted max-w-md">
+          <p className="text-sm text-ink-light max-w-md">
             Відео розміщено на YouTube. Після натискання ваш браузер звернеться до
             серверів YouTube (Google).
           </p>
