@@ -56,7 +56,7 @@ describe('App — /help route renders the seam stub (Є3, Р10)', () => {
     useAuthStore.setState({ apiKey: null, connected: false })
   })
 
-  it('renders the help stub — heading and the verbatim sentence — at /help', async () => {
+  it('renders the help page at /help', async () => {
     useAuthStore.setState({ apiKey: 'cs_live_key' })
     renderAt('/help')
     // The heading role disambiguates the page title from the header nav item,
@@ -64,7 +64,9 @@ describe('App — /help route renders the seam stub (Є3, Р10)', () => {
     expect(
       await screen.findByRole('heading', { name: 'Довідка' }),
     ).toBeInTheDocument()
-    // Р10: the stub is exactly this sentence — no help content.
-    expect(screen.getByText('Цей розділ ще готується.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Шлях автора за кроками й допомога'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Цей розділ ще готується.')).toBeNull()
   })
 })

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AlertCircle, ListChecks, Loader2, Plus } from 'lucide-react'
+import { ContactAdmin } from '../components/ui/ContactAdmin'
 import { EmptyState } from '../components/ui/EmptyState'
+import { useCourseStore } from '../stores/course'
 import { ConfirmDialog } from '../components/testEditor/ConfirmDialog'
 import { EditorToolbar } from '../components/testEditor/EditorToolbar'
 import {
@@ -62,6 +64,7 @@ export function TestEditorPage() {
       : { nodeId: params.get('node'), courseId: params.get('course') }
   const editor = useTestEditor(address)
   const { blocker, allowNextMove } = useLeaveGuard(editor.unsaved)
+  const tree = useCourseStore((s) => s.tree)
 
   const [view, setView] = useState<'edit' | 'student'>('edit')
   const [publishing, setPublishing] = useState(false)
@@ -318,7 +321,17 @@ export function TestEditorPage() {
             className="flex items-start gap-2 p-3 rounded-xl bg-coral-pale text-coral text-sm"
           >
             <AlertCircle size={16} className="shrink-0 mt-0.5" />
-            {editor.banner}
+            <div className="min-w-0 flex-1 space-y-2">
+              <div>{editor.banner}</div>
+              <ContactAdmin
+                message={editor.banner}
+                context={{
+                  course: tree?.title ?? null,
+                  test: draft.title?.trim() || null,
+                }}
+                fallback="after-click"
+              />
+            </div>
           </div>
         )}
 

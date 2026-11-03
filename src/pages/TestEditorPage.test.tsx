@@ -795,4 +795,80 @@ describe('TestEditorPage', () => {
       'Спершу збережіть зміни.',
     )
   })
+
+  it('renders ContactAdmin in banner when save fails with prompt_injection or screened text other', async () => {
+    await openTest()
+    tests.replace.mockRejectedValueOnce(
+      new ApiError(400, 'API error 400', {
+        detail: {
+          code: 'SECURITY_REJECTED',
+          details: 'security refusal',
+          category: 'prompt_injection',
+        },
+      }),
+    )
+
+    fireEvent.change(screen.getByLabelText('Назва тесту'), {
+      target: { value: 'Тест про змінні' },
+    })
+    fireEvent.click(button('Зберегти чернетку'))
+
+    const alertPrompt = await screen.findByRole('alert')
+    expect(alertPrompt).toHaveTextContent(
+      'Текст тесту не пройшов перевірку безпеки. Якщо ви впевнені, що з ним усе гаразд, напишіть нам — ми перевіримо.',
+    )
+    const adminLinkPrompt = within(alertPrompt).getByRole('link', {
+      name: 'Написати адміністраторові платформи',
+    })
+    expect(adminLinkPrompt).toHaveAttribute(
+      'href',
+      expect.stringContaining('mailto:support@pythoncourse.me?subject='),
+    )
+    const hrefPrompt = adminLinkPrompt.getAttribute('href')!
+    const bodyPrompt = decodeURIComponent(
+      hrefPrompt.slice(hrefPrompt.indexOf('&body=') + 6),
+    )
+    expect(bodyPrompt).toContain('Текст тесту не пройшов перевірку безпеки.')
+    expect(bodyPrompt).toContain('Тест: Тест про змінні')
+
+    // Test screened text other
+    tests.replace.mockRejectedValueOnce(
+      new ApiError(400, 'API error 400', {
+        detail: {
+          code: 'SECURITY_REJECTED',
+          details: 'security refusal',
+          category: 'other_security_category',
+        },
+      }),
+    )
+    fireEvent.click(button('Зберегти чернетку'))
+
+    const alertOther = await screen.findByRole('alert')
+    expect(alertOther).toHaveTextContent(
+      'Текст тесту не пройшов перевірку безпеки. Перевірте тексти й спробуйте ще раз; якщо повториться, напишіть нам.',
+    )
+    const adminLinkOther = within(alertOther).getByRole('link', {
+      name: 'Написати адміністраторові платформи',
+    })
+    expect(adminLinkOther).toBeInTheDocument()
+  })
+
+  it('does not render ContactAdmin in banner when error does not have the phrase', async () => {
+    await openTest()
+    tests.check.mockRejectedValueOnce(
+      new ApiError(409, 'API error 409', {
+        detail: {
+          code: 'GENERATION_IN_PROGRESS',
+        },
+      }),
+    )
+    fireEvent.click(button('Перевірити моделлю'))
+
+    const alert = await screen.findByRole('alert')
+    expect(
+      within(alert).queryByRole('link', {
+        name: 'Написати адміністраторові платформи',
+      }),
+    ).toBeNull()
+  })
 })

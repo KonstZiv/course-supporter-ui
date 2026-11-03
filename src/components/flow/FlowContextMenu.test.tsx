@@ -139,6 +139,18 @@ describe('FlowContextMenu — rename failure is visible (pre-network / CORS)', (
     await waitFor(() =>
       expect(screen.getByText(/Не вдалося зберегти назву/)).toBeInTheDocument(),
     )
+    const adminLink = screen.getByRole('link', {
+      name: 'Написати адміністраторові платформи',
+    })
+    expect(adminLink).toBeInTheDocument()
+    expect(adminLink).toHaveAttribute(
+      'href',
+      expect.stringContaining('mailto:support@pythoncourse.me?subject='),
+    )
+    const href = adminLink.getAttribute('href')!
+    const body = decodeURIComponent(href.slice(href.indexOf('&body=') + 6))
+    expect(body).toContain('Не вдалося зберегти назву — спробуйте ще раз.')
+    expect(body).toContain('Розділ: Стара назва')
     // Modal stays open with the typed value preserved (no retype needed).
     expect(screen.getByDisplayValue('Нова назва')).toBeInTheDocument()
     expect(screen.getByText('Зберегти')).toBeInTheDocument()

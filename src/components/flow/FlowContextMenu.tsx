@@ -28,6 +28,7 @@ import { Modal } from '../ui/Modal'
 import { UploadConfirmDialog } from '../ui/UploadConfirmDialog'
 import { UploadProgressView } from '../activity/UploadProgressView'
 import { UploadFailuresView } from '../activity/UploadFailuresView'
+import { ContactAdmin } from '../ui/ContactAdmin'
 import type { AssignmentType, MaterialRole } from '../../types/api'
 
 export interface MenuPosition {
@@ -94,6 +95,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const refreshTree = useRefreshTree()
   const courseId = useCourseStore((s) => s.tree?.id ?? null)
+  const treeTitle = useCourseStore((s) => s.tree?.title ?? null)
   const requestRefresh = useWorkListStore((s) => s.requestRefresh)
   const {
     state: uploadState,
@@ -404,6 +406,10 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
             <UploadFailuresView
               failures={uploadFailures}
               onDismiss={dismissFailures}
+              context={{
+                course: treeTitle,
+                section: position.nodeTitle ?? null,
+              }}
             />
           </div>
         )}
@@ -576,9 +582,19 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
               autoFocus
             />
             {renameError && (
-              <p className="text-coral text-sm mb-4" role="alert">
-                {renameError}
-              </p>
+              <div className="space-y-2 mb-4">
+                <p className="text-coral text-sm" role="alert">
+                  {renameError}
+                </p>
+                <ContactAdmin
+                  message={renameError}
+                  context={{
+                    course: treeTitle,
+                    section: position.nodeTitle ?? null,
+                  }}
+                  fallback="after-click"
+                />
+              </div>
             )}
             <div className="flex justify-end gap-2">
               <button className="btn-secondary btn-sm" onClick={dismissRename}>
