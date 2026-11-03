@@ -194,7 +194,7 @@ describe('external addresses in the source', () => {
           '/src/z.ts': [
             '// https://example.org/in-a-line-comment',
             '/* https://example.org/in-a-block-comment */',
-            'const embed = `https://www.youtube.com/embed/${"abc"}`',
+            'const embed = `https://www.youtube-nocookie.com/embed/${"abc"}`',
           ].join('\n'),
           '/portal.html': '<!-- https://example.org/in-an-html-comment -->',
         },

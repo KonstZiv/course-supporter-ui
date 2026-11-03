@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { PortalMaterialView, extOf } from './PortalMaterialView'
 import type {
   PortalMaterialItem,
@@ -41,7 +41,7 @@ describe('PortalMaterialView render matrix', () => {
     expect(screen.getByText('Слайди ще готуються.')).toBeInTheDocument()
   })
 
-  it('external + youtube video → embed iframe + affordance', () => {
+  it('external + youtube video → click-to-play, iframe only after the click + affordance', () => {
     const { container } = view(
       {
         kind: 'external',
@@ -50,9 +50,43 @@ describe('PortalMaterialView render matrix', () => {
       },
       'video',
     )
-    const iframe = container.querySelector('iframe')
-    expect(iframe?.getAttribute('src')).toContain('/embed/dQw4w9WgXcQ')
+    // Before the click: no request to YouTube — only the own button and the link.
+    expect(container.querySelector('iframe')).toBeNull()
+    const play = screen.getByRole('button', { name: 'Відтворити відео: Матеріал' })
+    expect(play).toHaveTextContent('Відтворити відео')
     expect(affordance()).toBeInTheDocument()
+
+    fireEvent.click(play)
+    const iframe = container.querySelector('iframe')
+    expect(iframe?.getAttribute('src')).toMatch(
+      /^https:\/\/www\.youtube-nocookie\.com\/embed\/dQw4w9WgXcQ\?autoplay=1$/,
+    )
+    expect(affordance()).toBeInTheDocument()
+  })
+
+  it('external + youtube: switching to another video needs a new click (key reset)', () => {
+    const youtube = (url: string): PortalMediaResponse => ({
+      kind: 'external',
+      url,
+      slide_urls: null,
+    })
+    const { container, rerender } = view(
+      youtube('https://www.youtube.com/watch?v=dQw4w9WgXcQ'),
+      'video',
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Відтворити відео: Матеріал' }))
+    expect(container.querySelector('iframe')).not.toBeNull()
+
+    rerender(
+      <PortalMaterialView
+        media={youtube('https://youtu.be/9bZkp7q19f0')}
+        item={item('video')}
+      />,
+    )
+    expect(container.querySelector('iframe')).toBeNull()
+    expect(
+      screen.getByRole('button', { name: 'Відтворити відео: Матеріал' }),
+    ).toBeInTheDocument()
   })
 
   it('external + non-youtube → link-out, no iframe', () => {

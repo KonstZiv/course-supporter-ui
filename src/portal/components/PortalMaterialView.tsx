@@ -3,6 +3,7 @@ import { Download, ExternalLink } from 'lucide-react'
 import type { PortalMaterialItem, PortalMediaResponse } from '../types'
 import { MarkdownContent } from './MarkdownContent'
 import { SlidesCarousel } from './SlidesCarousel'
+import { YoutubeClickToPlay } from './YoutubeClickToPlay'
 import { youtubeEmbedUrl } from './youtube'
 
 // Renders a loaded media descriptor originals-only (Phase 6 / T4b, c2).
@@ -121,21 +122,14 @@ export function PortalMaterialView({
   if (media.kind === 'external') {
     if (!media.url) return <Unrenderable />
     // Only YouTube is embedded; an arbitrary web origin is linked out, not
-    // iframed (corrective 4 / ratify Q1).
+    // iframed (corrective 4 / ratify Q1). The embed loads only after the
+    // student's click (privacy, З1); key resets it for every new video.
     const embed =
       item.source_type === 'video' ? youtubeEmbedUrl(media.url) : null
     if (embed) {
       return (
         <div>
-          <div className="aspect-video">
-            <iframe
-              src={embed}
-              title={item.label}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="w-full h-full rounded-lg border border-canvas-dark/40"
-            />
-          </div>
+          <YoutubeClickToPlay key={embed} embedUrl={embed} title={item.label} />
           <OpenLink url={media.url} />
         </div>
       )
