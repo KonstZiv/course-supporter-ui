@@ -4,12 +4,17 @@
 // mirrors the uploadConfirmMeta.ts ↔ UploadConfirmDialog.tsx split.
 //
 // ALL author-facing copy lives in ``ROLES_INTRO`` — a single place for point
-// edits. Text is operator-approved and reproduced verbatim; the confirm screen
+// edits. screenLead was approved separately on 2026-11-04.
+// Text is operator-approved and reproduced verbatim; the confirm screen
 // renders it both as an acknowledge-gated first-visit modal and as a voluntary
 // reopen via the permanent «Навіщо це?» link.
 import { STORAGE_KEYS } from '../../privacy/surface'
 
 export const ROLES_INTRO = {
+  screenLead: [
+    'Система розібрала проєкт автоматично й запропонувала роль кожному файлу. Перегляньте перелік і виправте те, що потрібно.',
+    'Власні файли вашого проєкту система пропонує лишити повними. Радимо залишити повним лише те, що потрібно для розуміння теми заняття: тоді увага студента зосереджена на головному, а обробка матеріалу обходиться дешевше. Рішення — за вами.',
+  ],
   title: 'Навіщо це?',
   paragraphs: [
     'Лише ви точно знаєте, які файли цього розділу є ключовими для навчання ' +
