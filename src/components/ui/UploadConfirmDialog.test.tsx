@@ -39,8 +39,8 @@ describe('UploadConfirmDialog — code axis', () => {
       screen.getByText(/ваші власні файли увійдуть до уроку повністю/),
     ).toBeTruthy()
     expect(
-      screen.getByText(/Після обробки ви зможете уточнити роль кожного файла/),
-    ).toBeTruthy()
+      screen.queryByText(/уточнити роль кожного файла/),
+    ).toBeNull()
   })
 
   it('offers the html-as-code toggle and reveals the region when checked', () => {
