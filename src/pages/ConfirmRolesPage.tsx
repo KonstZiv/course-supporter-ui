@@ -16,7 +16,11 @@ import {
   reasonLabel,
 } from '../utils/fileRoles'
 import { RolesIntroModal } from '../components/ui/RolesIntroModal'
-import { hasSeenRolesIntro, markRolesIntroSeen } from '../components/ui/rolesIntro'
+import {
+  ROLES_INTRO,
+  hasSeenRolesIntro,
+  markRolesIntroSeen,
+} from '../components/ui/rolesIntro'
 
 // The educational block has three states: hidden, the acknowledge-gated first
 // visit, and the voluntary reopen via «Навіщо це?» (freely dismissable).
@@ -166,6 +170,12 @@ export function ConfirmRolesPage() {
       <p className="text-sm text-ink-muted mb-4">
         {doc?.filename ?? doc?.source_url}
       </p>
+
+      <div className="mb-4 space-y-2 text-sm text-ink-light" data-testid="roles-lead">
+        {ROLES_INTRO.screenLead.map((paragraph, index) => (
+          <p key={index}>{paragraph}</p>
+        ))}
+      </div>
 
       {removedCount > 0 && (
         <p

@@ -184,6 +184,49 @@ describe('ConfirmRolesPage', () => {
     expect(screen.queryByText('Лише структура')).toBeNull()
   })
 
+  it('shows the screen lead in roles-lead on proposal screen with key phrases', async () => {
+    getMock.mockResolvedValue(makeDoc({ proposal: PROPOSAL }))
+    renderPage()
+    const lead = await screen.findByTestId('roles-lead')
+    expect(lead).toHaveTextContent('розібрала проєкт автоматично')
+    expect(lead).toHaveTextContent('Перегляньте перелік і виправте')
+    expect(lead).toHaveTextContent('потрібно для розуміння теми заняття')
+    expect(lead).toHaveTextContent('Рішення — за вами')
+  })
+
+  it('renders lead on repeat visit and omits it when proposal is absent', async () => {
+    // Repeat visit: beforeEach already set seen flag via markRolesIntroSeen()
+    getMock.mockResolvedValue(makeDoc({ proposal: PROPOSAL }))
+    renderPage()
+    expect(await screen.findByTestId('roles-lead')).toBeInTheDocument()
+
+    // No proposal: shows error state and does not render roles-lead
+    cleanup()
+    getMock.mockResolvedValue(makeDoc(null))
+    renderPage()
+    expect(
+      await screen.findByText(/немає пропозиції ролей|Пропозиція ролей відсутня/),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId('roles-lead')).toBeNull()
+  })
+
+  it('locks documentation-quoted UI labels on the confirm screen', async () => {
+    getMock.mockResolvedValue(makeDoc({ proposal: PROPOSAL }))
+    renderPage()
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Ролі файлів матеріалу' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Навіщо це\?/ })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Підтвердити й обробити' }),
+    ).toBeInTheDocument()
+    expect(screen.getAllByRole('option', { name: 'Повний' }).length).toBeGreaterThan(0)
+    expect(screen.getAllByRole('option', { name: 'Допоміжний' }).length).toBeGreaterThan(0)
+    expect(
+      screen.getAllByRole('option', { name: 'Несуттєвий для теми' }).length,
+    ).toBeGreaterThan(0)
+  })
+
   describe('educational block (A-UI-1)', () => {
     it('shows the block on the first visit', async () => {
       localStorage.clear() // undo beforeEach's "seen" flag → first visit
