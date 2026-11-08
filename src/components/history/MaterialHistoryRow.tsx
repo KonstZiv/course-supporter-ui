@@ -71,7 +71,7 @@ function MaterialName({ item }: { item: MaterialHistoryItemResponse }) {
     return (
       <span className="flex flex-col leading-tight text-ink-muted">
         <span>{deletedMaterialLabelShort()}</span>
-        <span className="text-xs text-ink-muted/70">
+        <span className="text-xs text-ink-muted">
           {deletedMaterialAuthorLine(item.material_deleted_at ?? '')}
         </span>
       </span>

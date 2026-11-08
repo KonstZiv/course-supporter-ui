@@ -14,7 +14,7 @@ export function sourceTypeMeta(type: string) {
     case 'code':
       // Neutral (no 6th chromatic hue in the palette), but the STRONG neutral
       // ``text-ink`` (#1A1A2E) — noticeably darker than the unknown-default
-      // ``text-ink-muted`` (#8A8A9A), so a deleted code material stays readable by
+      // ``text-ink-muted`` (#62627A), so a deleted code material stays readable by
       // its icon alone (Р7 / step-Г visual pass Г8).
       return { label: 'Код', icon: 'FileCode', color: 'text-ink' }
     case 'test_object':
