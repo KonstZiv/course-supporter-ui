@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { HelpPage } from './HelpPage'
 import { SUPPORT_ADDRESS } from '../utils/contactAdmin'
 
-const SEVEN_DOCUMENTATION_URLS = new Set([
+const DOCUMENTATION_URLS = new Set([
   'https://about.pythoncourse.me/uk/authors/',
   'https://about.pythoncourse.me/uk/authors/how-it-works/',
   'https://about.pythoncourse.me/uk/authors/first-course/',
@@ -11,6 +11,8 @@ const SEVEN_DOCUMENTATION_URLS = new Set([
   'https://about.pythoncourse.me/uk/authors/materials/',
   'https://about.pythoncourse.me/uk/authors/tasks/',
   'https://about.pythoncourse.me/uk/authors/tests/',
+  'https://about.pythoncourse.me/uk/authors/methodist/#when',
+  'https://about.pythoncourse.me/uk/authors/methodist/#edit',
 ])
 
 describe('HelpPage', () => {
@@ -48,10 +50,10 @@ describe('HelpPage', () => {
       'Додайте завдання й тести: Завдання, Тести.',
     )
     expect(items[5]).toHaveTextContent(
-      'Коли залито все, запустіть Методиста для всього курсу.',
+      'Коли залито все, запустіть Методиста для всього курсу — Описи розділів: Методист.',
     )
     expect(items[6]).toHaveTextContent(
-      'Перегляньте описи розділів, виправте, що треба, і затвердьте.',
+      'Перегляньте описи розділів, виправте, що треба, і затвердьте — там само.',
     )
     expect(items[7]).toHaveTextContent(
       'Додайте студентів і зарахуйте їх на курс.',
@@ -59,7 +61,7 @@ describe('HelpPage', () => {
     expect(items[8]).toHaveTextContent('Стежте за витратами.')
   })
 
-  it('every documentation link has target="_blank", rel with noopener and noreferrer, and points to one of the 7 section 2 URLs', () => {
+  it('every documentation link has target="_blank", rel with noopener and noreferrer, and points to one of the documentation URLs', () => {
     render(<HelpPage />)
     const allLinks = screen.getAllByRole('link')
     const httpLinks = allLinks.filter(
@@ -74,7 +76,7 @@ describe('HelpPage', () => {
         href.startsWith('https://about.pythoncourse.me/uk/'),
         `Forbidden external link: ${href}`,
       ).toBe(true)
-      expect(SEVEN_DOCUMENTATION_URLS.has(href)).toBe(true)
+      expect(DOCUMENTATION_URLS.has(href)).toBe(true)
       expect(link).toHaveAttribute('target', '_blank')
       const rel = link.getAttribute('rel') ?? ''
       expect(rel).toContain('noopener')
@@ -118,5 +120,39 @@ describe('HelpPage', () => {
         { exact: false },
       ),
     ).toBeInTheDocument()
+  })
+
+  it('renders steps 6 and 7 links to methodist sections and note for steps 8-9', () => {
+    const { container } = render(<HelpPage />)
+    const ol = container.querySelector('ol')
+    expect(ol).not.toBeNull()
+    const items = ol!.querySelectorAll('li')
+
+    const step6Link = items[5]!.querySelector('a')
+    expect(step6Link).not.toBeNull()
+    expect(step6Link).toHaveAttribute(
+      'href',
+      'https://about.pythoncourse.me/uk/authors/methodist/#when',
+    )
+    expect(step6Link).toHaveAttribute('target', '_blank')
+    const step6Rel = step6Link?.getAttribute('rel') ?? ''
+    expect(step6Rel).toContain('noopener')
+    expect(step6Rel).toContain('noreferrer')
+
+    const step7Link = items[6]!.querySelector('a')
+    expect(step7Link).not.toBeNull()
+    expect(step7Link).toHaveAttribute(
+      'href',
+      'https://about.pythoncourse.me/uk/authors/methodist/#edit',
+    )
+    expect(step7Link).toHaveAttribute('target', '_blank')
+    const step7Rel = step7Link?.getAttribute('rel') ?? ''
+    expect(step7Rel).toContain('noopener')
+    expect(step7Rel).toContain('noreferrer')
+
+    expect(
+      screen.getByText('Сторінки про кроки 8–9 ще готуються.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/кроки 6–9/)).toBeNull()
   })
 })
