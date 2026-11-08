@@ -73,13 +73,25 @@ const AUTHOR_STEPS: StepItem[] = [
     ],
   },
   {
-    parts: [{ text: 'Коли залито все, запустіть Методиста для всього курсу.' }],
+    parts: [
+      { text: 'Коли залито все, запустіть Методиста для всього курсу — ' },
+      {
+        text: 'Описи розділів: Методист',
+        href: 'https://about.pythoncourse.me/uk/authors/methodist/#when',
+      },
+      { text: '.' },
+    ],
   },
   {
     parts: [
       {
-        text: 'Перегляньте описи розділів, виправте, що треба, і затвердьте.',
+        text: 'Перегляньте описи розділів, виправте, що треба, і затвердьте — ',
       },
+      {
+        text: 'там само',
+        href: 'https://about.pythoncourse.me/uk/authors/methodist/#edit',
+      },
+      { text: '.' },
     ],
   },
   {
@@ -90,8 +102,8 @@ const AUTHOR_STEPS: StepItem[] = [
   },
 ]
 
-// прибрати, коли на сайті з'являться сторінки про Методиста, студентів і витрати
-export const STEPS_IN_PROGRESS_NOTE = 'Сторінки про кроки 6–9 ще готуються.'
+// прибрати, коли на сайті з'являться сторінки про студентів і витрати
+export const STEPS_IN_PROGRESS_NOTE = 'Сторінки про кроки 8–9 ще готуються.'
 
 export function HelpPage() {
   return (
