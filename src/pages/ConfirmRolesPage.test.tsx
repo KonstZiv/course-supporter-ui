@@ -95,6 +95,17 @@ describe('ConfirmRolesPage', () => {
     expect(appSelect.value).toBe('full')
   })
 
+  it('wraps file names and reasons with break-words instead of truncate (DD-AP-L)', async () => {
+    getMock.mockResolvedValue(makeDoc({ proposal: PROPOSAL }))
+    renderPage()
+    const fileName = await screen.findByText('app.ts')
+    const reason = screen.getByText('власний код уроку')
+    expect(fileName).toHaveClass('break-words')
+    expect(fileName).not.toHaveClass('truncate')
+    expect(reason).toHaveClass('break-words')
+    expect(reason).not.toHaveClass('truncate')
+  })
+
   it('shows the removed line when removed.count > 0', async () => {
     getMock.mockResolvedValue(makeDoc({ proposal: PROPOSAL }))
     renderPage()
