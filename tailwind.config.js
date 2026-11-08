@@ -6,7 +6,7 @@ export default {
       colors: {
         // Academic Studio palette
         canvas:    { DEFAULT: '#FAFAF7', dark: '#F0EDE6' },
-        ink:       { DEFAULT: '#1A1A2E', light: '#4A4A5A', muted: '#8A8A9A' },
+        ink:       { DEFAULT: '#1A1A2E', light: '#4A4A5A', muted: '#62627A' },
         navy:      { DEFAULT: '#1B4D5C', light: '#2A6B7C', dark: '#0F3540', pale: '#E8F4F8' },
         amber:     { DEFAULT: '#C8952E', light: '#E8B84D', dark: '#A07824', pale: '#FFF8E8' },
         forest:    { DEFAULT: '#2D6A4F', light: '#40916C', pale: '#E8F5EE' },
