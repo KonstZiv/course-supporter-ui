@@ -98,12 +98,19 @@ const AUTHOR_STEPS: StepItem[] = [
     parts: [{ text: 'Додайте студентів і зарахуйте їх на курс.' }],
   },
   {
-    parts: [{ text: 'Стежте за витратами.' }],
+    parts: [
+      { text: 'Стежте за витратами — ' },
+      {
+        text: 'Витрати й історія',
+        href: 'https://about.pythoncourse.me/uk/authors/costs-history/',
+      },
+      { text: '.' },
+    ],
   },
 ]
 
-// прибрати, коли на сайті з'являться сторінки про студентів і витрати
-export const STEPS_IN_PROGRESS_NOTE = 'Сторінки про кроки 8–9 ще готуються.'
+// прибрати, коли на сайті з'явиться сторінка про студентів
+export const STEPS_IN_PROGRESS_NOTE = 'Сторінка про крок 8 ще готується.'
 
 export function HelpPage() {
   return (

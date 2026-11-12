@@ -13,6 +13,7 @@ const DOCUMENTATION_URLS = new Set([
   'https://about.pythoncourse.me/uk/authors/tests/',
   'https://about.pythoncourse.me/uk/authors/methodist/#when',
   'https://about.pythoncourse.me/uk/authors/methodist/#edit',
+  'https://about.pythoncourse.me/uk/authors/costs-history/',
 ])
 
 describe('HelpPage', () => {
@@ -58,7 +59,9 @@ describe('HelpPage', () => {
     expect(items[7]).toHaveTextContent(
       'Додайте студентів і зарахуйте їх на курс.',
     )
-    expect(items[8]).toHaveTextContent('Стежте за витратами.')
+    expect(items[8]).toHaveTextContent(
+      'Стежте за витратами — Витрати й історія.',
+    )
   })
 
   it('every documentation link has target="_blank", rel with noopener and noreferrer, and points to one of the documentation URLs', () => {
@@ -122,7 +125,7 @@ describe('HelpPage', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders steps 6 and 7 links to methodist sections and note for steps 8-9', () => {
+  it('renders steps 6 and 7 links to methodist sections', () => {
     const { container } = render(<HelpPage />)
     const ol = container.querySelector('ol')
     expect(ol).not.toBeNull()
@@ -149,10 +152,30 @@ describe('HelpPage', () => {
     const step7Rel = step7Link?.getAttribute('rel') ?? ''
     expect(step7Rel).toContain('noopener')
     expect(step7Rel).toContain('noreferrer')
+  })
 
+  it('renders step 9 link to the costs page and a note about step 8 only', () => {
+    const { container } = render(<HelpPage />)
+    const ol = container.querySelector('ol')
+    expect(ol).not.toBeNull()
+    const items = ol!.querySelectorAll('li')
+
+    const step9Link = items[8]!.querySelector('a')
+    expect(step9Link).not.toBeNull()
+    expect(step9Link).toHaveAttribute(
+      'href',
+      'https://about.pythoncourse.me/uk/authors/costs-history/',
+    )
+    expect(step9Link).toHaveAttribute('target', '_blank')
+    const step9Rel = step9Link?.getAttribute('rel') ?? ''
+    expect(step9Rel).toContain('noopener')
+    expect(step9Rel).toContain('noreferrer')
+
+    expect(items[7]!.querySelector('a')).toBeNull()
     expect(
-      screen.getByText('Сторінки про кроки 8–9 ще готуються.'),
+      screen.getByText('Сторінка про крок 8 ще готується.'),
     ).toBeInTheDocument()
+    expect(screen.queryByText(/кроки 8–9/)).toBeNull()
     expect(screen.queryByText(/кроки 6–9/)).toBeNull()
   })
 })

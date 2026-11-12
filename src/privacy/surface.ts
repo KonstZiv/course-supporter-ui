@@ -16,10 +16,7 @@ export const STORAGE_KEYS = {
   portalStudent: 'cs_portal_student',
   /** Portal: the student's display name. */
   portalName: 'cs_portal_name',
-  /**
-   * Author app: the "already seen" flag of the roles intro dialog.
-   * Not named in the privacy policy text yet.
-   */
+  /** Author app: the "already seen" flag of the roles intro dialog. */
   rolesIntroSeen: 'cs_roles_intro_seen',
 } as const
 
