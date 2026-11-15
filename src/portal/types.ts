@@ -339,6 +339,21 @@ export interface PortalSubmissionDetail extends PortalSubmissionListItem {
   structure: ReviewStructureV1 | null
   delta: PortalDeltaReceipt | null
   own_feedback: FeedbackTouch | null
+  // Notification 6.3 (BIL-E): the review cost more than the units held for it,
+  // and the platform took the rest. Null otherwise, and always when the author
+  // pays. Optional, as the server's schema has it (a default, not required).
+  billing_note?: PortalBillingNote | null
+}
+
+// ``PortalBillingNote`` of the backend. One kind today; the screen shows the
+// note only for the kind it knows, so a newer kind says nothing rather than
+// something wrong.
+export interface PortalBillingNote {
+  kind: 'cost_over_reserve'
+  // F: what the review cost, in units.
+  cost_units: number
+  // B: what the student was charged — the reserve.
+  charged_units: number
 }
 
 // --- What the student says about a review (mentor-rebuild task 05) ---
@@ -691,8 +706,7 @@ export interface PortalBillingStatement {
 }
 
 // GET /portal/billing/outlook (without ``course_id``: the payment rule for the
-// student only). This stage reads ``paid_by``; the rest feeds the reminders of
-// the next one.
+// student only): who pays, and the reminders of "Мої курси" and "Юніти".
 export interface PortalBillingOutlook {
   // About how many reviews the available units cover; null when the author
   // pays or nothing is known to price a review.
@@ -700,4 +714,35 @@ export interface PortalBillingOutlook {
   warning: 'low' | 'next_may_fail' | null
   expiring_soon: { units: number; expires_on: string } | null
   paid_by: 'self' | 'author'
+}
+
+// POST /portal/tasks/{authored_document_id}/estimate (BIL-E, part B): what a
+// review of this task costs before it is sent — without a file, the task's
+// typical price; with the file about to be sent, the price of that file (the
+// file is read by the doors, never stored; no submission is made). A file the
+// doors refuse is 422 with the doors' code, as the submission would be.
+//
+// ``basis: "ceiling"``: the price could not be estimated, ``price_units`` is
+// the most the review can cost, and ``enough`` / ``missing_units`` are counted
+// from the task's typical price (or "available > 0" when even that is
+// unknown) — so the threshold is ``available_units + missing_units`` when not
+// enough. ``paid_by: "author"``: no numbers at all, ``enough`` true.
+export interface PortalReviewEstimate {
+  price_units: number | null
+  available_units: number | null
+  enough: boolean
+  missing_units: number | null
+  // Charging on AND the task's path not in its test mode.
+  charging_enabled: boolean
+  basis: 'typical' | 'file' | 'ceiling'
+  paid_by: 'self' | 'author'
+}
+
+// The numbers of a 402 ``insufficient_units`` refusal of a submission:
+// ``{"detail": {"code": "insufficient_units", "details": {…}}}`` — counted by
+// the same function as the estimate.
+export interface PortalUnitsShortfall {
+  price_units: number
+  available_units: number
+  missing_units: number
 }

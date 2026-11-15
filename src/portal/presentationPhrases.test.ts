@@ -68,14 +68,16 @@ describe('the wording the operator ratified', () => {
   })
 
   it('a hold says it resumes by itself and asks for no resubmission', () => {
-    // Who tops the limit up depends on how the course is sold (KD19) and the
-    // wire does not say, so the sentence names no one — but it does name the
-    // one action that holds either way, and that guards against a second
-    // submission of the same work (DD-SP-AT).
-    const phrase = presentationPhrase(p('awaiting_funds'))
-    expect(phrase).toMatch(/продовжиться автоматично/)
-    expect(phrase).toMatch(/Надсилати роботу знову не потрібно/)
-    expect(phrase).not.toMatch(/викладач|поповн[іи]ть|баланс|кредит/)
+    // Stage 2b: the hold for the student's OWN units says why and what then —
+    // buying is theirs to do — and still names the one action that holds
+    // either way, against a second submission of the same work (DD-SP-AT).
+    // The state's phrase and the code's article are the same sentence.
+    const sentence =
+      'Перевірку призупинено: на початок перевірки не вистачило юнітів. ' +
+      'Після купівлі перевірка продовжиться сама — надсилати роботу знову не потрібно.'
+    expect(presentationPhrase(p('awaiting_funds'))).toBe(sentence)
+    expect(presentationPhrase(p('awaiting_funds', 'awaiting_funds'))).toBe(sentence)
+    expect(sentence).not.toMatch(/викладач|поповн[іи]ть|баланс|кредит/)
   })
 
   it('a safety refusal keeps the sentence it was ratified with', () => {

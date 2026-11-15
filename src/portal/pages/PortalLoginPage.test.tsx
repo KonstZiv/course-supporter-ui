@@ -50,6 +50,21 @@ describe('PortalLoginPage', () => {
     usePortalSession.getState().clear()
   })
 
+  it('names the author of the course as the one who gave the login, and asks to keep the address', () => {
+    // Stage 2b, 5.6: the course's author hands the logins out, not a teacher;
+    // and this address is the way into the course's portal from anywhere.
+    renderAt(`/${TENANT_A}/login`)
+    expect(
+      screen.getByText('Введіть логін і пароль, які надав автор курсу.'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Збережіть адресу цієї сторінки: за нею ви входите в портал курсу з будь-якого пристрою.',
+      ),
+    ).toBeInTheDocument()
+    expect(document.body.textContent).not.toMatch(/викладач/i)
+  })
+
   it('shows the invalid-link page for a non-UUID tenant segment', () => {
     renderAt('/not-a-uuid/login')
     expect(

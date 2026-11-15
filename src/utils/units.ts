@@ -50,6 +50,21 @@ export function formatUnits(n: number): string {
   return `${formatNumber(n)} ${UNIT_WORD[PLURAL.select(Math.abs(n))]}`
 }
 
+// The accusative after "на": "вистачить на 1 перевірку / 2 перевірки / 5 перевірок".
+const REVIEW_WORD: Record<Intl.LDMLPluralRule, string> = {
+  zero: 'перевірок',
+  one: 'перевірку',
+  two: 'перевірки',
+  few: 'перевірки',
+  many: 'перевірок',
+  other: 'перевірки',
+}
+
+/** 1 → "1 перевірку", 2 → "2 перевірки", 5 → "5 перевірок", 21 → "21 перевірку". */
+export function formatReviews(n: number): string {
+  return `${formatNumber(n)} ${REVIEW_WORD[PLURAL.select(Math.abs(n))]}`
+}
+
 /** A package's name, as on the site's pricing page: "1 500 юнітів". */
 export function formatPackageName(units: number): string {
   return formatUnits(units)

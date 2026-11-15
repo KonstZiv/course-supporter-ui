@@ -12,6 +12,17 @@ vi.mock('../api/portalClient', async (importOriginal) => {
       ...actual.portalApi,
       material: vi.fn(),
       submitTask: vi.fn(),
+      // Stage 2b: the price before a submission. Charging off — the form as
+      // it was before the price, which is what every test here holds.
+      estimateTask: vi.fn().mockResolvedValue({
+        price_units: 0,
+        available_units: 0,
+        enough: true,
+        missing_units: 0,
+        charging_enabled: false,
+        basis: 'typical',
+        paid_by: 'self',
+      }),
       submissions: vi.fn(),
       base: vi.fn(),
       testStructure: vi.fn(),

@@ -87,8 +87,11 @@ export function PortalLoginPage() {
         </div>
 
         <h2 className="font-display text-2xl text-ink mb-2">Вхід</h2>
+        <p className="text-ink-muted mb-2">
+          Введіть логін і пароль, які надав автор курсу.
+        </p>
         <p className="text-ink-muted mb-8">
-          Введіть логін і пароль, які надав ваш викладач.
+          Збережіть адресу цієї сторінки: за нею ви входите в портал курсу з будь-якого пристрою.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">

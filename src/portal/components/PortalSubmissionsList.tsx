@@ -6,7 +6,7 @@ import type {
   PortalSubmissionListItem,
   PortalVerdict,
 } from '../types'
-import { isReviewed, stateLabel, stateTone } from '../presentationPhrases'
+import { isReviewed, presentationLabel, stateTone } from '../presentationPhrases'
 import { notOpenedCountLabel } from '../rejectionReasons'
 import { PortalReviewDetail } from './PortalReviewDetail'
 
@@ -26,7 +26,9 @@ function AttemptChip({
   const { state } = presentation
   if (!isReviewed(state)) {
     return (
-      <span className={`${base} ${stateTone(state)}`}>{stateLabel(state)}</span>
+      <span className={`${base} ${stateTone(state)}`}>
+        {presentationLabel(presentation)}
+      </span>
     )
   }
   if (score !== null) {

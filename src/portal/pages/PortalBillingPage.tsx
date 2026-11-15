@@ -14,6 +14,11 @@ import { PortalFailure } from '../components/SupportMailText'
 import { PortalCheckoutNotice } from '../components/billing/PortalCheckoutNotice'
 import { PortalPackagesSection } from '../components/billing/PortalPackagesSection'
 import { LOAD_FAILED, UNITS_SUBTITLE } from '../billingTexts'
+import { useStudentOutlook } from '../hooks/useStudentOutlook'
+import { UnitsReminders } from '../components/billing/UnitsReminders'
+import { SITE_TEXT_LINK_CLASS } from '../../components/site/siteLinks'
+import { BUY_UNITS, reviewsLeftLine } from '../unitsTexts'
+import type { PortalBillingOutlook } from '../types'
 
 // The address parameter that carries the checkout the student came back from
 // (App's `billing/checkouts/:checkoutRef` route moves its number here).
@@ -32,6 +37,34 @@ interface Statement {
 // failure this page says.
 function isSessionEnd(err: unknown): boolean {
   return err instanceof PortalApiError && err.status === 401
+}
+
+// Where "Купити юніти" of a reminder takes the student on this page.
+const PACKAGES_ID = 'units-packages'
+
+function scrollToPackages() {
+  const packages = document.getElementById(PACKAGES_ID)
+  packages?.scrollIntoView?.({ block: 'start' })
+  packages?.focus({ preventScroll: true })
+}
+
+/**
+ * Under "Доступно": how many reviews the units cover, and the reminders —
+ * only for a student who pays for their reviews.
+ */
+function OutlookLines({ outlook }: { outlook: PortalBillingOutlook | null }) {
+  if (outlook?.paid_by !== 'self') return null
+  return (
+    <UnitsReminders
+      outlook={outlook}
+      lead={outlook.reviews_left === null ? null : reviewsLeftLine(outlook.reviews_left)}
+      buy={
+        <button type="button" className={SITE_TEXT_LINK_CLASS} onClick={scrollToPackages}>
+          {BUY_UNITS}
+        </button>
+      }
+    />
+  )
 }
 
 function Loading() {
@@ -60,6 +93,7 @@ export function PortalBillingPage() {
   const [loadFailed, setLoadFailed] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [moreFailed, setMoreFailed] = useState(false)
+  const { outlook, reload: reloadOutlook } = useStudentOutlook()
 
   const failed = useCallback((err: unknown) => {
     if (!isSessionEnd(err)) setLoadFailed(true)
@@ -131,9 +165,13 @@ export function PortalBillingPage() {
   }, [checkout, dropCheckout])
 
   const afterCredit = useCallback(async () => {
-    const [available] = await Promise.all([loadBalance(), loadStatement()])
+    const [available] = await Promise.all([
+      loadBalance(),
+      loadStatement(),
+      reloadOutlook(),
+    ])
     return available
-  }, [loadBalance, loadStatement])
+  }, [loadBalance, loadStatement, reloadOutlook])
 
   return (
     <div className="min-h-screen bg-canvas">
@@ -161,19 +199,25 @@ export function PortalBillingPage() {
         )}
 
         {balance ? (
-          <BalanceCard balance={balance} withDifference={false} />
-        ) : (
-          !loadFailed && <Loading />
-        )}
-
-        {packages ? (
-          <PortalPackagesSection
-            packages={packages}
-            onStale={() => void loadPackages()}
+          <BalanceCard
+            balance={balance}
+            withDifference={false}
+            reminders={<OutlookLines outlook={outlook} />}
           />
         ) : (
           !loadFailed && <Loading />
         )}
+
+        <div id={PACKAGES_ID} tabIndex={-1} className="scroll-mt-6 focus:outline-none">
+          {packages ? (
+            <PortalPackagesSection
+              packages={packages}
+              onStale={() => void loadPackages()}
+            />
+          ) : (
+            !loadFailed && <Loading />
+          )}
+        </div>
 
         {statement ? (
           <StatementList

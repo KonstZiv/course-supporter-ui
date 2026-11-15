@@ -11,13 +11,22 @@ interface BalanceCardProps {
    * passes false.
    */
   withDifference?: boolean
+  /**
+   * What stands under "Доступно": the portal's "вистачить на N перевірок" and
+   * its reminders. The author's page passes nothing, and the place stays empty.
+   */
+  reminders?: React.ReactNode
 }
 
 /**
  * Where the holder's units stand (`GET /billing/balance`, the portal's
  * `GET /portal/billing/balance`).
  */
-export function BalanceCard({ balance, withDifference = true }: BalanceCardProps) {
+export function BalanceCard({
+  balance,
+  withDifference = true,
+  reminders,
+}: BalanceCardProps) {
   const { reserved, held, next_expiry: expiry } = balance
   const difference = withDifference ? balance.difference : 0
   const nothing =
@@ -35,8 +44,8 @@ export function BalanceCard({ balance, withDifference = true }: BalanceCardProps
       <p className="text-2xl font-semibold text-ink">
         Доступно: {formatUnits(balance.available)}
       </p>
-      {/* The place for the reminders of the next stage; empty for now. */}
-      <div data-billing-reminders="" />
+      {/* The portal's reminders; empty on the author's page. */}
+      <div data-billing-reminders="">{reminders}</div>
       <div className="space-y-1 text-ink-light">
         {reserved > 0 && (
           <p>

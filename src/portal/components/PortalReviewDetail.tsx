@@ -5,6 +5,7 @@ import { portalApi, PortalApiError } from '../api/portalClient'
 import type {
   FeedbackTouch,
   FeedbackValue,
+  PortalBillingNote,
   PortalDeltaReceipt,
   PortalNotOpened,
   PortalSubmissionDetail,
@@ -12,8 +13,8 @@ import type {
 } from '../types'
 import {
   isReviewed,
+  presentationLabel,
   presentationPhrase,
-  stateLabel,
   stateTone,
 } from '../presentationPhrases'
 import {
@@ -23,6 +24,12 @@ import {
 } from '../rejectionReasons'
 import { encodingDisplayName, shouldReportEncoding } from '../encodingNames'
 import { touchErrorMessage } from '../submissionCodes'
+import { costOverReserve } from '../unitsTexts'
+import { BuyUnitsLink } from './billing/UnitsCost'
+
+// A review held for the student's OWN units: they can buy them, and it then
+// goes on by itself. Held for the author's — no action of theirs.
+const HELD_FOR_OWN_UNITS = 'awaiting_funds'
 
 // KD18 P5 (I2): the delta receipt for a project submission — how it diverged
 // from the base + whether the base has since moved on. Rendered ONLY in the
@@ -107,6 +114,18 @@ function RecoveredEncodingBlock({ encoding }: { encoding: string | null }) {
       </span>{' '}
       і прочитано; рецензія складена за цим прочитанням. Щоб уникнути помилок
       надалі, зберігайте файли в UTF-8.
+    </div>
+  )
+}
+
+// Notification 6.3 (BIL-E): the review cost more than the units held for it.
+// Informative, not an error: the review is whole, the student paid the reserve
+// and no more. Only for the kind this build knows; any other says nothing.
+function BillingNote({ note }: { note: PortalBillingNote | null }) {
+  if (note?.kind !== 'cost_over_reserve') return null
+  return (
+    <div role="note" className="p-3 rounded-xl bg-canvas-dark/40 text-sm text-ink">
+      {costOverReserve(note.cost_units, note.charged_units)}
     </div>
   )
 }
@@ -260,7 +279,12 @@ export function PortalReviewDetail({ row }: { row: PortalSubmissionListItem }) {
     return (
       <div className="space-y-3">
         <div className={`p-3 rounded-xl text-sm ${stateTone(presentation.state)}`}>
-          {stateLabel(presentation.state)} — {phrase}
+          {presentationLabel(presentation)} — {phrase}
+          {presentation.reason_code === HELD_FOR_OWN_UNITS && (
+            <p className="mt-2">
+              <BuyUnitsLink />
+            </p>
+          )}
         </div>
         <RecoveredEncodingBlock encoding={row.recovered_encoding} />
         <NotOpenedBlock entries={row.not_opened} />
@@ -298,6 +322,7 @@ export function PortalReviewDetail({ row }: { row: PortalSubmissionListItem }) {
     <div className="space-y-3">
       <RecoveredEncodingBlock encoding={row.recovered_encoding} />
       <NotOpenedBlock entries={row.not_opened} />
+      <BillingNote note={detail.billing_note ?? null} />
       {detail.score !== null && (
         <div className="flex items-center gap-2 text-sm">
           <span className="font-medium text-ink">{detail.score}/100</span>

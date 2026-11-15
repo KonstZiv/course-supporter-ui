@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react'
 import { Loader2, Upload, CheckCircle2, Info, AlertCircle } from 'lucide-react'
-import { portalApi, PortalApiError } from '../api/portalClient'
+import { portalApi, PortalApiError, unitsShortfall } from '../api/portalClient'
 import type {
   PortalLanguageEntry,
   PortalTaskBase,
@@ -11,6 +11,10 @@ import { formatFileSize } from '../rejectionReasons'
 import { getSubmissionPolicy, policyFor } from '../submissionPolicy'
 import { submitErrorMessage } from '../submissionCodes'
 import { formatCount, noteLength, STUDENT_NOTE_MAX_CHARS } from '../studentNote'
+import { costView } from '../reviewCost'
+import { useReviewEstimate } from '../hooks/useReviewEstimate'
+import { useUnitsWait } from '../hooks/useUnitsWait'
+import { CostCard, UnitsShortPanel } from './billing/UnitsCost'
 
 type SubmitState = 'idle' | 'submitting' | 'success' | 'duplicate' | 'error'
 
@@ -25,6 +29,12 @@ type SubmitState = 'idle' | 'submitting' | 'success' | 'duplicate' | 'error'
 // It also READS on mount now (step Г2 §2.1): the allowed language list, and the
 // student's standing language preference. Both fail soft — neither is required
 // to submit, and a submission with no language named is resolved server-side.
+//
+// And the price (BIL-E, stage 2b): before a submission the form asks what a
+// review of this task costs — on opening, and for every file chosen — and
+// says it (``reviewCost``). When the units are short, a panel stands in place
+// of the button, the file stays chosen, and the form looks at the units until
+// they are enough. While charging is off, nothing of it shows.
 export function PortalSubmitForm({
   taskId,
   taskType = null,
@@ -67,6 +77,12 @@ export function PortalSubmitForm({
   // Remounts the file input so a cleared field really is empty, and so picking
   // the SAME file again still fires a change event.
   const [pickerKey, setPickerKey] = useState(0)
+
+  const estimate = useReviewEstimate(taskId, file)
+  const cost = costView(estimate.outcome, estimate.last)
+  useUnitsWait(cost.kind === 'panel' ? cost.threshold : null, estimate.askAgain)
+  // The answer is on its way and charging is known to be on: no sending yet.
+  const costGated = cost.kind === 'line' && cost.gated
 
   // The list is a server-side constant, so one fetch per SPA session (the
   // singleton) covers every task panel the student opens.
@@ -159,6 +175,7 @@ export function PortalSubmitForm({
     e.preventDefault()
     if (!file || state === 'submitting') return // corrective 4: lock — no double POST
     if (noteTooLong) return // the button is off too; this holds an Enter submit
+    if (costGated || cost.kind === 'panel') return // no button; this holds an Enter submit
     // Client size preflight (corrective 2); the server re-checks (422). The
     // cap and the number in the sentence both come from the policy for this
     // assignment kind — a project is allowed ten times what a single file is,
@@ -207,6 +224,16 @@ export function PortalSubmitForm({
       }
     } catch (err) {
       if (err instanceof PortalApiError && err.status === 401) return // centralised
+      // The server's safeguard: the units are short after all. The same panel,
+      // with the server's numbers; the file stays, and nothing is sent again
+      // until the student presses the button.
+      const shortfall = unitsShortfall(err)
+      if (shortfall !== null) {
+        setState('idle')
+        setMessage('')
+        estimate.refused(shortfall)
+        return
+      }
       setState('error')
       setMessage(submitErrorMessage(err))
     }
@@ -303,33 +330,48 @@ export function PortalSubmitForm({
           </span>
         </div>
       </div>
+      <div aria-live="polite" className="empty:hidden">
+        {cost.kind === 'line' && <p className="text-sm text-ink-light">{cost.text}</p>}
+        {cost.kind === 'refusal' && cost.text !== message && (
+          <div className="flex items-start gap-2 p-3 rounded-xl text-sm bg-coral-pale text-coral">
+            <AlertCircle size={16} className="shrink-0 mt-0.5" />
+            {cost.text}
+          </div>
+        )}
+        {cost.kind === 'card' && <CostCard text={cost.text} nowEnough={cost.nowEnough} />}
+      </div>
       {message && (
         <div className={`flex items-start gap-2 p-3 rounded-xl text-sm ${tone}`}>
           <Icon size={16} className="shrink-0 mt-0.5" />
           {message}
         </div>
       )}
-      <button
-        type="submit"
-        disabled={
-          !file ||
-          state === 'submitting' ||
-          state === 'duplicate' ||
-          baseNotReady ||
-          noteTooLong
-        }
-        title={baseNotReady ? 'Базовий проєкт ще не готовий.' : undefined}
-        className="btn-primary"
-      >
-        {state === 'submitting' ? (
-          <Loader2 size={18} className="animate-spin" />
-        ) : (
-          <>
-            <Upload size={16} />
-            Надіслати
-          </>
-        )}
-      </button>
+      {cost.kind === 'panel' ? (
+        <UnitsShortPanel text={cost.text} fileChosen={file !== null} />
+      ) : (
+        <button
+          type="submit"
+          disabled={
+            !file ||
+            state === 'submitting' ||
+            state === 'duplicate' ||
+            baseNotReady ||
+            noteTooLong ||
+            costGated
+          }
+          title={baseNotReady ? 'Базовий проєкт ще не готовий.' : undefined}
+          className="btn-primary"
+        >
+          {state === 'submitting' ? (
+            <Loader2 size={18} className="animate-spin" />
+          ) : (
+            <>
+              <Upload size={16} />
+              Надіслати
+            </>
+          )}
+        </button>
+      )}
       {baseNotReady && (
         <p className="text-xs text-ink-muted">
           Подача стане доступною, коли автор підготує базовий проєкт.

@@ -172,25 +172,24 @@ const PATH_STATE: Record<string, ReasonArticle> = {
     what: 'Не вдалося перевірити роботу.',
     action: 'Надішліть її ще раз.',
   },
-  // Held before anything was spent.
+  // Held before anything was spent, for want of units. The server says whose
+  // units it waits for (BIL-E2, 5a): the code was split in two once the
+  // payer became known to it, so each sentence names the right person.
   //
-  // The action deliberately says nothing about WHO lifts the hold: that depends
-  // on how the course is sold (KD19) — the author's own credits in classes B/C,
-  // the student's own purchase in class A — and nothing on the wire says which.
-  // The class lives on ``billing_account``, a table the billing work has yet to
-  // build, so the surface cannot know today, and naming the wrong person to go
-  // to would be worse than naming none. When the class arrives, this code
-  // splits in two, each with its own address.
-  //
-  // What it DOES say is the one thing that is true either way and that the
-  // student can act on: do not send the work again. A held revision is already
-  // queued, and a second one would be a second submission of the same work —
-  // paid for twice, judged twice, and racing the first (``DD-SP-AT``).
+  // The student's own: they can act — buy units — and the review then goes on
+  // by itself. The one thing either way: do not send the work again. A held
+  // revision is already queued, and a second one would be a second submission
+  // of the same work — paid for twice, judged twice, and racing the first
+  // (``DD-SP-AT``).
   awaiting_funds: {
-    what:
-      'Перевірку призупинено — вона продовжиться автоматично, ' +
-      'щойно ліміт поновлять.',
-    action: 'Надсилати роботу знову не потрібно.',
+    what: 'Перевірку призупинено: на початок перевірки не вистачило юнітів.',
+    action:
+      'Після купівлі перевірка продовжиться сама — надсилати роботу знову не потрібно.',
+  },
+  // The author's, who pays for this course's reviews: the work is taken, and
+  // there is nothing for the student to do — no action, no numbers.
+  awaiting_author_funds: {
+    what: 'Роботу прийнято. Перевірка почнеться, коли автор курсу поповнить юніти.',
   },
 }
 

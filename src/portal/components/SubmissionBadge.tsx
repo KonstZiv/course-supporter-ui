@@ -1,5 +1,5 @@
 import type { PortalSubmissionOverlay } from '../types'
-import { isReviewed, stateLabel, stateTone } from '../presentationPhrases'
+import { isReviewed, presentationLabel, stateTone } from '../presentationPhrases'
 
 // The student's best usable result, as one phrase, or null when no attempt has
 // earned one yet. ``best`` is the backend's own pick (highest-scored REVIEWED
@@ -28,8 +28,9 @@ export function SubmissionBadge({ overlay }: { overlay: PortalSubmissionOverlay 
   if (overlay.submission_status === 'none') {
     return <span className={`${base} bg-canvas-dark text-ink-muted`}>Не здано</span>
   }
-  const state = overlay.presentation?.state
-  if (state !== undefined && !isReviewed(state)) {
+  const presentation = overlay.presentation
+  const state = presentation?.state
+  if (presentation && state !== undefined && !isReviewed(state)) {
     // The latest attempt has not reached a graded result. WHICH of the four
     // ways it did not is the server's answer now (mentor-rebuild task 03); the
     // tree used to collapse them into "Помилка", so a student whose work simply
@@ -38,7 +39,7 @@ export function SubmissionBadge({ overlay }: { overlay: PortalSubmissionOverlay 
     // The number that rides along is an EARLIER attempt's, which is why it is
     // never shown alone here. DISTINCT from the reviewed branch below, where
     // "{score}/100 · не зараховано" means checked-and-not-passed.
-    const label = stateLabel(state)
+    const label = presentationLabel(presentation)
     return (
       <span className={`${base} ${stateTone(state)}`}>
         {result ? `${label} · ${result}` : label}
