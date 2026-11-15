@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { doorRefusal, portalApi, PortalApiError } from './portalClient'
+import { billingReason, doorRefusal, portalApi, PortalApiError } from './portalClient'
 import { usePortalSession } from '../stores/session'
 
 describe('portalApi.submitTask (authPost)', () => {
@@ -375,5 +375,127 @@ describe('portalApi test (task 07: structure, answers, refusal)', () => {
     expect(
       doorRefusal(new PortalApiError(409, 'x', { detail: { code: 'TEST_NOT_READY' } })),
     ).toEqual({ code: 'TEST_NOT_READY', details: null })
+  })
+})
+
+describe('portalApi billing (the student units)', () => {
+  const T = '019eda80-67ea-7060-b4c4-9dc85761690e'
+
+  beforeEach(() => {
+    localStorage.clear()
+    usePortalSession.getState().setSession({
+      token: 'jwt',
+      tenantId: T,
+      studentId: 's',
+      displayName: null,
+    })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  function okFetch(body: unknown = {}) {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(body),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    return fetchMock
+  }
+
+  it.each([
+    ['billingTerms', () => portalApi.billingTerms(), '/api/v1/portal/billing/terms'],
+    ['billingPackages', () => portalApi.billingPackages(), '/api/v1/portal/billing/packages'],
+    ['billingBalance', () => portalApi.billingBalance(), '/api/v1/portal/billing/balance'],
+    ['billingOutlook', () => portalApi.billingOutlook(), '/api/v1/portal/billing/outlook'],
+    [
+      'billingCheckoutState',
+      () => portalApi.billingCheckoutState('a b/c'),
+      '/api/v1/portal/billing/checkouts/a%20b%2Fc',
+    ],
+    [
+      'billingStatement',
+      () => portalApi.billingStatement(),
+      '/api/v1/portal/billing/statement?limit=50',
+    ],
+    [
+      'billingStatement with a cursor',
+      () => portalApi.billingStatement('cur/2'),
+      '/api/v1/portal/billing/statement?limit=50&cursor=cur%2F2',
+    ],
+  ])('%s GETs its route with the session', async (_, call, path) => {
+    const fetchMock = okFetch()
+    await call()
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url.endsWith(path)).toBe(true)
+    expect(init.method).toBeUndefined()
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer jwt')
+  })
+
+  it('the outlook is asked without a course', async () => {
+    const fetchMock = okFetch()
+    await portalApi.billingOutlook()
+    expect(fetchMock.mock.calls[0]![0]).not.toContain('course_id')
+  })
+
+  it('billingConsent POSTs the revision and the fingerprint', async () => {
+    const fetchMock = okFetch({ terms_version: 'v', consented_at: 'x' })
+    await portalApi.billingConsent('2026-11-12', 'ff89')
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/api/v1/portal/billing/consent')
+    expect(init.method).toBe('POST')
+    expect(JSON.parse(init.body as string)).toEqual({
+      terms_version: '2026-11-12',
+      text_sha256: 'ff89',
+    })
+  })
+
+  it('billingCheckout POSTs the package only', async () => {
+    const fetchMock = okFetch()
+    await portalApi.billingCheckout('units-500')
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/api/v1/portal/billing/checkout')
+    expect(JSON.parse(init.body as string)).toEqual({ package_id: 'units-500' })
+  })
+
+  it('billingReason reads detail.code of a coded refusal, null otherwise', () => {
+    expect(
+      billingReason(
+        new PortalApiError(409, 'x', { detail: { code: 'terms_changed', details: 'y' } }),
+      ),
+    ).toBe('terms_changed')
+    expect(billingReason(new PortalApiError(404, 'x', { detail: 'Not Found' }))).toBeNull()
+    expect(billingReason(new TypeError('Failed to fetch'))).toBeNull()
+  })
+
+  it('a 401 sends to the sign-in with the current page as next', async () => {
+    const assign = vi.fn()
+    vi.stubGlobal('location', {
+      ...window.location,
+      pathname: `/${T}/billing`,
+      search: '?checkout=abc',
+      assign,
+    })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 401, json: () => Promise.resolve(null) }),
+    )
+    await expect(portalApi.billingBalance()).rejects.toBeInstanceOf(PortalApiError)
+    expect(assign).toHaveBeenCalledWith(
+      `/${T}/login?next=${encodeURIComponent(`/${T}/billing?checkout=abc`)}`,
+    )
+    expect(usePortalSession.getState().token).toBeNull()
+  })
+
+  it('no redirect from the sign-in page itself', async () => {
+    const assign = vi.fn()
+    vi.stubGlobal('location', { ...window.location, pathname: `/${T}/login`, search: '', assign })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status: 401, json: () => Promise.resolve(null) }),
+    )
+    await expect(portalApi.billingBalance()).rejects.toBeInstanceOf(PortalApiError)
+    expect(assign).not.toHaveBeenCalled()
   })
 })

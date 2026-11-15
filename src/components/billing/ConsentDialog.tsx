@@ -1,16 +1,14 @@
 import { useId } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Modal } from '../ui/Modal'
-import { ContactAdmin } from '../ui/ContactAdmin'
 import {
   CONSENT_LINES,
   REFUNDS_LINK_WORDS,
   TERMS_LINK_WORDS,
+  type ConsentLines,
 } from '../../utils/billingConsent'
 import { SITE_REFUNDS_URL, SITE_TERMS_URL } from '../site/siteLinks'
 import { NewTabLink } from './NewTabLink'
-
-const [TITLE, CHECKBOX_LINE, SUMMARY_LINE, CHANGE_LINE] = CONSENT_LINES
 
 const LINKS: Record<string, string> = {
   [TERMS_LINK_WORDS]: SITE_TERMS_URL,
@@ -18,22 +16,24 @@ const LINKS: Record<string, string> = {
 }
 
 // The checkbox line with its two phrases as links: the words stay exactly the
-// consent text's, so what the author reads is what is fingerprinted.
-const CHECKBOX_PARTS = CHECKBOX_LINE.split(
-  new RegExp(`(${TERMS_LINK_WORDS}|${REFUNDS_LINK_WORDS})`),
-)
+// consent text's, so what the holder reads is what is fingerprinted.
+const LINK_PHRASES = new RegExp(`(${TERMS_LINK_WORDS}|${REFUNDS_LINK_WORDS})`)
 
 export const TERMS_UPDATED =
   'Умови оновилися. Перегляньте чинну редакцію й підтвердьте її, щоб продовжити.'
 
 interface ConsentDialogProps {
   open: boolean
+  /** The consent text shown — and fingerprinted; the author's by default. */
+  lines?: ConsentLines
   checked: boolean
   onCheckedChange: (checked: boolean) => void
   /** The terms changed since the window opened: say so. */
   termsUpdated: boolean
   submitting: boolean
   error: string | null
+  /** The error's sentence and the way to write about it, each app its own. */
+  renderFailure: (text: string) => React.ReactNode
   onConfirm: () => void
   onCancel: () => void
 }
@@ -41,17 +41,20 @@ interface ConsentDialogProps {
 /** The one-time consent to the billing terms before a purchase. */
 export function ConsentDialog({
   open,
+  lines = CONSENT_LINES,
   checked,
   onCheckedChange,
   termsUpdated,
   submitting,
   error,
+  renderFailure,
   onConfirm,
   onCancel,
 }: ConsentDialogProps) {
   const checkboxId = useId()
+  const [title, checkboxLine, summaryLine, changeLine] = lines
   return (
-    <Modal open={open} onClose={onCancel} title={TITLE}>
+    <Modal open={open} onClose={onCancel} title={title}>
       <div className="space-y-4 text-ink">
         {termsUpdated && (
           <p role="status" className="rounded-xl bg-navy-pale p-3 text-ink">
@@ -67,7 +70,7 @@ export function ConsentDialog({
             onChange={(e) => onCheckedChange(e.target.checked)}
           />
           <label htmlFor={checkboxId}>
-            {CHECKBOX_PARTS.map((part, i) =>
+            {checkboxLine.split(LINK_PHRASES).map((part, i) =>
               LINKS[part] ? (
                 <NewTabLink key={i} href={LINKS[part]}>
                   {part}
@@ -78,16 +81,9 @@ export function ConsentDialog({
             )}
           </label>
         </div>
-        <p className="text-ink-light">{SUMMARY_LINE}</p>
-        <p className="text-ink-light">{CHANGE_LINE}</p>
-        {error && (
-          <div className="space-y-2">
-            <p role="alert" className="text-ink">
-              {error}
-            </p>
-            <ContactAdmin message={error} fallback="after-click" />
-          </div>
-        )}
+        <p className="text-ink-light">{summaryLine}</p>
+        <p className="text-ink-light">{changeLine}</p>
+        {error && <div className="space-y-2">{renderFailure(error)}</div>}
         <div className="flex flex-wrap justify-end gap-2 pt-2">
           <button type="button" className="btn-secondary" onClick={onCancel}>
             Скасувати

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { PortalProtectedRoute } from './PortalProtectedRoute'
 import { usePortalSession } from '../stores/session'
 
@@ -16,11 +16,16 @@ function seedSession(tenantId: string) {
   })
 }
 
+function LoginPage() {
+  const { search } = useLocation()
+  return <div>LOGIN PAGE {search}</div>
+}
+
 function renderAt(path: string) {
   render(
     <MemoryRouter initialEntries={[path]}>
       <Routes>
-        <Route path="/:tenantId/login" element={<div>LOGIN PAGE</div>} />
+        <Route path="/:tenantId/login" element={<LoginPage />} />
         <Route
           path="/:tenantId/home"
           element={
@@ -42,8 +47,15 @@ describe('PortalProtectedRoute', () => {
 
   it('redirects to the tenant login when there is no session', () => {
     renderAt(`/${TENANT_A}/home`)
-    expect(screen.getByText('LOGIN PAGE')).toBeInTheDocument()
+    expect(screen.getByText(/LOGIN PAGE/)).toBeInTheDocument()
     expect(screen.queryByText('PROTECTED CONTENT')).not.toBeInTheDocument()
+  })
+
+  it('carries the address being opened to the login as next', () => {
+    renderAt(`/${TENANT_A}/home?tab=1`)
+    expect(
+      screen.getByText(`LOGIN PAGE ?next=${encodeURIComponent(`/${TENANT_A}/home?tab=1`)}`),
+    ).toBeInTheDocument()
   })
 
   it('renders children when the session tenant matches the URL', () => {
@@ -55,7 +67,9 @@ describe('PortalProtectedRoute', () => {
   it('clears a foreign-tenant session and redirects to login (Q3 guard)', () => {
     seedSession(TENANT_A)
     renderAt(`/${TENANT_B}/home`)
-    expect(screen.getByText('LOGIN PAGE')).toBeInTheDocument()
+    expect(
+      screen.getByText(`LOGIN PAGE ?next=${encodeURIComponent(`/${TENANT_B}/home`)}`),
+    ).toBeInTheDocument()
     expect(screen.queryByText('PROTECTED CONTENT')).not.toBeInTheDocument()
     // The tenant-A token must not linger when the URL points at tenant B.
     expect(usePortalSession.getState().token).toBeNull()
@@ -63,6 +77,8 @@ describe('PortalProtectedRoute', () => {
 
   it('shows the invalid-link page for a non-UUID tenant segment', () => {
     renderAt('/not-a-uuid/home')
-    expect(screen.getByText('Невірне посилання')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Навчальний портал Course Supporter' }),
+    ).toBeInTheDocument()
   })
 })

@@ -10,7 +10,20 @@ vi.mock('../api/portalClient', async (importOriginal) => {
     await importOriginal<typeof import('../api/portalClient')>()
   return {
     ...actual,
-    portalApi: { ...actual.portalApi, courses: vi.fn(), me: vi.fn() },
+    portalApi: {
+      ...actual.portalApi,
+      courses: vi.fn(),
+      me: vi.fn(),
+      // The header asks who pays; the student pays here.
+      billingOutlook: vi.fn(() =>
+        Promise.resolve({
+          reviews_left: null,
+          warning: null,
+          expiring_soon: null,
+          paid_by: 'self',
+        }),
+      ),
+    },
   }
 })
 

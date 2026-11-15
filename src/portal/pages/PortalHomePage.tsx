@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { BookOpen, LogOut, ChevronRight, Loader2 } from 'lucide-react'
+import { ChevronRight, Loader2 } from 'lucide-react'
 import { usePortalSession } from '../stores/session'
 import { portalApi, PortalApiError } from '../api/portalClient'
+import { PortalHeader } from '../components/PortalHeader'
 import { RecoveryEmailSection } from '../components/RecoveryEmailSection'
 import type { PortalCourseListItem } from '../types'
 
@@ -13,7 +14,6 @@ import type { PortalCourseListItem } from '../types'
 export function PortalHomePage() {
   const { tenantId } = useParams()
   const displayName = usePortalSession((s) => s.displayName)
-  const clear = usePortalSession((s) => s.clear)
   const navigate = useNavigate()
 
   const [courses, setCourses] = useState<PortalCourseListItem[] | null>(null)
@@ -34,27 +34,9 @@ export function PortalHomePage() {
 
   const name = displayName ?? 'Студент'
 
-  const handleLogout = () => {
-    clear()
-    navigate(`/${tenantId}/login`, { replace: true })
-  }
-
   return (
     <div className="min-h-screen bg-canvas">
-      <header className="border-b border-canvas-dark/50 bg-white">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-navy flex items-center justify-center">
-              <BookOpen size={18} className="text-amber-light" />
-            </div>
-            <span className="font-display text-xl text-ink">Навчальний портал</span>
-          </div>
-          <button onClick={handleLogout} className="btn-ghost btn-sm">
-            <LogOut size={16} />
-            Вийти
-          </button>
-        </div>
-      </header>
+      <PortalHeader current="courses" />
 
       <main className="max-w-4xl mx-auto px-6 py-12">
         <h1 className="page-title">Вітаємо, {name}!</h1>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { billingReason, getCheckout } from '../api/billing'
+import type { BillingCheckoutStateResponse } from '../types/api'
 import {
   nextPollDelay,
   pollStage,
@@ -12,16 +12,31 @@ export type CheckoutWatch =
   | { status: 'pending'; stage: PollStage }
   | { status: 'credited'; units: number; balanceAfter: number | null }
   | { status: 'failed' }
-  /** Not a checkout of this author's (404 `checkout_not_found`). */
+  /** Not a checkout of the holder's (404 `checkout_not_found`). */
   | { status: 'unknown' }
 
 /**
- * The state of the checkout the author came back from, asked on the
- * schedule of `utils/billingPolling` until it is credited or failed, or the
- * time is up. A failed ask (no connection, a server error) waits for the
- * next one. `retry` starts the schedule over.
+ * Where the holder's checkouts are asked about: the author's client or the
+ * portal's. A module-level constant, so the watch does not start over on
+ * every render.
  */
-export function useCheckoutWatch(checkoutRef: string): {
+export interface CheckoutSource {
+  getCheckout: (checkoutRef: string) => Promise<BillingCheckoutStateResponse>
+  /** The reason code of a failed ask (`detail.code`), or null. */
+  reasonOf: (err: unknown) => string | null
+}
+
+/**
+ * The state of the checkout the holder (the author, the student) came back
+ * from, asked through `source` on the schedule of `utils/billingPolling`
+ * until it is credited or failed, or the time is up. A failed ask (no
+ * connection, a server error) waits for the next one. `retry` starts the
+ * schedule over.
+ */
+export function useCheckoutWatch(
+  checkoutRef: string,
+  source: CheckoutSource,
+): {
   watch: CheckoutWatch
   retry: () => void
 } {
@@ -35,7 +50,7 @@ export function useCheckoutWatch(checkoutRef: string): {
 
     const ask = async () => {
       try {
-        const answer = await getCheckout(checkoutRef)
+        const answer = await source.getCheckout(checkoutRef)
         if (cancelled) return
         // Credited carries its units; an answer without them is asked again.
         if (answer.state === 'credited' && answer.units !== null) {
@@ -52,7 +67,7 @@ export function useCheckoutWatch(checkoutRef: string): {
         }
       } catch (err) {
         if (cancelled) return
-        if (billingReason(err) === 'checkout_not_found') {
+        if (source.reasonOf(err) === 'checkout_not_found') {
           setWatch({ status: 'unknown' })
           return
         }
@@ -68,7 +83,7 @@ export function useCheckoutWatch(checkoutRef: string): {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [checkoutRef, round])
+  }, [checkoutRef, source, round])
 
   const retry = useCallback(() => {
     setWatch({ status: 'pending', stage: 'first-minute' })

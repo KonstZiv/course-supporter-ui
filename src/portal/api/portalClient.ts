@@ -1,10 +1,21 @@
 import { usePortalSession } from '../stores/session'
+import { loginAddress } from '../signInReturn'
 import type {
   ConfirmRecoveryEmailRequest,
   FeedbackTouch,
   FeedbackValue,
   ForgotPasswordRequest,
   PortalBaseDownload,
+  PortalBillingBalance,
+  PortalBillingCheckout,
+  PortalBillingCheckoutRequest,
+  PortalBillingCheckoutState,
+  PortalBillingConsent,
+  PortalBillingConsentRequest,
+  PortalBillingOutlook,
+  PortalBillingPackages,
+  PortalBillingStatement,
+  PortalBillingTerms,
   PortalCourseListItem,
   PortalDoorRefusal,
   PortalLanguagesResponse,
@@ -49,15 +60,24 @@ export class PortalApiError extends Error {
   }
 }
 
-// Lazy session invalidation (ratify Q5): redirect to the tenant's login. Uses
-// a full-page navigation because the client lives outside the React tree. The
-// guard avoids a redirect loop when already on the login page.
+// Lazy session invalidation (ratify Q5): redirect to the tenant's login, with
+// the current page as ``next`` so sign-in brings the student back to it
+// (``signInReturn``). Uses a full-page navigation because the client lives
+// outside the React tree. The guard avoids a redirect loop when already on
+// the login page.
 function redirectToLogin(tenantId: string | null): void {
-  const target = tenantId ? `/${tenantId}/login` : '/'
-  if (window.location.pathname !== target) {
-    window.location.assign(target)
+  const { pathname, search } = window.location
+  if (!tenantId) {
+    if (pathname !== '/') window.location.assign('/')
+    return
+  }
+  if (pathname !== loginAddress(tenantId)) {
+    window.location.assign(loginAddress(tenantId, pathname + search))
   }
 }
+
+// Lines on one page of the student's statement, as on the author's.
+const STATEMENT_PAGE_SIZE = 50
 
 async function parseError(res: Response): Promise<PortalApiError> {
   const body = await res.json().catch(() => null)
@@ -254,4 +274,42 @@ export const portalApi = {
   // re-POSTing burns the old confirm token and mails a fresh link).
   setRecoveryEmail: (req: RecoveryEmailRequest) =>
     postAuthJson<RecoveryEmailResponse>('/api/v1/portal/recovery-email', req),
+  // Units of the student's account (BIL-A, BIL-PAY, BIL-E): the terms and the
+  // consent, packages and checkout, the checkout's state, balance, statement,
+  // and the outlook. A refusal carries its reason — read it with
+  // ``doorRefusal``.
+  billingTerms: () =>
+    authGet<PortalBillingTerms>('/api/v1/portal/billing/terms'),
+  billingConsent: (termsVersion: string, textSha256: string) =>
+    postAuthJson<PortalBillingConsent>('/api/v1/portal/billing/consent', {
+      terms_version: termsVersion,
+      text_sha256: textSha256,
+    } satisfies PortalBillingConsentRequest),
+  billingPackages: () =>
+    authGet<PortalBillingPackages>('/api/v1/portal/billing/packages'),
+  billingCheckout: (packageId: string) =>
+    postAuthJson<PortalBillingCheckout>('/api/v1/portal/billing/checkout', {
+      package_id: packageId,
+    } satisfies PortalBillingCheckoutRequest),
+  billingCheckoutState: (checkoutRef: string) =>
+    authGet<PortalBillingCheckoutState>(
+      `/api/v1/portal/billing/checkouts/${encodeURIComponent(checkoutRef)}`,
+    ),
+  billingBalance: () =>
+    authGet<PortalBillingBalance>('/api/v1/portal/billing/balance'),
+  billingStatement: (cursor?: string | null) => {
+    const query = new URLSearchParams({ limit: String(STATEMENT_PAGE_SIZE) })
+    if (cursor) query.set('cursor', cursor)
+    return authGet<PortalBillingStatement>(
+      `/api/v1/portal/billing/statement?${query}`,
+    )
+  },
+  // Without ``course_id``: only a payment rule for the student counts.
+  billingOutlook: () =>
+    authGet<PortalBillingOutlook>('/api/v1/portal/billing/outlook'),
+}
+
+// The reason code of a billing refusal (``detail.code``), or null.
+export function billingReason(err: unknown): string | null {
+  return doorRefusal(err)?.code ?? null
 }

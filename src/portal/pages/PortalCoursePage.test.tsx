@@ -14,6 +14,15 @@ vi.mock('../api/portalClient', async (importOriginal) => {
       ...actual.portalApi,
       courseMaterials: vi.fn(),
       material: vi.fn(),
+      // The header asks who pays; the student pays here.
+      billingOutlook: vi.fn(() =>
+        Promise.resolve({
+          reviews_left: null,
+          warning: null,
+          expiring_soon: null,
+          paid_by: 'self',
+        }),
+      ),
     },
   }
 })
