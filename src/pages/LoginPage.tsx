@@ -1,9 +1,38 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { AlertCircle, Loader2 } from 'lucide-react'
 import { useAuthStore } from '../stores/auth'
-import { motion } from 'framer-motion'
-import { BookOpen, ArrowRight, AlertCircle, Loader2 } from 'lucide-react'
+import { returnPath } from '../utils/returnPath'
+import { ContactAdmin } from '../components/ui/ContactAdmin'
+import { SiteHeader } from '../components/site/SiteHeader'
+import { SiteFooter } from '../components/site/SiteFooter'
+import {
+  BECOME_AUTHOR_URL,
+  DOCS_AUTHORS_URL,
+  SITE_PRICING_URL,
+  SITE_TEXT_LINK_CLASS,
+} from '../components/site/siteLinks'
 
+const HEADER_LINKS = [
+  { label: 'Ціни', href: SITE_PRICING_URL },
+  { label: 'Документація', href: DOCS_AUTHORS_URL },
+]
+
+const LOGIN_ERRORS = {
+  rejected:
+    'Цей ключ доступу не підходить. Перевірте, чи скопійовано його повністю, або напишіть адміністраторові платформи.',
+  server:
+    'Платформа зараз не відповідає. Спробуйте за кілька хвилин; якщо повториться, напишіть адміністраторові платформи.',
+  offline:
+    "Не вдалося з'єднатися з платформою. Перевірте з'єднання з інтернетом і спробуйте ще раз.",
+} as const
+
+/**
+ * The author program's sign-in page. Strangers see it too, so it is neutral and
+ * in the public site's look: what the program is, how to become an author and
+ * whom to write. After sign-in the author goes back to the address they were
+ * opening (`from`, set by ProtectedRoute).
+ */
 export function LoginPage() {
   const [key, setKey] = useState('')
   const [error, setError] = useState('')
@@ -11,10 +40,13 @@ export function LoginPage() {
   const setApiKey = useAuthStore((s) => s.setApiKey)
   const setConnected = useAuthStore((s) => s.setConnected)
   const navigate = useNavigate()
+  const location = useLocation()
+  const from: unknown = (location.state as { from?: unknown } | null)?.from
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!key.trim()) return
+    const trimmed = key.trim()
+    if (!trimmed) return
 
     setLoading(true)
     setError('')
@@ -22,144 +54,109 @@ export function LoginPage() {
     try {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
       const res = await fetch(`${baseUrl}/api/v1/nodes?limit=1`, {
-        headers: { 'X-API-Key': key.trim() },
+        headers: { 'X-API-Key': trimmed },
       })
 
       if (res.ok) {
-        setApiKey(key.trim())
+        setApiKey(trimmed)
         setConnected(true)
-        navigate('/')
+        navigate(returnPath(from), { replace: true })
       } else if (res.status === 401 || res.status === 403) {
-        setError('Невірний API ключ. Перевірте та спробуйте ще раз.')
+        setError(LOGIN_ERRORS.rejected)
       } else {
-        setError(`Помилка з'єднання: ${res.status}`)
+        setError(LOGIN_ERRORS.server)
       }
     } catch {
-      setError('Не вдалося з\'єднатися з сервером. Перевірте URL API.')
+      setError(LOGIN_ERRORS.offline)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-canvas flex">
-      {/* Left — decorative */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-navy via-navy-dark to-navy
-                      items-center justify-center relative overflow-hidden">
-        {/* Background pattern */}
-        <div className="absolute inset-0 opacity-[0.06]"
-             style={{
-               backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`,
-               backgroundSize: '32px 32px',
-             }}
-        />
-        {/* Content */}
-        <motion.div
-          className="relative z-10 max-w-md px-12"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.7, delay: 0.2 }}
-        >
-          <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-8">
-            <BookOpen size={32} className="text-amber-light" />
-          </div>
-          <h1 className="font-display text-4xl text-white leading-tight mb-4">
-            Course Supporter
-          </h1>
-          <p className="text-white/60 text-lg leading-relaxed">
-            Інтелектуальна система структурування навчальних курсів
-            на основі аналізу матеріалів.
-          </p>
-          <div className="mt-12 space-y-4">
-            {[
-              'Автоматична обробка відео, презентацій, текстів',
-              'AI-генерація структури курсу',
-              'Візуальне управління деревом матеріалів',
-            ].map((text, i) => (
-              <motion.div
-                key={text}
-                className="flex items-center gap-3 text-white/50"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.5 + i * 0.15 }}
-              >
-                <div className="w-1.5 h-1.5 rounded-full bg-amber-light shrink-0" />
-                <span className="text-sm">{text}</span>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-      </div>
+    <div className="min-h-screen bg-canvas flex flex-col">
+      <SiteHeader links={HEADER_LINKS} />
 
-      {/* Right — login form */}
-      <div className="flex-1 flex items-center justify-center px-6">
-        <motion.div
-          className="w-full max-w-sm"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-3 mb-10">
-            <div className="w-10 h-10 rounded-xl bg-navy flex items-center justify-center">
-              <BookOpen size={20} className="text-amber-light" />
-            </div>
-            <span className="font-display text-2xl text-ink">Course Supporter</span>
+      <main className="flex-1 w-full max-w-[28rem] mx-auto px-4 py-10 sm:py-16">
+        <h1 className="font-display text-3xl text-ink">Вхід для авторів курсів</h1>
+        <p className="text-ink-light mt-4">
+          Програма автора — місце, де автор готує свій курс на платформі Course
+          Supporter: завантажує матеріали, налаштовує завдання й тести, додає
+          студентів.
+        </p>
+        <p className="text-ink-light mt-3">
+          Щоб увійти, введіть ключ доступу, який вам надіслав адміністратор
+          платформи.
+        </p>
+
+        <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+          <div>
+            <label htmlFor="accessKey" className="block font-semibold text-ink mb-1.5">
+              Ключ доступу
+            </label>
+            <input
+              id="accessKey"
+              type="password"
+              className="input font-mono text-sm"
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              autoComplete="off"
+              autoFocus
+            />
           </div>
 
-          <h2 className="font-display text-2xl text-ink mb-2">Вхід</h2>
-          <p className="text-ink-muted mb-8">
-            Введіть API ключ для підключення до системи
-          </p>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="apiKey" className="block text-sm font-medium text-ink mb-1.5">
-                API ключ
-              </label>
-              <input
-                id="apiKey"
-                type="password"
-                className="input font-mono text-sm"
-                placeholder="cs_live_..."
-                value={key}
-                onChange={(e) => setKey(e.target.value)}
-                autoFocus
-              />
-            </div>
-
-            {error && (
-              <motion.div
-                className="flex items-start gap-2 p-3 rounded-xl bg-coral-pale text-coral text-sm"
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                {error}
-              </motion.div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading || !key.trim()}
-              className="btn-primary w-full btn-lg"
+          {error && (
+            <div
+              role="alert"
+              className="flex items-start gap-2 p-3 rounded-xl bg-coral-pale text-ink text-sm"
             >
-              {loading ? (
-                <Loader2 size={18} className="animate-spin" />
-              ) : (
-                <>
-                  Підключитися
-                  <ArrowRight size={18} />
-                </>
-              )}
-            </button>
-          </form>
+              <AlertCircle size={16} className="shrink-0 mt-0.5 text-coral" aria-hidden />
+              {error}
+            </div>
+          )}
 
-          <p className="text-ink-muted text-xs mt-6 text-center">
-            Ключ зберігається локально у вашому браузері
+          <button
+            type="submit"
+            disabled={loading || !key.trim()}
+            aria-busy={loading}
+            className="btn-primary w-full btn-lg"
+          >
+            {loading && <Loader2 size={18} className="animate-spin" aria-hidden />}
+            Увійти
+          </button>
+
+          <p className="text-ink-light text-sm">
+            Ключ зберігається лише в цьому браузері; кнопка «Вийти» в програмі його
+            прибирає.
           </p>
-        </motion.div>
-      </div>
+        </form>
+
+        <section className="mt-10 space-y-2">
+          <h2 className="font-display text-xl text-ink">Ще не автор?</h2>
+          <p className="text-ink-light">
+            Доступ до програми автора платформа відкриває за зверненням.
+          </p>
+          <p>
+            <a href={BECOME_AUTHOR_URL} className={SITE_TEXT_LINK_CLASS}>
+              Як стати автором
+            </a>
+          </p>
+        </section>
+
+        <section className="mt-8 space-y-3">
+          <h2 className="font-display text-xl text-ink">
+            Немає ключа або він не підходить?
+          </h2>
+          <ContactAdmin fallback="always" />
+        </section>
+
+        <p className="mt-10 text-ink-light text-sm">
+          Студентам: ваш курс відкривається за посиланням від автора курсу — вхід
+          там.
+        </p>
+      </main>
+
+      <SiteFooter />
     </div>
   )
 }

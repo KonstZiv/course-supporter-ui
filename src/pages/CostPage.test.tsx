@@ -1,47 +1,48 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen } from '@testing-library/react'
 import { CostPage } from './CostPage'
-import type { CostSummaryResponse } from '../types/api'
 
-// Smoke-level coverage only (per task 0.UI scope). Goal: prove the
-// vitest + RTL pipeline is wired correctly and that CostPage mounts
-// without crashing while issuing the all-time summary fetch (no
-// `from` / `to` params → backend tenant-fallback path). Future tasks
-// extend coverage as new behaviour ships.
-// `satisfies` makes tsc hold the mocked response to the contract type —
-// an untyped `vi.mock` factory would let the fixture drift silently.
+// The author sees no dollars: the page asks for nothing and says that the
+// spending in units comes once the platform charges units.
 vi.mock('../api/cost', () => ({
   costApi: {
-    summary: vi.fn(() =>
-      Promise.resolve({
-        from: '2026-01-01',
-        to: '2026-04-30',
-        total_usd: 12.3456,
-        total_by_kind: { exact_usd: 12, estimated_usd: 0.3456, unknown_calls: 1 },
-        unattributed_cost_usd: 0,
-        unattributed_by_kind: { exact_usd: 0, estimated_usd: 0, unknown_calls: 0 },
-        by_course: [],
-        by_provider: [],
-      } satisfies CostSummaryResponse),
-    ),
+    summary: vi.fn(),
+    homework: vi.fn(),
+    homeworkCourse: vi.fn(),
+    homeworkTask: vi.fn(),
   },
 }))
 
 describe('CostPage', () => {
+  const fetchMock = vi.fn()
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubGlobal('fetch', fetchMock)
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
-  it('renders the page title and fetches summary on mount', async () => {
-    const { costApi } = await import('../api/cost')
+  it('explains that the spending in units comes later', () => {
     render(<CostPage />)
+    expect(screen.getByRole('heading', { level: 1, name: 'Витрати' })).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "Тут будуть ваші витрати в юнітах на обробку матеріалів — з розбивкою по курсах. " +
+          "Вони з'являться, щойно платформа почне списувати юніти. Зараз юніти не списуються.",
+      ),
+    ).toBeInTheDocument()
+  })
 
-    expect(screen.getByText('Витрати')).toBeInTheDocument()
-    expect(costApi.summary).toHaveBeenCalledTimes(1)
-    expect(costApi.summary).toHaveBeenCalledWith({})
+  it('shows no money and makes no request', async () => {
+    const { container } = render(<CostPage />)
+    const text = container.textContent ?? ''
+    expect(text).not.toContain('$')
+    expect(text).not.toContain('USD')
+    expect(container.querySelector('.lucide-dollar-sign')).toBeNull()
 
-    await waitFor(() =>
-      expect(screen.getByText('$12.3456')).toBeInTheDocument(),
-    )
+    const { costApi } = await import('../api/cost')
+    for (const call of Object.values(costApi)) expect(call).not.toHaveBeenCalled()
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })
