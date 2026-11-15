@@ -71,14 +71,16 @@ export function CheckoutNotice({
       ) : (
         <>
           <p className="font-semibold">Зараховуємо…</p>
-          {stage !== 'first-minute' && (
+          {stage === 'waiting' && (
             <p>
               Оплата ще не надійшла. Якщо ви сплатили, юніти з'являться за
               кілька хвилин — сторінка перевіряє сама, її можна закрити.
             </p>
           )}
+          {/* The page no longer asks: the line no longer says it does. */}
           {stage === 'stopped' && (
             <>
+              <p>Оплата ще не надійшла.</p>
               <p>
                 Якщо ви сплатили, а юніти не з'являться протягом години,
                 напишіть адміністраторові платформи.

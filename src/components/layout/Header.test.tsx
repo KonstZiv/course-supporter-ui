@@ -41,14 +41,14 @@ describe('Header — help nav item (Є1)', () => {
     expect(link).toHaveAttribute('href', '/help')
   })
 
-  it('collapses to the icon below lg, keeping the name in aria-label + title', () => {
+  it('collapses to the icon below xl, keeping the name in aria-label + title', () => {
     renderHeader()
     const link = screen.getByRole('link', { name: 'Довідка' })
     expect(link).toHaveAttribute('aria-label', 'Довідка')
     expect(link).toHaveAttribute('title', 'Довідка')
     const label = screen.getByText('Довідка')
     expect(label.className).toContain('hidden')
-    expect(label.className).toContain('lg:inline')
+    expect(label.className).toContain('xl:inline')
   })
 
   it('marks the help item active on /help (same active style as siblings)', () => {
@@ -98,6 +98,19 @@ describe('Header — units nav item (1Б)', () => {
     }
   })
 
+  it('gives every control px-2.5 from sm and px-4 from xl, where the labels show', () => {
+    renderHeader()
+    const nav = screen.getByRole('link', { name: 'Юніти' }).closest('nav')!
+    const controls = Array.from(nav.querySelectorAll('a, button'))
+    expect(controls).toHaveLength(8)
+    for (const control of controls) {
+      expect(control.className).toContain('px-2')
+      expect(control.className).toContain('sm:px-2.5')
+      expect(control.className).toContain('xl:px-4')
+      expect(control.className).not.toContain('sm:px-4')
+    }
+  })
+
   it('marks the units item active on /billing', () => {
     renderHeader('/billing')
     expect(screen.getByRole('link', { name: 'Юніти' }).className).toContain('bg-navy-pale')
@@ -112,7 +125,7 @@ describe('Header — nav compaction keeps the accessible name (§3 c7, clar.1/2)
     expect(link).toHaveAttribute('title', 'Історія матеріалів')
     const label = screen.getByText('Історія матеріалів')
     expect(label.className).toContain('hidden')
-    expect(label.className).toContain('lg:inline')
+    expect(label.className).toContain('xl:inline')
   })
 
   it('collapses EVERY nav label at the same single breakpoint (no independent thresholds)', () => {
@@ -122,7 +135,7 @@ describe('Header — nav compaction keeps the accessible name (§3 c7, clar.1/2)
     expect(labelSpans.length).toBe(8) // seven links + logout
     labelSpans.forEach((s) => {
       expect(s.className).toContain('hidden')
-      expect(s.className).toContain('lg:inline')
+      expect(s.className).toContain('xl:inline')
     })
   })
 })

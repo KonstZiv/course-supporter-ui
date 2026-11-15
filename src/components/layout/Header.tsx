@@ -38,9 +38,10 @@ export function Header({
 
   const linkClass = (active: boolean) =>
     clsx(
-      // Д2: only below `sm` (the 320 floor) the nav icons need tighter padding to
-      // fit; from `sm`+ the original px-4 returns, so 768/1000/1440 are unchanged.
-      'flex items-center gap-2 px-2 sm:px-4 py-2 rounded-xl text-sm font-medium transition-colors',
+      // Д2: below `sm` (the 320 floor) the nav icons take the tightest padding.
+      // 1Б: with eight controls the icon-only row overran 640 at px-4, so from
+      // `sm` to `xl` it is px-2.5; from `xl`, where the labels show, px-4 returns.
+      'flex items-center gap-2 px-2 sm:px-2.5 xl:px-4 py-2 rounded-xl text-sm font-medium transition-colors',
       active
         ? 'bg-navy-pale text-navy'
         : 'text-ink-light hover:bg-canvas-dark hover:text-ink',
@@ -77,10 +78,11 @@ export function Header({
             a narrow window. Independent of the remaining width. */}
         <div className="w-px h-6 bg-canvas-dark/60 shrink-0" aria-hidden />
 
-        {/* Nav. ONE switching point for the whole header (§3 c7): below `lg` every
+        {/* Nav. ONE switching point for the whole header (§3 c7): below `xl` every
             label collapses to its icon so the strip keeps its width (В4) — a single
             breakpoint, so the labels never vanish at a different width than the one
-            the strip flexes at. The name lives on in aria-label + title, so screen
+            the strip flexes at. (1Б: the point moved from `lg` to `xl` — seven
+            labels already overran 1024 by 134px, the eighth by 236px, measured.) The name lives on in aria-label + title, so screen
             readers and hover survive the collapse (the c4 source-type-icon rule).
             О5 (ratified 2026-08-17): with Довідка the row is seven controls. The
             baseline six filled the 320 floor exactly, so the seventh overran it by
@@ -94,7 +96,8 @@ export function Header({
             scrolls sideways. A control reached by Tab is brought fully into
             view (the browser does so only for one wholly out of view); the
             vertical padding keeps its focus outline from being clipped. From
-            `sm` the row does not scroll. */}
+            `sm` the row does not scroll, and the page does not scroll sideways
+            at any width. */}
         <nav
           className="flex items-center gap-0.5 sm:gap-1 min-w-0 py-1 overflow-x-auto
                      [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
@@ -112,7 +115,7 @@ export function Header({
               className={linkClass(location.pathname === to)}
             >
               <Icon size={16} />
-              <span className="hidden lg:inline">{label}</span>
+              <span className="hidden xl:inline">{label}</span>
             </Link>
           ))}
           {/* A move to /logout, not the key dropped here: a page that holds
@@ -121,11 +124,11 @@ export function Header({
             onClick={() => navigate('/logout')}
             aria-label="Вийти"
             title="Вийти"
-            className="flex items-center gap-2 px-2 sm:px-4 py-2 rounded-xl text-sm font-medium
+            className="flex items-center gap-2 px-2 sm:px-2.5 xl:px-4 py-2 rounded-xl text-sm font-medium
                        text-ink-muted hover:bg-coral-pale hover:text-coral transition-colors ml-1 sm:ml-2"
           >
             <LogOut size={16} />
-            <span className="hidden lg:inline">Вийти</span>
+            <span className="hidden xl:inline">Вийти</span>
           </button>
         </nav>
       </div>

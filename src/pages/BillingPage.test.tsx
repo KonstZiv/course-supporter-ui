@@ -677,6 +677,7 @@ describe('BillingPage — waiting for the payment (mocked clock)', () => {
     })
   const STILL_WAITING =
     "Оплата ще не надійшла. Якщо ви сплатили, юніти з'являться за кілька хвилин — сторінка перевіряє сама, її можна закрити."
+  const NOT_YET = 'Оплата ще не надійшла.'
   const AFTER_TEN =
     "Якщо ви сплатили, а юніти не з'являться протягом години, напишіть адміністраторові платформи."
 
@@ -684,7 +685,7 @@ describe('BillingPage — waiting for the payment (mocked clock)', () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
   })
 
-  it('asks every 2 s, then every 10 s; after 1 min and 10 min says more; then stops', async () => {
+  it('asks every 2 s, then every 10 s; after 1 min one line, after 10 min another in its place; then stops', async () => {
     renderPage('/billing?checkout=ref-1')
     await advance(0)
     expect(screen.getByText('Зараховуємо…')).toBeInTheDocument()
@@ -704,7 +705,9 @@ describe('BillingPage — waiting for the payment (mocked clock)', () => {
 
     await advance(530_000) // ten minutes
     expect(api.getCheckout).toHaveBeenCalledTimes(85)
-    expect(screen.getByText(STILL_WAITING)).toBeInTheDocument()
+    // The first-minute line gives way to the short one: the page no longer asks.
+    expect(screen.queryByText(STILL_WAITING)).toBeNull()
+    expect(screen.getByText(NOT_YET)).toBeInTheDocument()
     expect(screen.getByText(AFTER_TEN)).toBeInTheDocument()
     expect(
       screen.getByRole('link', { name: 'Написати адміністраторові платформи' }),
@@ -719,11 +722,41 @@ describe('BillingPage — waiting for the payment (mocked clock)', () => {
     expect(api.getCheckout).toHaveBeenCalledTimes(86)
     expect(screen.getByText('Зараховуємо…')).toBeInTheDocument()
     expect(screen.queryByText(STILL_WAITING)).toBeNull()
+    expect(screen.queryByText(NOT_YET)).toBeNull()
     expect(screen.queryByText(AFTER_TEN)).toBeNull()
     expect(screen.queryByRole('button', { name: 'Перевірити ще раз' })).toBeNull()
 
     await advance(2_000)
     expect(api.getCheckout).toHaveBeenCalledTimes(87)
+  })
+
+  it('"Перевірити ще раз" starts the schedule over: the first-minute line, then the ten-minute one', async () => {
+    renderPage('/billing?checkout=ref-1')
+    await advance(0)
+    await advance(600_000)
+    expect(screen.getByText(NOT_YET)).toBeInTheDocument()
+    expect(api.getCheckout).toHaveBeenCalledTimes(85)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Перевірити ще раз' }))
+    await advance(0)
+    expect(screen.getByText('Зараховуємо…')).toBeInTheDocument()
+    expect(screen.queryByText(NOT_YET)).toBeNull()
+
+    await advance(58_000)
+    expect(screen.queryByText(STILL_WAITING)).toBeNull()
+    await advance(2_000) // a minute since the retry
+    expect(screen.getByText(STILL_WAITING)).toBeInTheDocument()
+    expect(screen.queryByText(NOT_YET)).toBeNull()
+    expect(screen.queryByText(AFTER_TEN)).toBeNull()
+    expect(api.getCheckout).toHaveBeenCalledTimes(85 + 31)
+
+    await advance(540_000) // ten minutes since the retry
+    expect(screen.queryByText(STILL_WAITING)).toBeNull()
+    expect(screen.getByText(NOT_YET)).toBeInTheDocument()
+    expect(screen.getByText(AFTER_TEN)).toBeInTheDocument()
+    expect(api.getCheckout).toHaveBeenCalledTimes(85 + 85)
+    await advance(60_000)
+    expect(api.getCheckout).toHaveBeenCalledTimes(85 + 85)
   })
 
   it('stops asking once credited', async () => {
