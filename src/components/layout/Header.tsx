@@ -7,6 +7,7 @@ import {
   History,
   LayoutDashboard,
   LogOut,
+  Package,
   Users,
 } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -18,6 +19,7 @@ import { ActivityStrip } from '../activity/ActivityStrip'
 const NAV = [
   { to: '/', label: 'Курси', icon: LayoutDashboard },
   { to: '/students', label: 'Студенти', icon: Users },
+  { to: '/billing', label: 'Юніти', icon: Package },
   { to: '/cost', label: 'Витрати', icon: DollarSign },
   // Витрати ДЗ = homework-review cost. ClipboardCheck (not a $-shaped icon) so it
   // never reads the same as "Витрати" (DollarSign) once labels collapse (Г8 п.4).
@@ -85,8 +87,22 @@ export function Header({
             17px (measured). The inter-item gap tightens on the narrow tier only
             (gap-0.5, from gap-1); together with the container gap (gap-1, above) that
             reclaims the 17px, so seven controls clear 320 — the ratified envelope
-            (О5): gaps only, no new breakpoint, no glyph shrink, no hidden item. */}
-        <nav className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+            (О5): gaps only, no new breakpoint, no glyph shrink, no hidden item.
+            1Б: «Юніти» makes eight controls, 27px past the 320 floor with the
+            gaps already at their least (measured). Below `sm` the row scrolls
+            sideways inside itself — no visible bar, the page itself never
+            scrolls sideways. A control reached by Tab is brought fully into
+            view (the browser does so only for one wholly out of view); the
+            vertical padding keeps its focus outline from being clipped. From
+            `sm` the row does not scroll. */}
+        <nav
+          className="flex items-center gap-0.5 sm:gap-1 min-w-0 py-1 overflow-x-auto
+                     [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
+                     sm:py-0 sm:overflow-visible sm:shrink-0"
+          onFocus={(e) =>
+            e.target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+          }
+        >
           {NAV.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}

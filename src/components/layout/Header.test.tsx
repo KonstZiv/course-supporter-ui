@@ -59,6 +59,51 @@ describe('Header — help nav item (Є1)', () => {
   })
 })
 
+describe('Header — units nav item (1Б)', () => {
+  it('shows "Юніти", pointing at /billing, between Студенти and Витрати', () => {
+    renderHeader()
+    const link = screen.getByRole('link', { name: 'Юніти' })
+    expect(link).toHaveAttribute('href', '/billing')
+    expect(link).toHaveAttribute('title', 'Юніти')
+    const nav = link.closest('nav')!
+    const hrefs = Array.from(nav.querySelectorAll('a')).map((a) => a.getAttribute('href'))
+    expect(hrefs).toEqual([
+      '/',
+      '/students',
+      '/billing',
+      '/cost',
+      '/cost/homework',
+      '/history',
+      '/help',
+    ])
+  })
+
+  it('makes the nav eight controls: seven links and the logout', () => {
+    renderHeader()
+    const nav = screen.getByRole('link', { name: 'Юніти' }).closest('nav')!
+    expect(nav.querySelectorAll('a, button')).toHaveLength(8)
+  })
+
+  it('below sm the row scrolls inside itself without a bar; from sm it does not', () => {
+    renderHeader()
+    const nav = screen.getByRole('link', { name: 'Юніти' }).closest('nav')!
+    for (const token of [
+      'min-w-0',
+      'overflow-x-auto',
+      '[scrollbar-width:none]',
+      'sm:overflow-visible',
+      'sm:shrink-0',
+    ]) {
+      expect(nav.className).toContain(token)
+    }
+  })
+
+  it('marks the units item active on /billing', () => {
+    renderHeader('/billing')
+    expect(screen.getByRole('link', { name: 'Юніти' }).className).toContain('bg-navy-pale')
+  })
+})
+
 describe('Header — nav compaction keeps the accessible name (§3 c7, clar.1/2)', () => {
   it('wraps the label so it collapses to the icon, but keeps the name in aria-label + title', () => {
     renderHeader()
@@ -74,7 +119,7 @@ describe('Header — nav compaction keeps the accessible name (§3 c7, clar.1/2)
     renderHeader()
     const nav = screen.getByRole('link', { name: 'Курси' }).closest('nav')!
     const labelSpans = Array.from(nav.querySelectorAll('span'))
-    expect(labelSpans.length).toBe(7) // six links + logout
+    expect(labelSpans.length).toBe(8) // seven links + logout
     labelSpans.forEach((s) => {
       expect(s.className).toContain('hidden')
       expect(s.className).toContain('lg:inline')
