@@ -231,6 +231,18 @@ describe('BillingPage — packages', () => {
     }
   })
 
+  it('draws the cards as the site pricing page does: sky-pale, a sky border, a navy-dark price', async () => {
+    renderPage()
+    const cards = await screen.findAllByRole('listitem')
+    for (const card of cards) {
+      expect(card).toHaveClass('rounded-2xl', 'bg-sky-pale', 'border', 'border-sky', 'p-6')
+      expect(card).not.toHaveClass('card')
+      expect(card.className).not.toMatch(/shadow/)
+    }
+    const price = within(cards[0]!).getByText('9,99 EUR')
+    expect(price).toHaveClass('font-display', 'font-semibold', 'text-[1.875rem]', 'text-navy-dark')
+  })
+
   it('tells about the price, the seller and links the terms and refunds', async () => {
     renderPage()
     expect(

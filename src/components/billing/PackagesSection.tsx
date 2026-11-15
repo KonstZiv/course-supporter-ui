@@ -160,12 +160,17 @@ export function PackagesSection({ packages, onStale }: PackagesSectionProps) {
           const price = pkg.prices_minor.EUR
           const opensThis = opening && buyingId === pkg.id
           return (
-            <li key={pkg.id} className="card p-5 flex flex-col gap-2">
+            // As the package cards of the site's pricing page: sky-pale with a
+            // sky border, no shadow; the price in the heading face, navy-dark.
+            <li
+              key={pkg.id}
+              className="rounded-2xl bg-sky-pale border border-sky p-6 flex flex-col gap-2"
+            >
               <h3 className="font-display text-lg text-ink">
                 {formatPackageName(pkg.units)}
               </h3>
               {price !== undefined && (
-                <p className="text-xl font-semibold text-ink">
+                <p className="font-display font-semibold text-[1.875rem] text-navy-dark">
                   {formatPriceEur(price)}
                 </p>
               )}
