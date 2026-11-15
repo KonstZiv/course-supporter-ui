@@ -111,6 +111,14 @@ describe('Header — units nav item (1Б)', () => {
     }
   })
 
+  it('below sm draws the focus outline inside each control, where the row cannot clip it', () => {
+    renderHeader()
+    const nav = screen.getByRole('link', { name: 'Юніти' }).closest('nav')!
+    for (const control of Array.from(nav.querySelectorAll('a, button'))) {
+      expect(control.className).toContain('max-sm:focus-visible:outline-offset-[-3px]')
+    }
+  })
+
   it('marks the units item active on /billing', () => {
     renderHeader('/billing')
     expect(screen.getByRole('link', { name: 'Юніти' }).className).toContain('bg-navy-pale')

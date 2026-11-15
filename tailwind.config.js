@@ -4,7 +4,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Academic Studio palette
+        // Academic Studio palette. Source of the values: the public site,
+        // repository course-supporter-site, file src/styles/global.css, block
+        // @theme — every page of the platform shares the site's look.
+        // The one deliberate departure is ink.muted: the site has #8a8a9a and
+        // uses it for decoration only, while here it carries text and must keep
+        // a contrast of at least 4.5:1 (src/inkContrast.test.ts).
+        // The site's rule for the accents sun, apricot and sky: decoration only;
+        // text on them is ink, never white.
         canvas:    { DEFAULT: '#FAFAF7', dark: '#F0EDE6' },
         ink:       { DEFAULT: '#1A1A2E', light: '#4A4A5A', muted: '#62627A' },
         navy:      { DEFAULT: '#1B4D5C', light: '#2A6B7C', dark: '#0F3540', pale: '#E8F4F8' },
@@ -12,10 +19,14 @@ export default {
         forest:    { DEFAULT: '#2D6A4F', light: '#40916C', pale: '#E8F5EE' },
         coral:     { DEFAULT: '#C44536', light: '#E05A4B', pale: '#FFF0EE' },
         plum:      { DEFAULT: '#6B4C8A', light: '#8B6CAA', pale: '#F5F0FA' },
+        sun:       { DEFAULT: '#F5C542', pale: '#FFF4CC' },
+        apricot:   { DEFAULT: '#F4A261', pale: '#FDEBDD' },
+        sky:       { DEFAULT: '#8CCBE0', pale: '#E3F3F9' },
       },
       fontFamily: {
-        display: ['"DM Serif Display"', 'Georgia', 'serif'],
-        body:    ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        // The site's fonts, bundled from npm (src/fonts.ts).
+        display: ['"Source Serif 4"', 'Georgia', '"Times New Roman"', 'serif'],
+        body:    ['"Manrope Variable"', 'system-ui', '-apple-system', '"Segoe UI"', 'Roboto', 'sans-serif'],
         mono:    ['"JetBrains Mono"', 'monospace'],
       },
       fontSize: {

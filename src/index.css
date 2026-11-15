@@ -14,6 +14,21 @@
   ::selection {
     background-color: rgba(27, 77, 92, 0.2);
   }
+
+  /* Headings at the site's weight (Source Serif 4 ships weight 600 alone). */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 600;
+  }
+
+  /* Keyboard focus is always visible, as on the site: a navy outline. */
+  :focus-visible {
+    outline: 3px solid theme('colors.navy.DEFAULT');
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
 }
 
 @layer components {
@@ -23,32 +38,28 @@
            transition-shadow duration-300 hover:shadow-card-lg;
   }
 
-  /* Button base */
+  /* Button base: the site's weight; focus is the base :focus-visible outline. */
   .btn {
     @apply inline-flex items-center justify-center gap-2
-           px-5 py-2.5 rounded-xl font-medium text-body
-           transition-all duration-200 cursor-pointer
-           focus:outline-none focus:ring-2 focus:ring-offset-2;
+           px-5 py-2.5 rounded-xl font-bold text-body
+           transition-all duration-200 cursor-pointer;
   }
   .btn-primary {
-    @apply btn bg-navy text-white hover:bg-navy-light
-           focus:ring-navy/40 active:scale-[0.97];
+    @apply btn bg-navy text-white hover:bg-navy-dark
+           active:scale-[0.97];
   }
   .btn-secondary {
     @apply btn bg-canvas-dark text-ink hover:bg-canvas-dark/80
-           border border-canvas-dark focus:ring-navy/20;
+           border border-canvas-dark;
   }
   .btn-accent {
-    @apply btn bg-amber text-white hover:bg-amber-light
-           focus:ring-amber/40;
+    @apply btn bg-amber text-white hover:bg-amber-light;
   }
   .btn-danger {
-    @apply btn bg-coral text-white hover:bg-coral-light
-           focus:ring-coral/40;
+    @apply btn bg-coral text-white hover:bg-coral-light;
   }
   .btn-ghost {
-    @apply btn bg-transparent text-ink-light hover:bg-canvas-dark/50
-           focus:ring-navy/20;
+    @apply btn bg-transparent text-ink-light hover:bg-canvas-dark/50;
   }
   .btn-sm {
     @apply px-3 py-1.5 text-sm rounded-lg;
@@ -57,17 +68,17 @@
     @apply px-7 py-3.5 text-lg rounded-2xl;
   }
 
-  /* Input style */
+  /* Input style: keeps its own focus ring; the base :focus-visible outline stays. */
   .input {
     @apply w-full px-4 py-3 rounded-xl border border-canvas-dark
            bg-white text-ink text-body placeholder:text-ink-muted
-           focus:outline-none focus:ring-2 focus:ring-navy/30 focus:border-navy
+           focus:ring-2 focus:ring-navy/30 focus:border-navy
            transition-all duration-200;
   }
 
   /* Page heading */
   .page-title {
-    @apply font-display text-3xl text-ink tracking-tight;
+    @apply font-display font-semibold text-3xl text-ink tracking-tight;
   }
   .page-subtitle {
     @apply text-lg text-ink-light mt-1;

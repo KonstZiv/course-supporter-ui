@@ -1,6 +1,7 @@
 import type { BillingBalanceResponse } from '../../types/api'
 import { formatDate, formatUnits } from '../../utils/units'
-import { SITE_PRICING, SiteLink } from './SiteLink'
+import { SITE_PRICING_URL } from '../site/siteLinks'
+import { NewTabLink } from './NewTabLink'
 
 /** Where the author's units stand (`GET /billing/balance`). */
 export function BalanceCard({ balance }: { balance: BillingBalanceResponse }) {
@@ -49,7 +50,7 @@ export function BalanceCard({ balance }: { balance: BillingBalanceResponse }) {
         {nothing && <p>Юнітів поки немає.</p>}
       </div>
       <p>
-        <SiteLink href={SITE_PRICING}>Як визначається вартість</SiteLink>
+        <NewTabLink href={SITE_PRICING_URL}>Як визначається вартість</NewTabLink>
       </p>
     </section>
   )

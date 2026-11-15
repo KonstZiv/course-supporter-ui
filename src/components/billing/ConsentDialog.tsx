@@ -7,13 +7,14 @@ import {
   REFUNDS_LINK_WORDS,
   TERMS_LINK_WORDS,
 } from '../../utils/billingConsent'
-import { SITE_REFUNDS, SITE_TERMS, SiteLink } from './SiteLink'
+import { SITE_REFUNDS_URL, SITE_TERMS_URL } from '../site/siteLinks'
+import { NewTabLink } from './NewTabLink'
 
 const [TITLE, CHECKBOX_LINE, SUMMARY_LINE, CHANGE_LINE] = CONSENT_LINES
 
 const LINKS: Record<string, string> = {
-  [TERMS_LINK_WORDS]: SITE_TERMS,
-  [REFUNDS_LINK_WORDS]: SITE_REFUNDS,
+  [TERMS_LINK_WORDS]: SITE_TERMS_URL,
+  [REFUNDS_LINK_WORDS]: SITE_REFUNDS_URL,
 }
 
 // The checkbox line with its two phrases as links: the words stay exactly the
@@ -68,9 +69,9 @@ export function ConsentDialog({
           <label htmlFor={checkboxId}>
             {CHECKBOX_PARTS.map((part, i) =>
               LINKS[part] ? (
-                <SiteLink key={i} href={LINKS[part]}>
+                <NewTabLink key={i} href={LINKS[part]}>
                   {part}
-                </SiteLink>
+                </NewTabLink>
               ) : (
                 part
               ),

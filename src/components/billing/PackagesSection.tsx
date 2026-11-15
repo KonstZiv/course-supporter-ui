@@ -15,7 +15,8 @@ import {
 import { formatPackageName, formatPriceEur } from '../../utils/units'
 import { ContactAdmin } from '../ui/ContactAdmin'
 import { ConsentDialog } from './ConsentDialog'
-import { SITE_REFUNDS, SITE_TERMS, SiteLink } from './SiteLink'
+import { SITE_REFUNDS_URL, SITE_TERMS_URL } from '../site/siteLinks'
+import { NewTabLink } from './NewTabLink'
 
 export const PURCHASE_NOT_OPEN_TEXT =
   'Купівля юнітів у програмі ще не відкрита. Якщо юніти потрібні вам зараз, напишіть адміністраторові платформи.'
@@ -198,8 +199,8 @@ export function PackagesSection({ packages, onStale }: PackagesSectionProps) {
           сторінці оплати. Після оплати ви повернетеся на цю сторінку.
         </p>
         <p className="flex flex-wrap gap-x-4 gap-y-1">
-          <SiteLink href={SITE_TERMS}>Умови користування</SiteLink>
-          <SiteLink href={SITE_REFUNDS}>Повернення оплати</SiteLink>
+          <NewTabLink href={SITE_TERMS_URL}>Умови користування</NewTabLink>
+          <NewTabLink href={SITE_REFUNDS_URL}>Повернення оплати</NewTabLink>
         </p>
       </div>
 

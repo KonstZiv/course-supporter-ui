@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 
 // The payment provider brings the author back to /billing/checkouts/{ref}
@@ -44,6 +44,10 @@ function renderAt(path: string) {
 }
 
 describe('billing routes', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   beforeEach(() => {
     localStorage.clear()
     useAuthStore.setState({ apiKey: 'cs_live_key', connected: false })
@@ -82,12 +86,23 @@ describe('billing routes', () => {
     expect(api.getCheckout).toHaveBeenCalledWith('a b')
   })
 
-  it('/billing/checkouts/abc without a key goes to the login page', async () => {
+  it('/billing/checkouts/abc without a key: the login page, then back to /billing?checkout=abc', async () => {
+    // The sign-in page checks the key with a request of its own.
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200 }))
     useAuthStore.setState({ apiKey: null })
     const router = renderAt('/billing/checkouts/abc')
-    expect(await screen.findByText('Вхід')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Вхід для авторів курсів' }),
+    ).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/login')
     expect(api.getCheckout).not.toHaveBeenCalled()
+
+    fireEvent.change(screen.getByLabelText('Ключ доступу'), { target: { value: 'the-key' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Увійти' }))
+    expect(await screen.findByText('Зараховуємо…')).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/billing')
+    expect(router.state.location.search).toBe('?checkout=abc')
+    expect(api.getCheckout).toHaveBeenCalledWith('abc')
   })
 
   it('/billing?checkout=cancelled drops the parameter without asking', async () => {

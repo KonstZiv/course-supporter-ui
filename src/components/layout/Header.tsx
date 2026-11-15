@@ -28,6 +28,10 @@ const NAV = [
   { to: '/help', label: 'Довідка', icon: HelpCircle },
 ] as const
 
+// The base :focus-visible outline (3px, offset 3px) drawn inside the control
+// below `sm`, where the nav row scrolls and clips what lies outside it.
+const NAV_FOCUS = 'max-sm:focus-visible:outline-offset-[-3px]'
+
 export function Header({
   stripItems = [],
 }: {
@@ -41,7 +45,10 @@ export function Header({
       // Д2: below `sm` (the 320 floor) the nav icons take the tightest padding.
       // 1Б: with eight controls the icon-only row overran 640 at px-4, so from
       // `sm` to `xl` it is px-2.5; from `xl`, where the labels show, px-4 returns.
+      // Below `sm` the row scrolls and would clip the focus outline drawn around
+      // a control: there the outline is drawn inside it (NAV_FOCUS).
       'flex items-center gap-2 px-2 sm:px-2.5 xl:px-4 py-2 rounded-xl text-sm font-medium transition-colors',
+      NAV_FOCUS,
       active
         ? 'bg-navy-pale text-navy'
         : 'text-ink-light hover:bg-canvas-dark hover:text-ink',
@@ -94,14 +101,14 @@ export function Header({
             gaps already at their least (measured). Below `sm` the row scrolls
             sideways inside itself — no visible bar, the page itself never
             scrolls sideways. A control reached by Tab is brought fully into
-            view (the browser does so only for one wholly out of view); the
-            vertical padding keeps its focus outline from being clipped. From
+            view (the browser does so only for one wholly out of view), and its
+            focus outline is drawn inside it, where the row cannot clip it. From
             `sm` the row does not scroll, and the page does not scroll sideways
             at any width. */}
         <nav
-          className="flex items-center gap-0.5 sm:gap-1 min-w-0 py-1 overflow-x-auto
+          className="flex items-center gap-0.5 sm:gap-1 min-w-0 overflow-x-auto
                      [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
-                     sm:py-0 sm:overflow-visible sm:shrink-0"
+                     sm:overflow-visible sm:shrink-0"
           onFocus={(e) =>
             e.target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
           }
@@ -124,8 +131,11 @@ export function Header({
             onClick={() => navigate('/logout')}
             aria-label="Вийти"
             title="Вийти"
-            className="flex items-center gap-2 px-2 sm:px-2.5 xl:px-4 py-2 rounded-xl text-sm font-medium
-                       text-ink-muted hover:bg-coral-pale hover:text-coral transition-colors ml-1 sm:ml-2"
+            className={clsx(
+              'flex items-center gap-2 px-2 sm:px-2.5 xl:px-4 py-2 rounded-xl text-sm font-medium',
+              'text-ink-muted hover:bg-coral-pale hover:text-coral transition-colors ml-1 sm:ml-2',
+              NAV_FOCUS,
+            )}
           >
             <LogOut size={16} />
             <span className="hidden xl:inline">Вийти</span>
