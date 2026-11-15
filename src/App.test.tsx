@@ -45,7 +45,9 @@ describe('App — /history under the shared auth guard (§3 c7, clar.3)', () => 
   it('redirects /history to login without a key (the shared guard, not its own)', async () => {
     useAuthStore.setState({ apiKey: null })
     renderAt('/history')
-    expect(await screen.findByText('Вхід')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Вхід для авторів курсів' }),
+    ).toBeInTheDocument()
     expect(screen.queryByText(HISTORY_MARK)).toBeNull()
   })
 })

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from './stores/auth'
 import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
@@ -16,6 +16,7 @@ import { getLanguages } from './utils/languages'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const apiKey = useAuthStore((s) => s.apiKey)
+  const location = useLocation()
   // Boot-time eager prefetch of the language whitelist (Task 2.4.13).
   // Fires once per authenticated session; cache warms before any
   // create-course modal mounts, so ``LanguageSelect`` renders the
@@ -27,7 +28,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       })
     }
   }, [apiKey])
-  if (!apiKey) return <Navigate to="/login" replace />
+  // The sign-in page sends the author back here once the key is accepted.
+  if (!apiKey) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: `${location.pathname}${location.search}` }}
+      />
+    )
+  }
   return <>{children}</>
 }
 
