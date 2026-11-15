@@ -50,6 +50,49 @@ export function formatUnits(n: number): string {
   return `${formatNumber(n)} ${UNIT_WORD[PLURAL.select(Math.abs(n))]}`
 }
 
+/** The forms of a Ukrainian noun after a number, by the plural category. */
+export interface NounForms {
+  one: string
+  few: string
+  many: string
+  /** Fractions; whole numbers never take it. */
+  other: string
+}
+
+/** The form of a noun that follows the number n: 1 → one, 2 → few, 5 → many. */
+export function pluralWord(n: number, forms: NounForms): string {
+  switch (PLURAL.select(Math.abs(n))) {
+    case 'one':
+      return forms.one
+    case 'two':
+    case 'few':
+      return forms.few
+    case 'other':
+      return forms.other
+    default:
+      return forms.many
+  }
+}
+
+function counted(n: number, forms: NounForms): string {
+  return `${formatNumber(n)} ${pluralWord(n, forms)}`
+}
+
+/** 1 → "1 день", 2 → "2 дні", 5 → "5 днів", 21 → "21 день". */
+export function formatDays(n: number): string {
+  return counted(n, { one: 'день', few: 'дні', many: 'днів', other: 'дня' })
+}
+
+/** 1 → "1 робота", 2 → "2 роботи", 5 → "5 робіт", 21 → "21 робота". */
+export function formatWorks(n: number): string {
+  return counted(n, {
+    one: 'робота',
+    few: 'роботи',
+    many: 'робіт',
+    other: 'роботи',
+  })
+}
+
 /** A package's name, as on the site's pricing page: "1 500 юнітів". */
 export function formatPackageName(units: number): string {
   return formatUnits(units)

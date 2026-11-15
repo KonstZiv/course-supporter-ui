@@ -1,17 +1,23 @@
 import { api, ApiError } from './client'
 import type {
+  AuthorEstimateResponse,
   BillingBalanceResponse,
   BillingCheckoutResponse,
   BillingCheckoutStateResponse,
   BillingConsentResponse,
+  BillingOutlookResponse,
   BillingPackagesResponse,
+  BillingSpendingResponse,
   BillingStatementResponse,
   BillingTermsResponse,
+  ProcessingEstimateRequest,
 } from '../types/api'
 
 // The author's units (backend `api/routes/billing.py`): terms and consent,
-// packages and checkout, the checkout's state, balance and statement. Same
-// author `X-API-Key` as every other route.
+// packages and checkout, the checkout's state, balance and statement; the
+// reminders (`billing_outlook.py`), the prices before an action
+// (`billing_estimates.py`) and the spending in units. Same author `X-API-Key`
+// as every other route.
 
 const BASE = '/api/v1/billing'
 
@@ -47,6 +53,40 @@ export const getStatement = (cursor?: string | null) => {
   if (cursor) query.set('cursor', cursor)
   return api.get<BillingStatementResponse>(`${BASE}/statement?${query}`)
 }
+
+/** The reminders and the students' reviews waiting for units. */
+export const billingOutlook = () =>
+  api.get<BillingOutlookResponse>(`${BASE}/outlook`)
+
+/**
+ * The spending in units of a period: inclusive UTC days, YYYY-MM-DD. Without
+ * them the server takes the current month.
+ */
+export const billingSpending = (from?: string, to?: string) => {
+  const query = new URLSearchParams()
+  if (from) query.set('from', from)
+  if (to) query.set('to', to)
+  const search = query.toString()
+  return api.get<BillingSpendingResponse>(
+    `${BASE}/spending${search ? `?${search}` : ''}`,
+  )
+}
+
+/** The price of processing a material of the node, from its features. */
+export const estimateProcessing = (
+  nodeId: string,
+  body: ProcessingEstimateRequest,
+) =>
+  api.post<AuthorEstimateResponse>(
+    `/api/v1/nodes/${encodeURIComponent(nodeId)}/documents/estimate`,
+    body,
+  )
+
+/** The price of the explanations of a test's key. */
+export const estimateKeyExplanation = (documentId: string) =>
+  api.post<AuthorEstimateResponse>(
+    `/api/v1/documents/${encodeURIComponent(documentId)}/reference/estimate`,
+  )
 
 /**
  * The reason code of a billing refusal — `detail.code` of

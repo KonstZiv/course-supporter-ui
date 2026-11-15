@@ -12,6 +12,7 @@ export function ConfirmDialog({
   confirmLabel,
   confirmClass = 'btn-primary',
   busy = false,
+  confirmDisabled = false,
   onCancel,
   onConfirm,
   children,
@@ -22,6 +23,8 @@ export function ConfirmDialog({
   confirmLabel: string
   confirmClass?: 'btn-primary' | 'btn-accent' | 'btn-danger'
   busy?: boolean
+  /** The action may not start yet (its price is not in, or not enough). */
+  confirmDisabled?: boolean
   onCancel: () => void
   onConfirm: () => void
   children: React.ReactNode
@@ -38,7 +41,7 @@ export function ConfirmDialog({
             type="button"
             className={confirmClass}
             onClick={onConfirm}
-            disabled={busy}
+            disabled={busy || confirmDisabled}
           >
             {busy && <Loader2 size={16} className="animate-spin" />}
             {confirmLabel}

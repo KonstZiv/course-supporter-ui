@@ -2,6 +2,8 @@ import { AlertTriangle } from 'lucide-react'
 import type { DraftCheckState } from '../../types/api'
 import { ConfirmDialog } from './ConfirmDialog'
 import { TEXTS } from './editorTexts'
+import type { ActionPrice } from '../../hooks/useActionPrice'
+import { PriceCard } from '../billing/PriceCard'
 
 // What the second part of the question says, by how far the check got; every
 // state but a finished check is a warning: the first students may get their
@@ -19,6 +21,7 @@ export function PublishDialog({
   firstPublication,
   checkState,
   busy,
+  price,
   onCancel,
   onConfirm,
 }: {
@@ -26,6 +29,8 @@ export function PublishDialog({
   firstPublication: boolean
   checkState: DraftCheckState
   busy: boolean
+  /** The price of the explanations a publication asks for; not enough stops it. */
+  price?: ActionPrice
   onCancel: () => void
   onConfirm: () => void
 }) {
@@ -38,6 +43,7 @@ export function PublishDialog({
       confirmLabel={TEXTS.publish}
       confirmClass="btn-accent"
       busy={busy}
+      confirmDisabled={price !== undefined && !price.ready}
       onCancel={onCancel}
       onConfirm={onConfirm}
     >
@@ -50,6 +56,7 @@ export function PublishDialog({
       ) : (
         <p>{check.words}</p>
       )}
+      {price && <PriceCard price={price} />}
     </ConfirmDialog>
   )
 }

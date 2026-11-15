@@ -15,6 +15,26 @@ vi.mock('react-router-dom', async (importOriginal) => {
   return { ...actual, useNavigate: () => navigateMock }
 })
 
+// The price before a paid action (BIL-E) is asked first. Charging is off here
+// (as it is until calibration), so every action runs as it did before.
+vi.mock('../../api/billing', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../api/billing')>()),
+  estimateProcessing: vi.fn().mockResolvedValue({
+    price_units: 0,
+    available_units: null,
+    enough: true,
+    missing_units: null,
+    charging_enabled: false,
+  }),
+  estimateKeyExplanation: vi.fn().mockResolvedValue({
+    price_units: 0,
+    available_units: null,
+    enough: true,
+    missing_units: null,
+    charging_enabled: false,
+  }),
+}))
+
 // The link door calls ``documentsApi.uploadUrl``; mock the module so the
 // rejection path is drivable. Other methods are unused no-ops here.
 vi.mock('../../api/documents', () => ({
@@ -194,7 +214,7 @@ describe('NodeDetailPanel — link rejection is shown, never swallowed', () => {
 
   // Drive the URL door end to end: type a link, open the «Тип документа»
   // dialog, pick a role, confirm — the same steps the author performs.
-  function addLinkThroughDialog(url: string): void {
+  async function addLinkThroughDialog(url: string): Promise<void> {
     seed(makeNode())
     render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
     fireEvent.change(
@@ -203,7 +223,10 @@ describe('NodeDetailPanel — link rejection is shown, never swallowed', () => {
     )
     fireEvent.click(screen.getByText('Додати'))
     fireEvent.click(screen.getByText('Навчальний'))
-    fireEvent.click(screen.getByText('Завантажити'))
+    // The dialog asks the price first (BIL-E); the button waits for it.
+    const upload = screen.getByText('Завантажити')
+    await waitFor(() => expect(upload).toBeEnabled())
+    fireEvent.click(upload)
   }
 
   it('surfaces the server reason (video past the duration cap)', async () => {
@@ -217,7 +240,7 @@ describe('NodeDetailPanel — link rejection is shown, never swallowed', () => {
         },
       }),
     )
-    addLinkThroughDialog('https://youtu.be/long')
+    await addLinkThroughDialog('https://youtu.be/long')
     // Step Г2 §2.5: the link door and the file door answer on ONE surface —
     // the author has one place to look, whichever way the material came in.
     await waitFor(() =>
@@ -233,7 +256,7 @@ describe('NodeDetailPanel — link rejection is shown, never swallowed', () => {
     vi.mocked(documentsApi.uploadUrl).mockRejectedValue(
       new ApiError(400, 'API error 400', null),
     )
-    addLinkThroughDialog('https://youtu.be/x')
+    await addLinkThroughDialog('https://youtu.be/x')
     await waitFor(() =>
       expect(
         screen.getByText(
@@ -247,7 +270,7 @@ describe('NodeDetailPanel — link rejection is shown, never swallowed', () => {
     vi.mocked(documentsApi.uploadUrl).mockRejectedValue(
       new ApiError(400, 'API error 400', null),
     )
-    addLinkThroughDialog('https://youtu.be/x')
+    await addLinkThroughDialog('https://youtu.be/x')
     await screen.findByText(
       'Не вдалося додати матеріал за посиланням. Спробуйте ще раз.',
     )

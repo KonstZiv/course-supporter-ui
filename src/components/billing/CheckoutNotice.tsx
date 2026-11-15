@@ -2,6 +2,7 @@ import { billingReason, getCheckout } from '../../api/billing'
 import type { CheckoutSource } from '../../hooks/useCheckoutWatch'
 import { ContactAdmin } from '../ui/ContactAdmin'
 import { PaymentResult } from './PaymentResult'
+import { ReturnToWork } from './ReturnToWork'
 
 // The author's checkouts, asked with the author's key.
 const AUTHOR_CHECKOUTS: CheckoutSource = {
@@ -35,6 +36,7 @@ export function CheckoutNotice({
       source={AUTHOR_CHECKOUTS}
       onCredited={onCredited}
       onDismiss={onDismiss}
+      creditedAction={<ReturnToWork />}
       stoppedNote={
         <>
           <p>
