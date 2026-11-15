@@ -35,6 +35,14 @@ describe('rejectionPhrase — layer 1, the §4 article for a whole submission', 
     )
   })
 
+  it('no_changes → the ratified article for a project without changes', () => {
+    expect(rejectionPhrase(rej('no_changes'))).toBe(
+      'Надісланий архів не містить ваших змін: у ньому немає жодного нового ' +
+        'чи зміненого файла з кодом або текстом порівняно зі стартовим проєктом. ' +
+        'Внесіть свої зміни в проєкт і надішліть роботу знову.',
+    )
+  })
+
   it.each(['archive_violation', 'archive_bomb', 'symlink_violation'])(
     '%s → the one structural answer (which guard tripped is not the student’s concern)',
     (code) => {
