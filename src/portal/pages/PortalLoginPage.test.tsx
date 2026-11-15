@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { PortalLoginPage } from './PortalLoginPage'
 import { usePortalSession } from '../stores/session'
 import { portalLogin, PortalApiError } from '../api/portalClient'
@@ -14,7 +14,13 @@ vi.mock('../api/portalClient', async (importOriginal) => {
 })
 
 const TENANT_A = '019eda80-67ea-7060-b4c4-9dc85761690e'
+const TENANT_B = '019edb00-0000-7000-8000-000000000002'
 const mockedLogin = vi.mocked(portalLogin)
+
+function BillingProbe() {
+  const { search } = useLocation()
+  return <div>BILLING PAGE {search}</div>
+}
 
 function renderAt(path: string) {
   render(
@@ -22,6 +28,7 @@ function renderAt(path: string) {
       <Routes>
         <Route path="/:tenantId/login" element={<PortalLoginPage />} />
         <Route path="/:tenantId/home" element={<div>HOME PAGE</div>} />
+        <Route path="/:tenantId/billing" element={<BillingProbe />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -96,5 +103,47 @@ describe('PortalLoginPage', () => {
     })
     renderAt(`/${TENANT_A}/login`)
     expect(screen.getByText('HOME PAGE')).toBeInTheDocument()
+  })
+
+  describe('the way back (next)', () => {
+    const SUCCESS = {
+      access_token: 'jwt-token',
+      token_type: 'bearer',
+      student_id: '019edaa5-1111-7000-8000-000000000001',
+      display_name: 'Олена',
+    }
+    const login = (next: string) =>
+      `/${TENANT_A}/login?next=${encodeURIComponent(next)}`
+
+    it('leads to next, a page of this tenant, after sign-in', async () => {
+      mockedLogin.mockResolvedValue(SUCCESS)
+      renderAt(login(`/${TENANT_A}/billing?checkout=abc`))
+      fillCredentials()
+      fireEvent.click(screen.getByRole('button', { name: /увійти/i }))
+      expect(await screen.findByText('BILLING PAGE ?checkout=abc')).toBeInTheDocument()
+    })
+
+    it.each([
+      ['another tenant', `/${TENANT_B}/billing`],
+      ['a path with //', `/${TENANT_A}//evil.example`],
+      ['another site', 'https://evil.example/'],
+    ])('leads home for %s', async (_, next) => {
+      mockedLogin.mockResolvedValue(SUCCESS)
+      renderAt(login(next))
+      fillCredentials()
+      fireEvent.click(screen.getByRole('button', { name: /увійти/i }))
+      expect(await screen.findByText('HOME PAGE')).toBeInTheDocument()
+    })
+
+    it('leads to next when already signed in for this tenant', () => {
+      usePortalSession.getState().setSession({
+        token: 'jwt',
+        tenantId: TENANT_A,
+        studentId: '019edaa5-1111-7000-8000-000000000001',
+        displayName: 'Олена',
+      })
+      renderAt(login(`/${TENANT_A}/billing?checkout=abc`))
+      expect(screen.getByText('BILLING PAGE ?checkout=abc')).toBeInTheDocument()
+    })
   })
 })
