@@ -47,6 +47,7 @@ const row = (over: Partial<PortalSubmissionListItem>): PortalSubmissionListItem 
   rejection: null,
   not_opened: [],
   recovered_encoding: null,
+  attempt_no: null,
   ...over,
 })
 

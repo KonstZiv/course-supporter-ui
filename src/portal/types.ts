@@ -309,6 +309,11 @@ export interface PortalSubmissionListItem {
   // the LIST row like ``not_opened``, because the error and pending branches of
   // the review detail render without fetching (DD-6-D).
   recovered_encoding: string | null
+  // Which attempt at the task this is: 1 for the first reviewed attempt, null
+  // for a submission made before attempts were counted (mentor-rebuild task 13,
+  // K5). On the list row and, through ``extends``, on the detail — the backend
+  // carries it on both.
+  attempt_no: number | null
 }
 
 // KD18 P5: I2 delta receipt — counters + staleness for a project submission,
@@ -376,19 +381,31 @@ export interface PortalTouchRequest {
 // review but a test's: since task 07 a test's review carries one, with its
 // ``test`` section, and no other stage writes one yet.
 
-// Where in the material a remark points. The four kinds are closed on the
-// server; a fifth would arrive as a string this build does not know.
-export type ReviewPositionKind = 'video' | 'slide' | 'paragraph' | 'file'
+// Where in the material a remark or a course link points. The five kinds are
+// closed on the server (``audio`` came with the course links of task 10: a
+// recording is not a video); a sixth would arrive as a string this build does
+// not know.
+export type ReviewPositionKind = 'video' | 'audio' | 'slide' | 'paragraph' | 'file'
 
 export interface ReviewPosition {
   kind: ReviewPositionKind
   value: string
 }
 
-// Something to read, already resolved to a link by the server.
+// Something to read: an outside link, or a course link to a place in the
+// course (task 10). An outside link has its ``url``. A course link has none —
+// its address in the portal is built from ``segment_id`` — and may carry where
+// in the material (``position``), a few words of the fragment for the portal
+// to show (``excerpt``) and ``later_in_course`` when the fragment comes later
+// in the course than the task. The four task-10 keys are absent from a review
+// stored before them.
 export interface ReviewReference {
   title: string
-  url: string
+  url: string | null
+  position?: ReviewPosition | null
+  excerpt?: string | null
+  segment_id?: string | null
+  later_in_course?: boolean
 }
 
 // One remark, in the contrasting form: what is wrong, why it matters, what to
@@ -409,11 +426,33 @@ export interface ReviewReply {
   answer: string
 }
 
+// Which branch of a criteria list's pass rule decided (2026-11-12). Closed on
+// the server: ``author_musts_*`` — the author approved a list with mandatory
+// criteria; ``no_author_musts_*`` — the list is the automatic check's, or the
+// author's without mandatory criteria.
+export type ReviewPassBasis =
+  | 'author_musts_met'
+  | 'author_musts_unmet'
+  | 'author_musts_below_threshold'
+  | 'no_author_musts_passed'
+  | 'no_author_musts_failed'
+
+// The pass rule as it decided a verdict: the branch and the two numbers its
+// phrase names — the work's score and that branch's threshold, whole percent.
+export interface ReviewPassRule {
+  basis: ReviewPassBasis
+  score: number
+  threshold: number
+}
+
 // ``why`` is null on a test's verdict — the score is its reason (task 07,
-// decision 20); every other verdict carries one.
+// decision 20); every other verdict carries one. ``rule`` is the pass rule of
+// a criteria list as it decided this verdict; the key is absent from a test's
+// verdict and from every review stored before the rule (2026-11-12).
 export interface ReviewVerdict {
   passed: boolean
   why: string | null
+  rule?: ReviewPassRule
 }
 
 // What was established by running the work, and what by reading it. Either
@@ -463,6 +502,11 @@ export interface ReviewStructureV1 {
   replies: ReviewReply[]
   verification: ReviewVerification | null
   progress: string | null
+  // The number of the student's earlier attempt this review repeats: the work
+  // did not change since it, so its review was given again without a new
+  // check (task 13, K3). The key is absent from a review written for this
+  // submission and from every review stored before it.
+  unchanged_from_attempt?: number
 }
 
 // --- R3: password-recovery self-service ---

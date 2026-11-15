@@ -70,6 +70,7 @@ const row = (over: Partial<PortalSubmissionListItem> = {}): PortalSubmissionList
   rejection: null,
   not_opened: [],
   recovered_encoding: null,
+  attempt_no: null,
   ...over,
 })
 
@@ -93,6 +94,7 @@ const detail = (over: Partial<Parameters<typeof mockedSubmission.mockResolvedVal
   rejection: null,
   not_opened: [],
   recovered_encoding: null,
+  attempt_no: null,
   ...over,
 })
 

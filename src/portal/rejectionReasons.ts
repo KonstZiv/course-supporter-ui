@@ -87,6 +87,15 @@ const WHOLE_FILE: Record<string, ReasonArticle> = {
     what: 'У поданому файлі немає тексту для перевірки.',
     action: 'Надішліть текстову версію роботи (не скан і не порожній архів).',
   },
+  // A project with no new or changed text file against the starting project
+  // (mentor-rebuild, project chain K6): refused before anything is paid for.
+  // Wording ratified by the operator 2026-11-15.
+  no_changes: {
+    what:
+      'Надісланий архів не містить ваших змін: у ньому немає жодного нового ' +
+      'чи зміненого файла з кодом або текстом порівняно зі стартовим проєктом.',
+    action: 'Внесіть свої зміни в проєкт і надішліть роботу знову.',
+  },
   suspicious_unicode: {
     what: 'У тексті є приховані або підмінені символи.',
     action: 'Приберіть їх і подайте знову.',
