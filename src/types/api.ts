@@ -965,3 +965,132 @@ export interface EnrollmentRequest {
   student_id: string
   course_node_id: string
 }
+
+// ─── Units of the author's account (BIL-A, BIL-PAY) ───
+//
+// The author's billing routes (`api/routes/billing.py`, schemas
+// `Billing*` in `api/schemas.py`), synced by hand against backend main.
+// Every amount is in units; the only money is a package's price.
+// A refusal carries `{ detail: { code, details } }` — the screen picks its
+// words by `code` (`billingReason`), never shows `details`.
+
+export interface BillingTermsResponse {
+  /** Revision in force: the date it took effect, YYYY-MM-DD. */
+  terms_version: string
+  consent_required: boolean
+  consented_at: string | null
+}
+
+export interface BillingConsentRequest {
+  /** The revision the author was shown; must be the one in force. */
+  terms_version: string
+  /** SHA-256 (lowercase hex) of the terms text shown. */
+  text_sha256: string
+}
+
+export interface BillingConsentResponse {
+  terms_version: string
+  consented_at: string
+}
+
+export interface BillingPackage {
+  id: string
+  units: number
+  /** Price per currency (ISO 4217) in minor units; EUR always. */
+  prices_minor: Record<string, number>
+}
+
+export type BillingPurchaseClosedReason =
+  | 'payment_unavailable'
+  | 'purchase_not_open'
+
+export interface BillingPurchaseState {
+  open: boolean
+  reason: BillingPurchaseClosedReason | null
+}
+
+export interface BillingPackagesResponse {
+  packages: BillingPackage[]
+  purchase: BillingPurchaseState
+}
+
+export interface BillingCheckoutRequest {
+  package_id: string
+}
+
+export interface BillingCheckoutResponse {
+  provider: string
+  checkout_id: string
+  checkout_url: string
+  /** The platform's own number of the checkout (a UUID). */
+  checkout_ref: string
+}
+
+export type BillingCheckoutState = 'pending' | 'credited' | 'failed'
+
+export interface BillingCheckoutStateResponse {
+  state: BillingCheckoutState
+  package_id: string
+  /** Credited: the units the purchase brought; null otherwise. */
+  units: number | null
+  /** Credited: the units available now; null otherwise. */
+  balance_after: number | null
+}
+
+export interface BillingNextExpiry {
+  units: number
+  /** The day they burn (UTC), YYYY-MM-DD. */
+  expires_on: string
+}
+
+export interface BillingBalanceResponse {
+  balance: number
+  reserved: number
+  held: number
+  /** balance − reserved − held. */
+  available: number
+  difference: number
+  next_expiry: BillingNextExpiry | null
+}
+
+/** `StatementLineKind` of the backend: the key the screen translates. */
+export type BillingStatementKind =
+  | 'purchase'
+  | 'admin_credit'
+  | 'charge'
+  | 'benefit_covered'
+  | 'platform_covered'
+  | 'expired'
+  | 'refund'
+  | 'refund_hold'
+  | 'refund_released'
+  | 'dispute_hold'
+  | 'dispute_released'
+  | 'dispute_lost'
+  | 'difference_arisen'
+  | 'difference_repaid'
+  | 'difference_annulled'
+
+export interface BillingStatementAction {
+  /** review | processing | task_preparation (a plain string on the wire). */
+  kind: string
+  id: string
+}
+
+export interface BillingStatementItem {
+  at: string
+  kind: BillingStatementKind
+  affects_balance: boolean
+  /**
+   * affects_balance: signed by the change (+ in, − out). Otherwise a
+   * positive amount held, freed or covered; the balance stays as it was.
+   */
+  units: number
+  balance_after: number
+  action: BillingStatementAction | null
+}
+
+export interface BillingStatementResponse {
+  items: BillingStatementItem[]
+  next_cursor: string | null
+}

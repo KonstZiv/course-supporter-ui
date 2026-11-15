@@ -17,6 +17,7 @@ describe('contactAdminPlaces', () => {
       'FlowContextMenu.tsx': 1,
       'ingestErrors.ts': 2,
       'testRefusals.ts': 2,
+      'billingWords.ts': 3,
     }
 
     const actualCounts: Record<string, number> = {}

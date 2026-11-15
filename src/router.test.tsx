@@ -36,6 +36,7 @@ vi.mock('./pages/HomeworkCostPage', () => ({
   HomeworkCostPage: () => <h1>page: homework cost</h1>,
 }))
 vi.mock('./pages/HistoryPage', () => ({ HistoryPage: () => <h1>page: history</h1> }))
+vi.mock('./pages/BillingPage', () => ({ BillingPage: () => <h1>page: billing</h1> }))
 vi.mock('./pages/HelpPage', () => ({
   HelpPage: () => {
     if (help.fails) throw new Error('the help page broke')
@@ -63,6 +64,7 @@ const PAGES = [
   { path: '/students', page: 'students' },
   { path: '/cost', page: 'cost' },
   { path: '/cost/homework', page: 'homework cost' },
+  { path: '/billing', page: 'billing' },
   { path: '/history', page: 'history' },
   { path: '/help', page: 'help' },
 ]
