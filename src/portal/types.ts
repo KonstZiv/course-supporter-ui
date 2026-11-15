@@ -576,3 +576,128 @@ export interface SubmissionPolicyResponse {
   // "project or not" on this side of the boundary.
   policies: Record<PortalAssignmentType, SubmissionPolicyEntry>
 }
+
+
+// --- Units of the student's account (BIL-A, BIL-PAY, BIL-E) ---
+// The student's billing routes (backend ``api/routes/portal_billing.py`` and
+// ``billing_outlook.py``; schemas ``Billing*`` in ``api/schemas.py``, the very
+// ones the author's routes answer with), synced by hand against backend main.
+// Every amount is in units; the only money is a package's price. A refusal
+// carries ``{ detail: { code, details } }`` — the page picks its words by
+// ``code`` (``doorRefusal``) and never shows ``details``. Portal-local twins of
+// the author's ``Billing*`` (ratify Q2); the shared billing components of
+// ``src/components/billing`` take either, the shapes being the same.
+
+export interface PortalBillingTerms {
+  // Revision in force: the date it took effect, YYYY-MM-DD.
+  terms_version: string
+  consent_required: boolean
+  consented_at: string | null
+}
+
+export interface PortalBillingConsentRequest {
+  // The revision the student was shown; must be the one in force (409 else).
+  terms_version: string
+  // SHA-256 (lowercase hex) of the terms text shown.
+  text_sha256: string
+}
+
+export interface PortalBillingConsent {
+  terms_version: string
+  consented_at: string
+}
+
+export interface PortalBillingPackage {
+  id: string
+  units: number
+  // Price per currency (ISO 4217) in minor units; EUR always.
+  prices_minor: Record<string, number>
+}
+
+export interface PortalBillingPackages {
+  packages: PortalBillingPackage[]
+  purchase: {
+    open: boolean
+    reason: 'payment_unavailable' | 'purchase_not_open' | null
+  }
+}
+
+export interface PortalBillingCheckoutRequest {
+  package_id: string
+}
+
+export interface PortalBillingCheckout {
+  provider: string
+  checkout_id: string
+  checkout_url: string
+  // The platform's own number of the checkout (a UUID): the last segment of
+  // the address the provider brings the student back to.
+  checkout_ref: string
+}
+
+export interface PortalBillingCheckoutState {
+  state: 'pending' | 'credited' | 'failed'
+  package_id: string
+  // Credited: the units the purchase brought; null otherwise.
+  units: number | null
+  // Credited: the units available now; null otherwise.
+  balance_after: number | null
+}
+
+export interface PortalBillingBalance {
+  balance: number
+  reserved: number
+  held: number
+  // balance − reserved − held.
+  available: number
+  // Always 0 for a student.
+  difference: number
+  next_expiry: { units: number; expires_on: string } | null
+}
+
+// ``StatementLineKind`` of the backend: the key the screen translates.
+export type PortalBillingStatementKind =
+  | 'purchase'
+  | 'admin_credit'
+  | 'charge'
+  | 'benefit_covered'
+  | 'platform_covered'
+  | 'expired'
+  | 'refund'
+  | 'refund_hold'
+  | 'refund_released'
+  | 'dispute_hold'
+  | 'dispute_released'
+  | 'dispute_lost'
+  | 'difference_arisen'
+  | 'difference_repaid'
+  | 'difference_annulled'
+
+export interface PortalBillingStatementItem {
+  at: string
+  kind: PortalBillingStatementKind
+  affects_balance: boolean
+  // affects_balance: signed by the change (+ in, − out). Otherwise a positive
+  // amount held, freed or covered; the balance stays as it was.
+  units: number
+  balance_after: number
+  // review | processing | task_preparation (a plain string on the wire).
+  action: { kind: string; id: string } | null
+}
+
+export interface PortalBillingStatement {
+  items: PortalBillingStatementItem[]
+  next_cursor: string | null
+}
+
+// GET /portal/billing/outlook (without ``course_id``: the payment rule for the
+// student only). This stage reads ``paid_by``; the rest feeds the reminders of
+// the next one.
+export interface PortalBillingOutlook {
+  // About how many reviews the available units cover; null when the author
+  // pays or nothing is known to price a review.
+  reviews_left: number | null
+  warning: 'low' | 'next_may_fail' | null
+  expiring_soon: { units: number; expires_on: string } | null
+  paid_by: 'self' | 'author'
+}

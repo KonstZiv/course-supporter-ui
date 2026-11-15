@@ -3,9 +3,23 @@ import { formatDate, formatUnits } from '../../utils/units'
 import { SITE_PRICING_URL } from '../site/siteLinks'
 import { NewTabLink } from './NewTabLink'
 
-/** Where the author's units stand (`GET /billing/balance`). */
-export function BalanceCard({ balance }: { balance: BillingBalanceResponse }) {
-  const { reserved, held, difference, next_expiry: expiry } = balance
+interface BalanceCardProps {
+  balance: BillingBalanceResponse
+  /**
+   * Whether the line about units used beyond the balance is shown. A student
+   * has none (the server's `difference` is always 0 for them): the portal
+   * passes false.
+   */
+  withDifference?: boolean
+}
+
+/**
+ * Where the holder's units stand (`GET /billing/balance`, the portal's
+ * `GET /portal/billing/balance`).
+ */
+export function BalanceCard({ balance, withDifference = true }: BalanceCardProps) {
+  const { reserved, held, next_expiry: expiry } = balance
+  const difference = withDifference ? balance.difference : 0
   const nothing =
     balance.balance === 0 &&
     reserved === 0 &&

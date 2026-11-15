@@ -5,6 +5,7 @@ import { PortalResetPasswordPage } from './pages/PortalResetPasswordPage'
 import { PortalConfirmEmailPage } from './pages/PortalConfirmEmailPage'
 import { PortalHomePage } from './pages/PortalHomePage'
 import { PortalCoursePage } from './pages/PortalCoursePage'
+import { PortalBillingPage } from './pages/PortalBillingPage'
 import { PortalProtectedRoute } from './components/PortalProtectedRoute'
 import { InvalidPortalLink } from './components/InvalidPortalLink'
 
@@ -12,6 +13,20 @@ import { InvalidPortalLink } from './components/InvalidPortalLink'
 function TenantIndex() {
   const { tenantId } = useParams()
   return <Navigate to={`/${tenantId}/home`} replace />
+}
+
+// The payment provider brings the student back to
+// /<tenant>/billing/checkouts/<ref> (backend `return_urls`), maybe with
+// parameters of its own: the number moves to the units page's `checkout`
+// parameter, the rest is dropped, and the entry is replaced.
+function CheckoutReturn() {
+  const { tenantId, checkoutRef = '' } = useParams()
+  return (
+    <Navigate
+      to={`/${tenantId}/billing?checkout=${encodeURIComponent(checkoutRef)}`}
+      replace
+    />
+  )
 }
 
 // Portal router (Phase 6 / T4b, c1). All routes carry the tenant-id segment
@@ -46,6 +61,22 @@ export function PortalApp() {
         element={
           <PortalProtectedRoute>
             <PortalCoursePage />
+          </PortalProtectedRoute>
+        }
+      />
+      <Route
+        path="/:tenantId/billing"
+        element={
+          <PortalProtectedRoute>
+            <PortalBillingPage />
+          </PortalProtectedRoute>
+        }
+      />
+      <Route
+        path="/:tenantId/billing/checkouts/:checkoutRef"
+        element={
+          <PortalProtectedRoute>
+            <CheckoutReturn />
           </PortalProtectedRoute>
         }
       />

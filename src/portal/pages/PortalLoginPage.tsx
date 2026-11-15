@@ -1,22 +1,32 @@
 import { useState } from 'react'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import {
+  Link,
+  Navigate,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from 'react-router-dom'
 import { BookOpen, ArrowRight, AlertCircle, Loader2 } from 'lucide-react'
 import { usePortalSession } from '../stores/session'
 import { portalLogin, PortalApiError } from '../api/portalClient'
 import { isUuid } from '../uuid'
 import { InvalidPortalLink } from '../components/InvalidPortalLink'
+import { afterSignIn, nextOf } from '../signInReturn'
 
 // Student portal login (Phase 6 / T4b, c1). The tenant comes from the URL
 // segment (ratify Q3) and is sent as ``tenant_id`` in the unauthenticated
 // login request — the student has no key, the tenant is resolved before the
 // student is known. Mirrors the author LoginPage's raw-fetch approach (the
-// bearer client cannot be used pre-token).
+// bearer client cannot be used pre-token). Sign-in leads back to the address
+// the student was opening (``next``) when it is a page of this tenant's
+// portal, else home.
 export function PortalLoginPage() {
   const { tenantId } = useParams()
   const token = usePortalSession((s) => s.token)
   const sessionTenant = usePortalSession((s) => s.tenantId)
   const setSession = usePortalSession((s) => s.setSession)
   const navigate = useNavigate()
+  const [search] = useSearchParams()
 
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
@@ -27,9 +37,11 @@ export function PortalLoginPage() {
     return <InvalidPortalLink />
   }
 
+  const target = afterSignIn(tenantId, nextOf(search))
+
   // Already signed in for this tenant → straight to the portal.
   if (token && sessionTenant === tenantId) {
-    return <Navigate to={`/${tenantId}/home`} replace />
+    return <Navigate to={target} replace />
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,7 +62,7 @@ export function PortalLoginPage() {
         studentId: res.student_id,
         displayName: res.display_name,
       })
-      navigate(`/${tenantId}/home`, { replace: true })
+      navigate(target, { replace: true })
     } catch (err) {
       if (err instanceof PortalApiError && err.status === 401) {
         setError('Невірний логін або пароль.')

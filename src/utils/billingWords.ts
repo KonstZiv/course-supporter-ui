@@ -1,10 +1,12 @@
-import { ApiError } from '../api/client'
-import { billingReason } from '../api/billing'
 import type { BillingStatementItem } from '../types/api'
 
-// What the "Юніти" page says: a statement line's kind, and a failed load or
-// action. The page picks a refusal's words by its reason code (`detail.code`);
+// What the "Юніти" pages say: a statement line's kind, and a failed load or
+// action. A page picks a refusal's words by its reason code (`detail.code`);
 // the server's English `details` never reach the screen.
+//
+// A pure module — no client, no store — shared by the author app and the
+// portal. The sentences below are the author's; the portal has its own
+// (`portal/billingTexts.ts`), which name the support address instead.
 
 const KIND_TEXT: Record<string, string> = {
   purchase: 'Купівля пакета',
@@ -60,14 +62,35 @@ export const PURCHASE_CLOSED_REASONS: readonly string[] = [
 ]
 
 /**
- * The words for an action (consent, checkout) that failed with no state of
- * its own on the page: by the reason code; a refusal without a known one is
- * the general sentence; no answer at all is the connection.
+ * What became of an action (consent, checkout) that failed with no state of
+ * its own on the page: a package gone from the sale, a payment page that did
+ * not open, another refusal, or no answer at all.
  */
-export function actionFailureText(err: unknown): string {
-  const reason = billingReason(err)
-  if (reason === 'package_not_found') return PACKAGE_NOT_FOUND
-  if (reason === 'provider_unavailable') return PROVIDER_UNAVAILABLE
-  if (reason !== null || err instanceof ApiError) return ACTION_FAILED
-  return NETWORK_FAILED
+export type ActionFailure =
+  | 'package_not_found'
+  | 'provider_unavailable'
+  | 'refused'
+  | 'unreachable'
+
+/**
+ * The failure of an action by its refusal's reason code (`reason`, null when
+ * it carried none) and whether the server answered at all (`answered`): a
+ * refusal without a known code is a refusal; no answer is the connection.
+ */
+export function actionFailure(
+  reason: string | null,
+  answered: boolean,
+): ActionFailure {
+  if (reason === 'package_not_found') return 'package_not_found'
+  if (reason === 'provider_unavailable') return 'provider_unavailable'
+  if (reason !== null || answered) return 'refused'
+  return 'unreachable'
+}
+
+/** The author's words for each failure of an action. */
+export const ACTION_FAILURE_TEXT: Record<ActionFailure, string> = {
+  package_not_found: PACKAGE_NOT_FOUND,
+  provider_unavailable: PROVIDER_UNAVAILABLE,
+  refused: ACTION_FAILED,
+  unreachable: NETWORK_FAILED,
 }

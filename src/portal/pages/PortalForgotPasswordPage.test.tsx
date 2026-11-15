@@ -38,7 +38,9 @@ describe('PortalForgotPasswordPage', () => {
 
   it('shows the invalid-link page for a non-UUID tenant segment', () => {
     renderAt('/not-a-uuid/forgot-password')
-    expect(screen.getByText('Невірне посилання')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Навчальний портал Course Supporter' }),
+    ).toBeInTheDocument()
     expect(screen.queryByLabelText('Логін')).not.toBeInTheDocument()
   })
 
