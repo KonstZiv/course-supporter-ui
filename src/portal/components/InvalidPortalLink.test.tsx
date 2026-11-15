@@ -68,9 +68,12 @@ describe('InvalidPortalLink — the neutral page', () => {
     expect(screen.getByRole('navigation', { name: 'Правова інформація' })).toBeInTheDocument()
   })
 
-  it('never names a teacher', () => {
+  it('never names a teacher, nor any avoided word', () => {
     renderAt('/')
-    expect(document.body.textContent).not.toMatch(/викладач/i)
+    const text = document.body.textContent!.toLowerCase()
+    for (const word of ['викладач', 'напишіть нам', 'тест', 'баланс', 'поповнення', 'різниц', 'борг', 'provider']) {
+      expect(text, word).not.toContain(word)
+    }
   })
 
   it('asks the server nothing', () => {

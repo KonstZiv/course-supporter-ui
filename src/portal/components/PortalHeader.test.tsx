@@ -151,6 +151,24 @@ describe('PortalHeader', () => {
     expect(within(nav()).getByRole('link', { name: 'Юніти' })).toBeInTheDocument()
   })
 
+  it('the signed-in pages say none of the avoided words', async () => {
+    for (const path of [`/${T}/home`, `/${T}/courses/${COURSE}`]) {
+      const { unmount } = render(
+        <RouterProvider
+          router={createMemoryRouter([{ path: '*', element: <PortalApp /> }], {
+            initialEntries: [path],
+          })}
+        />,
+      )
+      await waitFor(() => expect(api.billingOutlook).toHaveBeenCalled())
+      const text = document.body.textContent!.toLowerCase()
+      for (const word of ['напишіть нам', 'тест', 'баланс', 'поповнення', 'різниц', 'борг', 'provider']) {
+        expect(text, `${path}: ${word}`).not.toContain(word)
+      }
+      unmount()
+    }
+  })
+
   it('"Юніти" leads to the units page', async () => {
     const router = renderAt(`/${T}/home`)
     fireEvent.click(within(nav()).getByRole('link', { name: 'Юніти' }))
