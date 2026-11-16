@@ -43,6 +43,16 @@ describe('rejectionPhrase — layer 1, the §4 article for a whole submission', 
     )
   })
 
+  it('no_readable_changes → the ratified article for a project with no readable changes', () => {
+    expect(rejectionPhrase(rej('no_readable_changes'))).toBe(
+      'Серед ваших нових і змінених файлів немає жодного, який перевірка ' +
+        'змогла прочитати: файлів із кодом чи текстом немає або їх не ' +
+        'вдалося відкрити (перелік і причини — нижче). ' +
+        'Додайте чи виправте файли з кодом або текстом (текст зберігайте ' +
+        'в кодуванні UTF-8) і надішліть роботу знову.',
+    )
+  })
+
   it.each(['archive_violation', 'archive_bomb', 'symlink_violation'])(
     '%s → the one structural answer (which guard tripped is not the student’s concern)',
     (code) => {
