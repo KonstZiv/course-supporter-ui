@@ -35,19 +35,20 @@ import { useCourseStore } from '../../stores/course'
 import { documentsApi } from '../../api/documents'
 import { nodesApi } from '../../api/nodes'
 
-const OFF: AuthorEstimateResponse = {
-  price_units: 0,
-  available_units: null,
-  enough: true,
-  missing_units: null,
-  charging_enabled: false,
-}
+// A retry is asked with the kind alone: the server answers without a price.
 const ON_UNPRICED: AuthorEstimateResponse = {
-  price_units: 0,
+  price_units: null,
   available_units: 300,
   enough: true,
   missing_units: null,
   charging_enabled: true,
+  unpriced_reason: 'missing_features',
+  missing_features: ['duration_sec'],
+}
+const OFF: AuthorEstimateResponse = {
+  ...ON_UNPRICED,
+  available_units: null,
+  charging_enabled: false,
 }
 
 const INSUFFICIENT_TEXT =

@@ -36,7 +36,7 @@ describe('useActionPrice — after the purchase', () => {
     vi.useFakeTimers()
     visibility('visible')
     const estimate = vi.fn().mockResolvedValue(SHORT)
-    const requests: PriceRequest[] = [{ estimate, priced: true }]
+    const requests: PriceRequest[] = [{ estimate }]
     const { result } = renderHook(() => useActionPrice(requests))
     await flush()
     expect(result.current.view.kind).toBe('short')
@@ -69,7 +69,7 @@ describe('useActionPrice — after the purchase', () => {
     vi.useFakeTimers()
     visibility('hidden')
     const estimate = vi.fn().mockResolvedValue(SHORT)
-    const requests: PriceRequest[] = [{ estimate, priced: true }]
+    const requests: PriceRequest[] = [{ estimate }]
     const { result } = renderHook(() => useActionPrice(requests))
     await flush()
     await act(async () => {
@@ -91,7 +91,7 @@ describe('useActionPrice — after the purchase', () => {
     vi.useFakeTimers()
     visibility('visible')
     const estimate = vi.fn().mockResolvedValue(SHORT)
-    const requests: PriceRequest[] = [{ estimate, priced: true }]
+    const requests: PriceRequest[] = [{ estimate }]
     const { result } = renderHook(() => useActionPrice(requests))
     await flush()
     estimate.mockRejectedValue(new TypeError('Failed to fetch'))
@@ -100,6 +100,26 @@ describe('useActionPrice — after the purchase', () => {
     })
     expect(result.current.view.kind).toBe('short')
     expect(result.current.recovered).toBe(false)
+  })
+
+  it('a re-ask without a price (the estimate failed, or no features) keeps the panel', async () => {
+    vi.useFakeTimers()
+    visibility('visible')
+    const estimate = vi.fn().mockResolvedValue(SHORT)
+    const requests: PriceRequest[] = [{ estimate }]
+    const { result } = renderHook(() => useActionPrice(requests))
+    await flush()
+    const unpriced = { ...SHORT, price_units: null, missing_units: null, enough: true }
+    for (const reason of ['estimate_failed', 'missing_features'] as const) {
+      estimate.mockResolvedValue({ ...unpriced, unpriced_reason: reason })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(RECHECK_MS)
+      })
+      expect(result.current.view.kind).toBe('short')
+      expect(result.current.recovered).toBe(false)
+      expect(result.current.ready).toBe(false)
+    }
+    expect(estimate).toHaveBeenCalledTimes(3)
   })
 
   it('nothing to price: ready at once, nothing asked', () => {

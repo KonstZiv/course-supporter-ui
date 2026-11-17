@@ -22,12 +22,15 @@ vi.mock('../api/billing', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api/billing')>()),
   estimateProcessing: estimateMock,
 }))
+// The kind alone: the server answers without a price, naming what it lacks.
 const CHARGING_OFF = {
-  price_units: 0,
+  price_units: null,
   available_units: null,
   enough: true,
   missing_units: null,
   charging_enabled: false,
+  unpriced_reason: 'missing_features',
+  missing_features: ['files', 'text_chars'],
 }
 vi.mock('../api/documents', () => ({
   documentsApi: { get: getMock, confirmFileRoles: confirmMock },

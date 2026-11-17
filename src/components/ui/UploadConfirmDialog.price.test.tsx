@@ -35,7 +35,21 @@ const SHORT: AuthorEstimateResponse = {
   missing_units: 80,
   charging_enabled: true,
 }
-const UNPRICED: AuthorEstimateResponse = { ...ENOUGH, price_units: 0 }
+/** The server's answer to a request without the features its kind needs. */
+const UNPRICED: AuthorEstimateResponse = {
+  price_units: null,
+  available_units: 1500,
+  enough: true,
+  missing_units: null,
+  charging_enabled: true,
+  unpriced_reason: 'missing_features',
+  missing_features: ['slides', 'text_chars'],
+}
+const ESTIMATE_FAILED: AuthorEstimateResponse = {
+  ...UNPRICED,
+  unpriced_reason: 'estimate_failed',
+  missing_features: null,
+}
 
 const PENDING = 'Рахуємо орієнтовну вартість…'
 const FAILED = 'Орієнтовну вартість зараз порахувати не вдалося.'
@@ -114,11 +128,33 @@ describe('upload dialog — the five rows for one file', () => {
   })
 
   it('3: charging off without the features → still nothing', async () => {
-    api.estimateProcessing.mockResolvedValue({ ...OFF })
+    api.estimateProcessing.mockResolvedValue({ ...UNPRICED, charging_enabled: false })
     const pdf = { name: 'deck.pdf', sourceType: 'presentation', file: new File(['%PDF'], 'deck.pdf') }
     const { upload } = renderDialog([pdf])
     await waitFor(() => expect(upload).toBeEnabled())
     expect(screen.queryByText(UNPRICED_LINE)).toBeNull()
+  })
+
+  it('every feature sent, the estimate failed → the failed line, never "0", and it runs', async () => {
+    api.estimateProcessing.mockResolvedValue(ESTIMATE_FAILED)
+    const { onConfirm, upload } = renderDialog([textFile()])
+    expect(await screen.findByText(FAILED)).toBeInTheDocument()
+    expect(api.estimateProcessing).toHaveBeenCalledWith('node-1', { kind: 'text', text_chars: 9 })
+    expect(screen.queryByText(/приблизно/)).toBeNull()
+    expect(screen.queryByText(UNPRICED_LINE)).toBeNull()
+    expect(upload).toBeEnabled()
+    fireEvent.click(upload)
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+  })
+
+  it('free (a price of 0, no reason) → nothing, the upload runs', async () => {
+    api.estimateProcessing.mockResolvedValue({ ...ENOUGH, price_units: 0 })
+    const { onConfirm, upload } = renderDialog([textFile()])
+    await waitFor(() => expect(upload).toBeEnabled())
+    expect(screen.queryByText(/Орієнтовн/)).toBeNull()
+    expect(screen.queryByTestId('price-card')).toBeNull()
+    fireEvent.click(upload)
+    expect(onConfirm).toHaveBeenCalledTimes(1)
   })
 
   it('4: enough → the price card with the price and what is available', async () => {
@@ -222,6 +258,26 @@ describe('upload dialog — a batch', () => {
       'Орієнтовна вартість: приблизно 240 юнітів. У вас доступно 1 500 юнітів.',
     )
     expect(card).toHaveTextContent('Для 1 з 3 файлів порахувати до обробки не вдалося.')
+  })
+
+  it('one estimate of three failed: the sum of the two, and the file left out', async () => {
+    api.estimateProcessing
+      .mockResolvedValueOnce(ENOUGH)
+      .mockResolvedValueOnce(ESTIMATE_FAILED)
+      .mockResolvedValueOnce(ENOUGH)
+    const { onConfirm, upload } = renderDialog([
+      textFile('a.md', 'один'),
+      textFile('b.md', 'два'),
+      textFile('c.md', 'три'),
+    ])
+    const card = await screen.findByTestId('price-card')
+    expect(api.estimateProcessing).toHaveBeenCalledTimes(3)
+    expect(card).toHaveTextContent(
+      'Орієнтовна вартість: приблизно 240 юнітів. У вас доступно 1 500 юнітів.',
+    )
+    expect(card).toHaveTextContent('Для 1 з 3 файлів порахувати до обробки не вдалося.')
+    fireEvent.click(upload)
+    expect(onConfirm).toHaveBeenCalledTimes(1)
   })
 
   it('each file fits, together they may not: the warning, and the upload runs', async () => {

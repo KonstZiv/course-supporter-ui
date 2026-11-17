@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { AuthorEstimateResponse } from '../types/api'
 import {
-  REQUIRED_FEATURES,
   batchPriceView,
-  hasRequiredFeatures,
+  isMaterialEstimateKind,
   priceEnoughText,
   priceShortText,
   priceViewOf,
@@ -20,42 +19,43 @@ function answer(over: Partial<AuthorEstimateResponse> = {}): AuthorEstimateRespo
     enough: true,
     missing_units: null,
     charging_enabled: true,
+    unpriced_reason: null,
+    missing_features: null,
     ...over,
   }
 }
-const priced = (over: Partial<AuthorEstimateResponse> = {}): EstimateOutcome => ({
+const answered = (a: AuthorEstimateResponse): EstimateOutcome => ({
   status: 'answered',
-  answer: answer(over),
-  priced: true,
+  answer: a,
 })
-const unpriced = (over: Partial<AuthorEstimateResponse> = {}): EstimateOutcome => ({
-  status: 'answered',
-  answer: answer({ price_units: 0, ...over }),
-  priced: false,
-})
+const priced = (over: Partial<AuthorEstimateResponse> = {}): EstimateOutcome =>
+  answered(answer(over))
+/** The server's answer without a price: the request lacks a feature. */
+const unpriced = (over: Partial<AuthorEstimateResponse> = {}): EstimateOutcome =>
+  answered(
+    answer({
+      price_units: null,
+      missing_units: null,
+      unpriced_reason: 'missing_features',
+      missing_features: ['text_chars'],
+      ...over,
+    }),
+  )
+/** The server's answer without a price: the estimate itself failed. */
+const estimateFailed = (over: Partial<AuthorEstimateResponse> = {}): EstimateOutcome =>
+  answered(
+    answer({ price_units: null, missing_units: null, unpriced_reason: 'estimate_failed', ...over }),
+  )
 const FAILED: EstimateOutcome = { status: 'failed' }
 
-describe('REQUIRED_FEATURES / hasRequiredFeatures (mirrors the server)', () => {
-  it('names the features of each kind', () => {
-    expect(REQUIRED_FEATURES).toEqual({
-      audio: ['duration_sec'],
-      video: ['duration_sec'],
-      presentation: ['slides', 'text_chars'],
-      text: ['text_chars'],
-      web: ['text_chars'],
-      code: ['files', 'text_chars'],
-    })
-  })
-
-  it('a request is priced only with every feature its kind needs', () => {
-    expect(hasRequiredFeatures({ kind: 'video', duration_sec: 600 })).toBe(true)
-    expect(hasRequiredFeatures({ kind: 'video' })).toBe(false)
-    expect(hasRequiredFeatures({ kind: 'presentation', slides: 12 })).toBe(false)
-    expect(hasRequiredFeatures({ kind: 'presentation', slides: 12, text_chars: 0 })).toBe(true)
-    expect(hasRequiredFeatures({ kind: 'text', text_chars: 4000 })).toBe(true)
-    expect(hasRequiredFeatures({ kind: 'web' })).toBe(false)
-    expect(hasRequiredFeatures({ kind: 'code', text_chars: 10 })).toBe(false)
-    expect(hasRequiredFeatures({ kind: 'audio', duration_sec: null })).toBe(false)
+describe('isMaterialEstimateKind — the kinds the estimate accepts', () => {
+  it('the six kinds of ProcessingEstimateRequest, nothing else', () => {
+    for (const kind of ['text', 'web', 'code', 'audio', 'video', 'presentation']) {
+      expect(isMaterialEstimateKind(kind)).toBe(true)
+    }
+    for (const other of ['test', 'archive', '', 'toString', 'constructor']) {
+      expect(isMaterialEstimateKind(other)).toBe(false)
+    }
   })
 })
 
@@ -85,6 +85,15 @@ describe('priceViewOf — the five rows of a single action', () => {
       priceViewOf(priced({ enough: false, available_units: 40, missing_units: 80 })),
     ).toEqual({ kind: 'short', price: 120, available: 40, missing: 80 })
   })
+
+  it('the estimate itself failed → as a failed request, never a price of 0', () => {
+    expect(priceViewOf(estimateFailed())).toEqual({ kind: 'failed' })
+    expect(priceViewOf(estimateFailed({ charging_enabled: false }))).toEqual({ kind: 'none' })
+  })
+
+  it('a price of 0 with no reason is free → nothing', () => {
+    expect(priceViewOf(priced({ price_units: 0 }))).toEqual({ kind: 'none' })
+  })
 })
 
 describe('batchPriceView — a batch of files', () => {
@@ -109,10 +118,37 @@ describe('batchPriceView — a batch of files', () => {
     })
   })
 
+  it('a file whose estimate failed is left out like an unpriced one', () => {
+    expect(
+      batchPriceView([estimateFailed(), priced(), priced({ price_units: 30 })]),
+    ).toEqual({
+      kind: 'enough',
+      price: 150,
+      available: 1500,
+      unpriced: { count: 1, of: 3 },
+    })
+  })
+
   it('every file unpriced → the batch line', () => {
     expect(batchPriceView([unpriced(), unpriced()])).toEqual({
       kind: 'unpriced',
       batch: true,
+    })
+    expect(batchPriceView([estimateFailed(), unpriced(), FAILED])).toEqual({
+      kind: 'unpriced',
+      batch: true,
+    })
+  })
+
+  it('every file free → nothing; free beside unpriced → the files left out', () => {
+    expect(
+      batchPriceView([priced({ price_units: 0 }), priced({ price_units: 0 })]),
+    ).toEqual({ kind: 'none' })
+    expect(batchPriceView([priced({ price_units: 0 }), unpriced()])).toEqual({
+      kind: 'enough',
+      price: 0,
+      available: 1500,
+      unpriced: { count: 1, of: 2 },
     })
   })
 

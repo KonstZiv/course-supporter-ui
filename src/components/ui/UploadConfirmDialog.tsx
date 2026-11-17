@@ -15,10 +15,7 @@ import { TASK_TYPE_OPTIONS, formatAudioDuration } from './uploadConfirmMeta'
 import { estimateProcessing } from '../../api/billing'
 import { useActionPrice, type PriceRequest } from '../../hooks/useActionPrice'
 import { readMaterialFeatures } from '../../utils/materialFeatures'
-import {
-  REQUIRED_FEATURES,
-  hasRequiredFeatures,
-} from '../../utils/priceEstimate'
+import { isMaterialEstimateKind } from '../../utils/priceEstimate'
 import { PriceCard } from '../billing/PriceCard'
 
 // «Тип документа» — the pre-upload classification dialog (defect #10 +
@@ -83,8 +80,7 @@ function paidKind(
     asCode && CODE_ELIGIBLE_TEXT_EXTENSIONS.includes(extOf(file.name))
       ? 'code'
       : file.sourceType
-  if (type === 'code' || !(type in REQUIRED_FEATURES)) return null
-  return type as MaterialEstimateKind
+  return type !== 'code' && isMaterialEstimateKind(type) ? type : null
 }
 
 /** The features of each file, read once per batch (null while reading). */
@@ -143,21 +139,14 @@ export function UploadConfirmDialog({
     if (linkUrl) {
       // What a link holds is not read before it is added: the kind alone.
       const kind = isVideoUrl(linkUrl) ? 'video' : 'web'
-      return [
-        { estimate: () => estimateProcessing(nodeId, { kind }), priced: false },
-      ]
+      return [{ estimate: () => estimateProcessing(nodeId, { kind }) }]
     }
     if (features === null) return null
     return files.flatMap((f) => {
       const kind = paidKind(f, asCode)
       const request = features.get(f)
       if (kind === null || !request) return []
-      return [
-        {
-          estimate: () => estimateProcessing(nodeId, request),
-          priced: hasRequiredFeatures(request),
-        },
-      ]
+      return [{ estimate: () => estimateProcessing(nodeId, request) }]
     })
   }, [pricing, nodeId, linkUrl, features, files, asCode])
   const price = useActionPrice(requests)
