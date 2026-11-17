@@ -20,20 +20,17 @@ import { documentsApi } from '../../api/documents'
 import { nodesApi } from '../../api/nodes'
 import { useCourseStore } from '../../stores/course'
 
-const OFF: AuthorEstimateResponse = {
-  price_units: 0,
-  available_units: null,
-  enough: true,
-  missing_units: null,
-  charging_enabled: false,
-}
+// A retry is asked with the kind alone: the server answers without a price.
 const ON: AuthorEstimateResponse = {
-  price_units: 0,
+  price_units: null,
   available_units: 300,
   enough: true,
   missing_units: null,
   charging_enabled: true,
+  unpriced_reason: 'missing_features',
+  missing_features: ['duration_sec'],
 }
+const OFF: AuthorEstimateResponse = { ...ON, available_units: null, charging_enabled: false }
 
 function failed(id: string, source_type: AuthoredDocumentResponse['source_type']) {
   return {
@@ -144,9 +141,11 @@ describe('«Обробити матеріали» (place 4б)', () => {
 describe('the upload from the menu (place 2)', () => {
   it('the dialog prices the chosen file for this node', async () => {
     api.estimateProcessing.mockResolvedValue({
-      ...ON,
       price_units: 50,
       available_units: 1000,
+      enough: true,
+      missing_units: null,
+      charging_enabled: true,
     })
     const file = new File(['Змінні'], 'notes.md', { type: 'text/markdown' })
     vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(function (

@@ -1150,13 +1150,24 @@ export interface ProcessingEstimateRequest {
  * POST /documents/{document_id}/reference/estimate).
  */
 export interface AuthorEstimateResponse {
-  price_units: number
+  /** null — no price; `unpriced_reason` says why. 0 with no reason is free. */
+  price_units: number | null
   available_units: number | null
-  /** available ≥ price, or credit allowed, or charging off. */
+  /** available ≥ price, or credit allowed, or charging off; true without a price. */
   enough: boolean
+  /** null without a price. */
   missing_units: number | null
   charging_enabled: boolean
+  unpriced_reason?: EstimateUnpricedReason | null
+  /** The request's fields the kind needs and lacks; only for `missing_features`. */
+  missing_features?: string[] | null
 }
+
+/**
+ * Why an author's action has no price: the request lacks a feature its kind
+ * needs, or the estimate itself failed.
+ */
+export type EstimateUnpricedReason = 'missing_features' | 'estimate_failed'
 
 export interface BillingSpendingUnits {
   /** Charged to the author. */

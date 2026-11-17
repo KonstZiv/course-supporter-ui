@@ -9,8 +9,6 @@ import {
 /** One estimate of a paid action, asked again on each re-check. */
 export interface PriceRequest {
   estimate: () => Promise<AuthorEstimateResponse>
-  /** The features the material's kind needs are in the request. */
-  priced: boolean
 }
 
 export interface ActionPrice {
@@ -31,9 +29,9 @@ async function outcomesOf(
   requests: readonly PriceRequest[],
 ): Promise<EstimateOutcome[]> {
   const settled = await Promise.allSettled(requests.map((r) => r.estimate()))
-  return settled.map((result, i) =>
+  return settled.map((result) =>
     result.status === 'fulfilled'
-      ? { status: 'answered', answer: result.value, priced: requests[i]!.priced }
+      ? { status: 'answered', answer: result.value }
       : { status: 'failed' },
   )
 }
@@ -66,8 +64,9 @@ export function useActionPrice(
       const next = batchPriceView(await outcomesOf(list))
       if (mine !== asked.current) return
       if (recheck) {
-        // A failed re-check keeps the panel; the next one asks again.
-        if (next.kind === 'failed') return
+        // A re-check without a price — the request or the estimate failed —
+        // keeps the panel; the next one asks again.
+        if (next.kind === 'failed' || next.kind === 'unpriced') return
         if (next.kind !== 'short') setRecovered(true)
       }
       setView(next)

@@ -4,22 +4,21 @@ import {
   PRICE_FAILED,
   PRICE_UNPRICED,
   PRICE_UNPRICED_BATCH,
-  REQUIRED_FEATURES,
+  isMaterialEstimateKind,
   priceViewOf,
   type EstimateOutcome,
 } from './priceEstimate'
 
 // A processing whose material the browser cannot read — a retry of a material
 // already on the server, the processing a code material's confirmed roles
-// start — is asked about with its kind alone: the answer says only whether
-// charging is on. Until the server prices such a material by its id, the
-// price is "could not be counted before processing", and the action starts.
+// start — is asked about with its kind alone: the server answers it has no
+// price (the features are missing) and whether charging is on. Until the
+// server prices such a material by its id, the price is "could not be counted
+// before processing", and the action starts.
 
 /** The estimate kind of a material, or null for one never processed (a test). */
 export function estimateKindOf(sourceType: SourceType): MaterialEstimateKind | null {
-  return sourceType in REQUIRED_FEATURES
-    ? (sourceType as MaterialEstimateKind)
-    : null
+  return isMaterialEstimateKind(sourceType) ? sourceType : null
 }
 
 /**
@@ -34,7 +33,7 @@ export async function kindOnlyPriceLine(
   let outcome: EstimateOutcome
   try {
     const answer = await estimateProcessing(nodeId, { kind })
-    outcome = { status: 'answered', answer, priced: false }
+    outcome = { status: 'answered', answer }
   } catch {
     outcome = { status: 'failed' }
   }

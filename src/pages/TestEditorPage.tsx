@@ -130,7 +130,7 @@ export function TestEditorPage() {
   const checkPriceRequests = useMemo(
     (): PriceRequest[] =>
       testId !== null && checkPossible
-        ? [{ estimate: () => estimateKeyExplanation(testId), priced: true }]
+        ? [{ estimate: () => estimateKeyExplanation(testId) }]
         : [],
     [testId, checkPossible],
   )
@@ -138,7 +138,7 @@ export function TestEditorPage() {
   const publishPriceRequests = useMemo(
     (): PriceRequest[] =>
       testId !== null && paidCheck && publishing
-        ? [{ estimate: () => estimateKeyExplanation(testId), priced: true }]
+        ? [{ estimate: () => estimateKeyExplanation(testId) }]
         : [],
     [testId, paidCheck, publishing],
   )

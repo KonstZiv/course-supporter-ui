@@ -917,6 +917,15 @@ describe('TestEditorPage — the price of the explanations (places 6 and 7)', ()
     missing_units: 20,
     charging_enabled: true,
   }
+  const ESTIMATE_FAILED = {
+    price_units: null,
+    available_units: 500,
+    enough: true,
+    missing_units: null,
+    charging_enabled: true,
+    unpriced_reason: 'estimate_failed' as const,
+    missing_features: null,
+  }
   const FAILED_CHECK = { state: 'failed' as const, explanations: {}, doubts: {} }
   const IN_PROGRESS = { state: 'in_progress' as const, explanations: {}, doubts: {} }
   const ROW_4 = 'Орієнтовна вартість: приблизно 30 юнітів. У вас доступно 500 юнітів.'
@@ -947,6 +956,32 @@ describe('TestEditorPage — the price of the explanations (places 6 and 7)', ()
     expect(
       await screen.findByText('Орієнтовну вартість зараз порахувати не вдалося.'),
     ).toBeInTheDocument()
+    fireEvent.click(button('Перевірити моделлю'))
+    await waitFor(() => expect(tests.check).toHaveBeenCalledTimes(1))
+  })
+
+  it('6: the estimate itself failed → the failed line, never "0"; the check runs', async () => {
+    estimate.mockResolvedValue(ESTIMATE_FAILED)
+    tests.check.mockResolvedValue(IN_PROGRESS)
+    await openTest()
+    expect(
+      await screen.findByText('Орієнтовну вартість зараз порахувати не вдалося.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/приблизно/)).toBeNull()
+    const check = button('Перевірити моделлю')
+    expect(check).toBeEnabled()
+    fireEvent.click(check)
+    await waitFor(() => expect(tests.check).toHaveBeenCalledTimes(1))
+  })
+
+  it('6: free (a price of 0, no reason) → nothing; the check runs', async () => {
+    estimate.mockResolvedValue({ ...ENOUGH, price_units: 0 })
+    tests.check.mockResolvedValue(IN_PROGRESS)
+    await openTest()
+    await waitFor(() => expect(button('Перевірити моделлю')).toBeEnabled())
+    expect(estimate).toHaveBeenCalledWith('t1')
+    expect(screen.queryByText(/Орієнтовн/)).toBeNull()
+    expect(screen.queryByTestId('price-card')).toBeNull()
     fireEvent.click(button('Перевірити моделлю'))
     await waitFor(() => expect(tests.check).toHaveBeenCalledTimes(1))
   })
@@ -1006,6 +1041,22 @@ describe('TestEditorPage — the price of the explanations (places 6 and 7)', ()
     fireEvent.click(button('Опублікувати'))
     const dialog = await screen.findByRole('dialog', { name: 'Опублікувати тест?' })
     expect(await within(dialog).findByTestId('price-card')).toHaveTextContent(ROW_4)
+    const confirm = within(dialog).getByRole('button', { name: 'Опублікувати' })
+    await waitFor(() => expect(confirm).toBeEnabled())
+    fireEvent.click(confirm)
+    await waitFor(() => expect(tests.publish).toHaveBeenCalledWith('t1'))
+  })
+
+  it('7: the estimate itself failed → the failed line in the window, and it publishes', async () => {
+    estimate.mockResolvedValue(ESTIMATE_FAILED)
+    tests.publish.mockResolvedValue({ created: true, published: VERSION })
+    await openTest()
+    fireEvent.click(button('Опублікувати'))
+    const dialog = await screen.findByRole('dialog', { name: 'Опублікувати тест?' })
+    expect(
+      await within(dialog).findByText('Орієнтовну вартість зараз порахувати не вдалося.'),
+    ).toBeInTheDocument()
+    expect(within(dialog).queryByText(/приблизно/)).toBeNull()
     const confirm = within(dialog).getByRole('button', { name: 'Опублікувати' })
     await waitFor(() => expect(confirm).toBeEnabled())
     fireEvent.click(confirm)

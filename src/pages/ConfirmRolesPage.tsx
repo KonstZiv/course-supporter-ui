@@ -53,18 +53,14 @@ export function ConfirmRolesPage() {
 
   // The processing the confirmation starts is paid. The browser knows only the
   // files' paths here, not their text: the price is asked with the kind
-  // alone, and says whether charging is on (BIL-E, place 5).
+  // alone — the server answers it has no price, and whether charging is on
+  // (BIL-E, place 5).
   const nodeId = doc?.course_node_id ?? null
   const priceRequests = useMemo(
     (): PriceRequest[] | null =>
       nodeId === null
         ? null
-        : [
-            {
-              estimate: () => estimateProcessing(nodeId, { kind: 'code' }),
-              priced: false,
-            },
-          ],
+        : [{ estimate: () => estimateProcessing(nodeId, { kind: 'code' }) }],
     [nodeId],
   )
   const price = useActionPrice(priceRequests)
