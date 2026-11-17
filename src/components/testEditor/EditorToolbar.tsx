@@ -6,6 +6,8 @@ import type { DraftCheckState, WrittenTestResponse } from '../../types/api'
 import type { TestAction } from '../../utils/testRefusals'
 import { Chip, type Tone } from './Chip'
 import { TEXTS } from './editorTexts'
+import type { ActionPrice } from '../../hooks/useActionPrice'
+import { PriceCard } from '../billing/PriceCard'
 
 const CHECK_CHIP: Record<DraftCheckState, { label: string; tone: Tone }> = {
   not_checked: { label: TEXTS.notChecked, tone: 'neutral' },
@@ -30,6 +32,7 @@ export function EditorToolbar({
   publishBlocked,
   view,
   status,
+  checkPrice,
   onSave,
   onCheck,
   onPublish,
@@ -44,6 +47,11 @@ export function EditorToolbar({
   publishBlocked: string | null
   view: 'edit' | 'student'
   status: string | null
+  /**
+   * The price of the check's explanations; not enough stops it. Absent —
+   * no price is shown.
+   */
+  checkPrice?: ActionPrice
   onSave: () => void
   onCheck: () => void
   onPublish: () => void
@@ -132,7 +140,11 @@ export function EditorToolbar({
             type="button"
             className="btn-secondary btn-sm"
             onClick={onCheck}
-            disabled={busy !== null || checkBlocked !== null}
+            disabled={
+              busy !== null ||
+              checkBlocked !== null ||
+              (checkPrice !== undefined && !checkPrice.ready)
+            }
             aria-describedby={checkBlocked !== null ? checkHintId : undefined}
           >
             {busy === 'check' && <Loader2 size={14} className="animate-spin" />}
@@ -168,6 +180,7 @@ export function EditorToolbar({
           </div>
         </div>
 
+        {checkPrice && checkBlocked === null && <PriceCard price={checkPrice} />}
         {checkBlocked !== null && (
           <p id={checkHintId} className="text-xs text-ink-muted">
             {checkBlocked}

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCourseStore } from '../../stores/course'
 import { useWorkListStore } from '../../stores/workList'
@@ -21,6 +21,14 @@ import { authoredRejectionMessage } from '../../utils/apiError'
 import { validateUploadFiles } from '../../utils/uploadValidation'
 import { useUploadBatch, type UploadTask } from '../../hooks/useUploadBatch'
 import { ingestErrorMessage } from '../../utils/ingestErrors'
+import {
+  BUY_UNITS,
+  INSUFFICIENT_UNITS_CATEGORY,
+} from '../../utils/authorBillingTexts'
+import { NewTabLink } from '../billing/NewTabLink'
+import { Modal } from '../ui/Modal'
+import { estimateKindOf, kindOnlyPriceLine } from '../../utils/kindOnlyPrice'
+import { PRICE_PENDING } from '../../utils/priceEstimate'
 import {
   CODE_ELIGIBLE_TEXT_EXTENSIONS,
   sourceTypeForExtension,
@@ -68,6 +76,14 @@ interface NodeDetailPanelProps {
   onOpenSummary?: (nodeId: string, nodeTitle: string) => void
 }
 
+/** The question before a material's processing is started again. */
+function retryQuestion(mat: AuthoredDocumentSummary, force: boolean): string {
+  const name = documentLabel(mat)
+  return force
+    ? `Перезапустити обробку «${name}»? Поточний результат буде замінено новим.`
+    : `Запустити обробку «${name}» ще раз?`
+}
+
 export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
   const tree = useCourseStore((s) => s.tree)
   const selectedNodeId = useCourseStore((s) => s.selectedNodeId)
@@ -101,6 +117,15 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
     materialName: string | null
   } | null>(null)
 
+  // The retry asked about its price: the material in pricing, then the
+  // confirmation with the price line (charging on).
+  const [pricingId, setPricingId] = useState<string | null>(null)
+  const [retryAsk, setRetryAsk] = useState<{
+    mat: AuthoredDocumentSummary
+    force: boolean
+    line: string
+  } | null>(null)
+
   // Upload confirmation state
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [pendingFileDurations, setPendingFileDurations] = useState<
@@ -108,6 +133,19 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
   >(new Map())
   const [pendingLink, setPendingLink] = useState<string | null>(null)
   const showConfirm = pendingFiles.length > 0 || pendingLink !== null
+  // One list per batch: the dialog prices it once, not on every render.
+  const confirmFiles = useMemo(
+    () =>
+      pendingFiles.map((f) => ({
+        name: f.name,
+        sourceType: sourceTypeForExtension(
+          f.name.split('.').pop()?.toLowerCase() ?? '',
+        ),
+        durationSec: pendingFileDurations.get(f.name) ?? null,
+        file: f,
+      })),
+    [pendingFiles, pendingFileDurations],
+  )
 
   const node = tree && selectedNodeId ? findNode(tree, selectedNodeId) : null
 
@@ -274,22 +312,9 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
     [refresh],
   )
 
-  const handleRetry = useCallback(
-    async (mat: AuthoredDocumentSummary) => {
+  const runRetry = useCallback(
+    async (mat: AuthoredDocumentSummary, force: boolean) => {
       const name = documentLabel(mat)
-      // `force=true` is required to reprocess a material that already
-      // reached `ready` (e.g. after changing the course/material language).
-      // For error-state materials, force is harmless and still works.
-      const force = mat.state !== 'error'
-      if (
-        force &&
-        !confirm(
-          `Перезапустити обробку «${name}»? ` +
-            'Поточний результат буде замінено новим.',
-        )
-      ) {
-        return
-      }
       setActionError(null)
       try {
         await documentsApi.retry(mat.id, force)
@@ -306,6 +331,29 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
       requestRefresh() // Д10 — wake the shell poll for the re-queued job
     },
     [refresh, requestRefresh],
+  )
+
+  const handleRetry = useCallback(
+    async (mat: AuthoredDocumentSummary) => {
+      // `force=true` is required to reprocess a material that already
+      // reached `ready` (e.g. after changing the course/material language).
+      // For error-state materials, force is harmless and still works.
+      const force = mat.state !== 'error'
+      // The price first, with the kind alone (the material is already on the
+      // server): charging off — as before; on — the line in a confirmation.
+      const kind = estimateKindOf(mat.source_type)
+      setPricingId(mat.id)
+      const line =
+        node && kind ? await kindOnlyPriceLine(node.id, kind) : null
+      setPricingId(null)
+      if (line !== null) {
+        setRetryAsk({ mat, force, line })
+        return
+      }
+      if (force && !confirm(retryQuestion(mat, force))) return
+      await runRetry(mat, force)
+    },
+    [node, runRetry],
   )
 
   // Toggle material role on existing material (clickable badge)
@@ -570,7 +618,22 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                       </button>
                     )}
                   </div>
-                  {mat.processing_phase === 'error' && (mat.error_category || mat.error_message) && (
+                  {mat.processing_phase === 'error' &&
+                    mat.error_category === INSUFFICIENT_UNITS_CATEGORY && (
+                      <>
+                        <p className="text-xs text-coral mt-1">
+                          {ingestErrorMessage(mat.error_category)}
+                        </p>
+                        {/* Beside the card's own retry: the purchase, in a new
+                            tab; the retry stays as it is. */}
+                        <p className="text-xs mt-1">
+                          <NewTabLink href="/billing">{BUY_UNITS}</NewTabLink>
+                        </p>
+                      </>
+                    )}
+                  {mat.processing_phase === 'error' &&
+                    mat.error_category !== INSUFFICIENT_UNITS_CATEGORY &&
+                    (mat.error_category || mat.error_message) && (
                     <>
                       <p className="text-xs text-coral mt-1 line-clamp-2">
                         {ingestErrorMessage(mat.error_category)}
@@ -599,14 +662,21 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                   {!isTest && (mat.state === 'error' || mat.state === 'ready') && (
                     <button
                       onClick={() => handleRetry(mat)}
+                      disabled={pricingId === mat.id}
                       className="p-1.5 rounded-lg hover:bg-amber-pale transition-colors"
                       title={
-                        mat.state === 'error'
-                          ? 'Повторити обробку'
-                          : 'Перезапустити обробку (force)'
+                        pricingId === mat.id
+                          ? PRICE_PENDING
+                          : mat.state === 'error'
+                            ? 'Повторити обробку'
+                            : 'Перезапустити обробку (force)'
                       }
                     >
-                      <RotateCcw size={14} className="text-amber" />
+                      {pricingId === mat.id ? (
+                        <Loader2 size={14} className="animate-spin text-amber" />
+                      ) : (
+                        <RotateCcw size={14} className="text-amber" />
+                      )}
                     </button>
                   )}
                   <button
@@ -629,17 +699,46 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
         )}
       </div>
 
+      {/* A retry while charging is on: the price line, then the run. */}
+      <Modal
+        open={retryAsk !== null}
+        onClose={() => setRetryAsk(null)}
+        title="Обробка матеріалу"
+      >
+        {retryAsk && (
+          <>
+            <p className="text-sm text-ink mb-3">
+              {retryQuestion(retryAsk.mat, retryAsk.force)}
+            </p>
+            <p className="text-sm text-ink-light mb-4">{retryAsk.line}</p>
+            <div className="flex justify-end gap-2">
+              <button
+                className="btn-secondary btn-sm"
+                onClick={() => setRetryAsk(null)}
+              >
+                Скасувати
+              </button>
+              <button
+                className="btn-primary btn-sm"
+                onClick={() => {
+                  const { mat, force } = retryAsk
+                  setRetryAsk(null)
+                  void runRetry(mat, force)
+                }}
+              >
+                Запустити обробку
+              </button>
+            </div>
+          </>
+        )}
+      </Modal>
+
       {/* Upload confirmation dialog */}
       <UploadConfirmDialog
         open={showConfirm}
-        files={pendingFiles.map((f) => ({
-          name: f.name,
-          sourceType: sourceTypeForExtension(
-            f.name.split('.').pop()?.toLowerCase() ?? '',
-          ),
-          durationSec: pendingFileDurations.get(f.name) ?? null,
-        }))}
+        files={confirmFiles}
         linkUrl={pendingLink || undefined}
+        nodeId={node.id}
         onConfirm={handleConfirmUpload}
         onCancel={handleCancelUpload}
       />

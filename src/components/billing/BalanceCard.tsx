@@ -12,8 +12,8 @@ interface BalanceCardProps {
    */
   withDifference?: boolean
   /**
-   * What stands under "Доступно": the portal's "вистачить на N перевірок" and
-   * its reminders. The author's page passes nothing, and the place stays empty.
+   * The reminders right under "Доступно": the author passes theirs, the portal
+   * its own.
    */
   reminders?: React.ReactNode
 }
@@ -44,7 +44,7 @@ export function BalanceCard({
       <p className="text-2xl font-semibold text-ink">
         Доступно: {formatUnits(balance.available)}
       </p>
-      {/* The portal's reminders; empty on the author's page. */}
+      {/* The reminders under "Доступно": the author's or the portal's own. */}
       <div data-billing-reminders="">{reminders}</div>
       <div className="space-y-1 text-ink-light">
         {reserved > 0 && (

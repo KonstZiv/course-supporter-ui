@@ -14,6 +14,7 @@ import {
 import { Modal } from '../components/ui/Modal'
 import { EmptyState } from '../components/ui/EmptyState'
 import { LanguageSelect, LanguageBadge } from '../components/ui/LanguageSelect'
+import { OutlookReminders } from '../components/billing/OutlookReminders'
 
 export function DashboardPage() {
   const [courses, setCourses] = useState<NodeResponse[]>([])
@@ -68,6 +69,11 @@ export function DashboardPage() {
 
   return (
     <div className="max-w-[1200px] mx-auto px-6 py-8">
+      {/* The author's reminders about units, above everything else. */}
+      <div className="mb-6 empty:hidden">
+        <OutlookReminders />
+      </div>
+
       {/* Header */}
       <div className="flex items-end justify-between mb-8">
         <div>

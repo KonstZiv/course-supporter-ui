@@ -1094,3 +1094,98 @@ export interface BillingStatementResponse {
   items: BillingStatementItem[]
   next_cursor: string | null
 }
+
+// ─── Reminders, prices before an action, spending (BIL-E) ───
+//
+// `api/routes/billing_outlook.py` (`AuthorOutlookResponse`),
+// `api/routes/billing_estimates.py` (`ProcessingEstimateRequest`,
+// `AuthorEstimateResponse`) and `api/routes/billing.py` with the
+// `BillingSpending*` schemas of `api/schemas.py`. Units only.
+
+export interface BillingExpiringSoon {
+  units: number
+  /** The day they burn (UTC), YYYY-MM-DD. */
+  expires_on: string
+}
+
+/** Students' reviews the author pays for under a rule, waiting for units. */
+export interface BillingHeldReviews {
+  /** How many; 0 when none waits (always 0 for an author with credit). */
+  count: number
+  oldest_at: string | null
+  /** The waiting reviews' prices together, less the available units; ≥ 0. */
+  missing_units: number
+}
+
+/** GET /billing/outlook. */
+export interface BillingOutlookResponse {
+  /** About how many days the units last at the last week's pace. */
+  days_left: number | null
+  warning: 'runs_out_soon' | null
+  expiring_soon: BillingExpiringSoon | null
+  held_reviews: BillingHeldReviews
+}
+
+/** `kind` of POST /nodes/{node_id}/documents/estimate. */
+export type MaterialEstimateKind =
+  | 'text'
+  | 'web'
+  | 'code'
+  | 'audio'
+  | 'video'
+  | 'presentation'
+
+/** What the client knows of a material before it is processed. */
+export interface ProcessingEstimateRequest {
+  kind: MaterialEstimateKind
+  duration_sec?: number | null
+  slides?: number | null
+  text_chars?: number | null
+  files?: number | null
+}
+
+/**
+ * The price of an author's action and whether it may start now
+ * (POST /nodes/{node_id}/documents/estimate,
+ * POST /documents/{document_id}/reference/estimate).
+ */
+export interface AuthorEstimateResponse {
+  price_units: number
+  available_units: number | null
+  /** available ≥ price, or credit allowed, or charging off. */
+  enough: boolean
+  missing_units: number | null
+  charging_enabled: boolean
+}
+
+export interface BillingSpendingUnits {
+  /** Charged to the author. */
+  billed_units: number
+  /** Borne by the author's benefit or by the platform; never charged. */
+  covered_units: number
+}
+
+export interface BillingSpendingTask extends BillingSpendingUnits {
+  authored_document_id: string
+  title: string | null
+  reviews: number
+}
+
+export interface BillingSpendingCourse extends BillingSpendingUnits {
+  course_node_id: string
+  title: string | null
+  reviews_units: number
+  processing_units: number
+  preparation_units: number
+  tasks: BillingSpendingTask[]
+}
+
+/** GET /billing/spending?from&to (inclusive UTC days). */
+export interface BillingSpendingResponse {
+  period: { from: string; to: string }
+  /** While false nothing is charged and every number is 0. */
+  charging_enabled: boolean
+  totals: BillingSpendingUnits
+  courses: BillingSpendingCourse[]
+  unlinked: BillingSpendingUnits
+}

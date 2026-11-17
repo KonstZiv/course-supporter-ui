@@ -1,7 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AlertCircle, HelpCircle, Loader2 } from 'lucide-react'
 import { documentsApi } from '../api/documents'
+import { estimateProcessing } from '../api/billing'
+import { useActionPrice, type PriceRequest } from '../hooks/useActionPrice'
+import { PriceCard } from '../components/billing/PriceCard'
 import { ApiError } from '../api/client'
 import type {
   AuthoredDocumentResponse,
@@ -47,6 +50,24 @@ export function ConfirmRolesPage() {
   const [introMode, setIntroMode] = useState<IntroMode>(() =>
     hasSeenRolesIntro() ? 'hidden' : 'first',
   )
+
+  // The processing the confirmation starts is paid. The browser knows only the
+  // files' paths here, not their text: the price is asked with the kind
+  // alone, and says whether charging is on (BIL-E, place 5).
+  const nodeId = doc?.course_node_id ?? null
+  const priceRequests = useMemo(
+    (): PriceRequest[] | null =>
+      nodeId === null
+        ? null
+        : [
+            {
+              estimate: () => estimateProcessing(nodeId, { kind: 'code' }),
+              priced: false,
+            },
+          ],
+    [nodeId],
+  )
+  const price = useActionPrice(priceRequests)
 
   const acknowledgeIntro = () => {
     markRolesIntroSeen()
@@ -266,11 +287,12 @@ export function ConfirmRolesPage() {
         </p>
       )}
 
-      <div className="mt-6 flex justify-end">
+      <div className="mt-6 flex flex-col items-end gap-3">
+        <PriceCard price={price} />
         <button
           type="button"
           onClick={() => void handleSave()}
-          disabled={saving}
+          disabled={saving || !price.ready}
           className="inline-flex items-center gap-2 rounded-md bg-navy text-white px-4 py-2 text-sm font-medium disabled:opacity-60"
         >
           {saving && <Loader2 size={16} className="animate-spin" />}

@@ -8,6 +8,26 @@ import { ApiError } from '../../api/client'
 import { useCourseStore } from '../../stores/course'
 import type { AuthoredDocumentResponse, NodeWithDocuments } from '../../types/api'
 
+// The price before a paid action (BIL-E) is asked first. Charging is off here
+// (as it is until calibration), so every action runs as it did before.
+vi.mock('../../api/billing', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../api/billing')>()),
+  estimateProcessing: vi.fn().mockResolvedValue({
+    price_units: 0,
+    available_units: null,
+    enough: true,
+    missing_units: null,
+    charging_enabled: false,
+  }),
+  estimateKeyExplanation: vi.fn().mockResolvedValue({
+    price_units: 0,
+    available_units: null,
+    enough: true,
+    missing_units: null,
+    charging_enabled: false,
+  }),
+}))
+
 describe('FlowContextMenu — generate trigger', () => {
   it('lifts onGenerate with node id + title and closes the menu', () => {
     const onGenerate = vi.fn()

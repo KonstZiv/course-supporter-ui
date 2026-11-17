@@ -46,8 +46,29 @@ vi.mock('./DashboardPage', () => ({
 vi.mock('./LoginPage', () => ({ LoginPage: () => <h1>page: login</h1> }))
 
 import { ApiError } from '../api/client'
+import { estimateKeyExplanation } from '../api/billing'
 import { createAppRouter } from '../router'
 import { useAuthStore } from '../stores/auth'
+
+// The price before a paid action (BIL-E) is asked first. Charging is off here
+// (as it is until calibration), so every action runs as it did before.
+vi.mock('../api/billing', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../api/billing')>()),
+  estimateProcessing: vi.fn().mockResolvedValue({
+    price_units: 0,
+    available_units: null,
+    enough: true,
+    missing_units: null,
+    charging_enabled: false,
+  }),
+  estimateKeyExplanation: vi.fn().mockResolvedValue({
+    price_units: 0,
+    available_units: null,
+    enough: true,
+    missing_units: null,
+    charging_enabled: false,
+  }),
+}))
 
 function renderAt(path: string) {
   const router = createAppRouter((routes) =>
@@ -870,5 +891,133 @@ describe('TestEditorPage', () => {
         name: 'Написати адміністраторові платформи',
       }),
     ).toBeNull()
+  })
+})
+
+describe('TestEditorPage — the price of the explanations (places 6 and 7)', () => {
+  const estimate = vi.mocked(estimateKeyExplanation)
+  const OFF = {
+    price_units: 0,
+    available_units: null,
+    enough: true,
+    missing_units: null,
+    charging_enabled: false,
+  }
+  const ENOUGH = {
+    price_units: 30,
+    available_units: 500,
+    enough: true,
+    missing_units: null,
+    charging_enabled: true,
+  }
+  const SHORT = {
+    price_units: 30,
+    available_units: 10,
+    enough: false,
+    missing_units: 20,
+    charging_enabled: true,
+  }
+  const FAILED_CHECK = { state: 'failed' as const, explanations: {}, doubts: {} }
+  const IN_PROGRESS = { state: 'in_progress' as const, explanations: {}, doubts: {} }
+  const ROW_4 = 'Орієнтовна вартість: приблизно 30 юнітів. У вас доступно 500 юнітів.'
+  const ROW_5 = 'Ця дія коштує приблизно 30 юнітів, у вас 10 юнітів. Не вистачає 20 юнітів.'
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useAuthStore.setState({ apiKey: 'cs_live_key', connected: false })
+    nodes.getNode.mockResolvedValue({ id: 'r1', default_language: 'ukr' })
+    estimate.mockReset()
+    estimate.mockResolvedValue(OFF)
+  })
+
+  it('6, row 1: charging off → nothing; the check runs', async () => {
+    tests.check.mockResolvedValue(IN_PROGRESS)
+    await openTest()
+    await waitFor(() => expect(button('Перевірити моделлю')).toBeEnabled())
+    expect(estimate).toHaveBeenCalledWith('t1')
+    expect(screen.queryByText(/Орієнтовн/)).toBeNull()
+    fireEvent.click(button('Перевірити моделлю'))
+    await waitFor(() => expect(tests.check).toHaveBeenCalledWith('t1'))
+  })
+
+  it('6, row 2: the request failed → the line; the check runs', async () => {
+    estimate.mockRejectedValue(new TypeError('Failed to fetch'))
+    tests.check.mockResolvedValue(IN_PROGRESS)
+    await openTest()
+    expect(
+      await screen.findByText('Орієнтовну вартість зараз порахувати не вдалося.'),
+    ).toBeInTheDocument()
+    fireEvent.click(button('Перевірити моделлю'))
+    await waitFor(() => expect(tests.check).toHaveBeenCalledTimes(1))
+  })
+
+  it('6, row 4: not checked → the price beside the button; the check runs', async () => {
+    estimate.mockResolvedValue(ENOUGH)
+    tests.check.mockResolvedValue(IN_PROGRESS)
+    await openTest()
+    expect(await screen.findByTestId('price-card')).toHaveTextContent(ROW_4)
+    fireEvent.click(button('Перевірити моделлю'))
+    await waitFor(() => expect(tests.check).toHaveBeenCalledTimes(1))
+  })
+
+  it('6, row 5: a failed check and not enough → the panel stands instead; nothing is asked', async () => {
+    estimate.mockResolvedValue(SHORT)
+    await openTest({ check: FAILED_CHECK })
+    const card = await screen.findByTestId('price-card')
+    expect(card).toHaveTextContent(ROW_5)
+    expect(within(card).getByRole('link', { name: 'Купити юніти' })).toHaveAttribute(
+      'href',
+      '/billing',
+    )
+    // The chip keeps its words.
+    expect(screen.getByText('Перевірка не вдалася')).toBeInTheDocument()
+    const check = button('Перевірити моделлю')
+    expect(check).toBeDisabled()
+    fireEvent.click(check)
+    expect(tests.check).not.toHaveBeenCalled()
+  })
+
+  it('6: a check ready or in progress costs nothing again — no request, no line', async () => {
+    const ready = await openTest({ check: READY })
+    expect(screen.queryByText(/Орієнтовн/)).toBeNull()
+    ready.unmount()
+    await openTest({ check: IN_PROGRESS })
+    expect(screen.queryByText(/Орієнтовн/)).toBeNull()
+    expect(estimate).not.toHaveBeenCalled()
+  })
+
+  it('7: publishing an unchecked draft — the price in the window; not enough stops it', async () => {
+    estimate.mockResolvedValue(SHORT)
+    await openTest()
+    await screen.findByTestId('price-card')
+    fireEvent.click(button('Опублікувати'))
+    const dialog = await screen.findByRole('dialog', { name: 'Опублікувати тест?' })
+    expect(await within(dialog).findByTestId('price-card')).toHaveTextContent(ROW_5)
+    const confirm = within(dialog).getByRole('button', { name: 'Опублікувати' })
+    expect(confirm).toBeDisabled()
+    fireEvent.click(confirm)
+    expect(tests.publish).not.toHaveBeenCalled()
+  })
+
+  it('7: publishing an unchecked draft with enough — the price, and it publishes', async () => {
+    estimate.mockResolvedValue(ENOUGH)
+    tests.publish.mockResolvedValue({ created: true, published: VERSION })
+    await openTest()
+    fireEvent.click(button('Опублікувати'))
+    const dialog = await screen.findByRole('dialog', { name: 'Опублікувати тест?' })
+    expect(await within(dialog).findByTestId('price-card')).toHaveTextContent(ROW_4)
+    const confirm = within(dialog).getByRole('button', { name: 'Опублікувати' })
+    await waitFor(() => expect(confirm).toBeEnabled())
+    fireEvent.click(confirm)
+    await waitFor(() => expect(tests.publish).toHaveBeenCalledWith('t1'))
+  })
+
+  it('7: a checked draft is published without more — no request, no line', async () => {
+    await openTest({ check: READY })
+    fireEvent.click(button('Опублікувати'))
+    const dialog = await screen.findByRole('dialog', { name: 'Опублікувати тест?' })
+    expect(within(dialog).queryByText(/Орієнтовн/)).toBeNull()
+    expect(within(dialog).getByRole('button', { name: 'Опублікувати' })).toBeEnabled()
+    expect(estimate).not.toHaveBeenCalled()
   })
 })

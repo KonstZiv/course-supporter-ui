@@ -27,6 +27,7 @@ const api = vi.hoisted(() => ({
   getCheckout: vi.fn(),
   getBalance: vi.fn(),
   getStatement: vi.fn(),
+  billingOutlook: vi.fn(),
 }))
 vi.mock('../api/billing', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../api/billing')>()),
@@ -138,6 +139,12 @@ async function pressBuy(index = 0) {
 
 beforeEach(() => {
   for (const mock of Object.values(api)) mock.mockReset()
+  api.billingOutlook.mockResolvedValue({
+    days_left: null,
+    warning: null,
+    expiring_soon: null,
+    held_reviews: { count: 0, oldest_at: null, missing_units: 0 },
+  })
   api.getBalance.mockResolvedValue(FULL_BALANCE)
   api.getPackages.mockResolvedValue(PACKAGES)
   api.getStatement.mockResolvedValue(EMPTY_STATEMENT)
@@ -892,5 +899,96 @@ describe('BillingPage — words', () => {
     renderPage()
     await screen.findByRole('alert')
     expectNoAvoidedWords('load failure')
+  })
+})
+
+describe('BillingPage — "Повернутись до роботи" (5.6)', () => {
+  const RETURN_LINE =
+    'Якщо ви прийшли сюди з іншої сторінки програми, поверніться на ту вкладку й запустіть дію ще раз.'
+  const CREDITED: BillingCheckoutStateResponse = {
+    state: 'credited',
+    package_id: 'pkgid_alpha',
+    units: 500,
+    balance_after: 2030,
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.useRealTimers()
+  })
+
+  async function pressReturn() {
+    api.getCheckout.mockResolvedValue(CREDITED)
+    renderPage('/billing?checkout=ref-1')
+    fireEvent.click(await screen.findByRole('button', { name: 'Повернутись до роботи' }))
+  }
+
+  it('beside "Зрозуміло" once credited', async () => {
+    api.getCheckout.mockResolvedValue(CREDITED)
+    renderPage('/billing?checkout=ref-1')
+    const status = await screen.findByRole('status')
+    expect(
+      await within(status).findByRole('button', { name: 'Повернутись до роботи' }),
+    ).toBeInTheDocument()
+    expect(within(status).getByRole('button', { name: 'Зрозуміло' })).toBeInTheDocument()
+  })
+
+  it('no way back while the payment is pending', async () => {
+    renderPage('/billing?checkout=ref-1')
+    await screen.findByText('Зараховуємо…')
+    expect(screen.queryByRole('button', { name: 'Повернутись до роботи' })).toBeNull()
+  })
+
+  it('credited: the outlook is read again (reminders, students’ reviews waiting)', async () => {
+    api.getCheckout.mockResolvedValue(CREDITED)
+    renderPage('/billing?checkout=ref-1')
+    await screen.findByRole('button', { name: 'Повернутись до роботи' })
+    expect(api.billingOutlook).toHaveBeenCalledTimes(1)
+  })
+
+  it('closes the tab', async () => {
+    const close = vi.spyOn(window, 'close').mockImplementation(() => {})
+    await pressReturn()
+    expect(close).toHaveBeenCalledTimes(1)
+  })
+
+  it('a tab still in view after 300 ms: where the action waits, and «Мої курси»', async () => {
+    vi.spyOn(window, 'close').mockImplementation(() => {})
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible')
+    await pressReturn()
+    expect(await screen.findByText(RETURN_LINE)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Повернутись до роботи' })).toBeNull()
+    expect(
+      within(screen.getByRole('status')).getByRole('link', { name: 'Мої курси' }),
+    ).toHaveAttribute('href', '/')
+  })
+
+  it('waits the 300 ms before it says so', async () => {
+    vi.spyOn(window, 'close').mockImplementation(() => {})
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible')
+    api.getCheckout.mockResolvedValue(CREDITED)
+    renderPage('/billing?checkout=ref-1')
+    const button = await screen.findByRole('button', { name: 'Повернутись до роботи' })
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    fireEvent.click(button)
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(299)
+    })
+    expect(screen.queryByText(RETURN_LINE)).toBeNull()
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1)
+    })
+    expect(screen.getByText(RETURN_LINE)).toBeInTheDocument()
+  })
+
+  it('a tab that went out of view keeps the button', async () => {
+    vi.spyOn(window, 'close').mockImplementation(() => {})
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden')
+    await pressReturn()
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 400))
+    })
+    expect(screen.queryByText(RETURN_LINE)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Повернутись до роботи' })).toBeInTheDocument()
   })
 })

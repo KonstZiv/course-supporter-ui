@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   FolderPlus,
   ListChecks,
@@ -29,7 +29,12 @@ import { UploadConfirmDialog } from '../ui/UploadConfirmDialog'
 import { UploadProgressView } from '../activity/UploadProgressView'
 import { UploadFailuresView } from '../activity/UploadFailuresView'
 import { ContactAdmin } from '../ui/ContactAdmin'
-import type { AssignmentType, MaterialRole } from '../../types/api'
+import type {
+  AssignmentType,
+  AuthoredDocumentResponse,
+  MaterialRole,
+} from '../../types/api'
+import { estimateKindOf, kindOnlyPriceLine } from '../../utils/kindOnlyPrice'
 
 export interface MenuPosition {
   x: number
@@ -53,6 +58,8 @@ interface Props {
 type ProcessNotice =
   | { kind: 'nothing_failed' }
   | { kind: 'refused'; names: string[] }
+  /** Charging is on: the price line, then «Обробити» starts the retries. */
+  | { kind: 'price'; line: string; failed: AuthoredDocumentResponse[] }
 
 /* ── Pipeline step descriptions ── */
 
@@ -86,6 +93,23 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
   const [showPipelineInfo, setShowPipelineInfo] = useState<string | null>(null)
   const [processNotice, setProcessNotice] = useState<ProcessNotice | null>(null)
   const [pendingUpload, setPendingUpload] = useState<File[]>([])
+  // The media durations the pre-send checks read: the price of the processing.
+  const [pendingDurations, setPendingDurations] = useState<
+    Map<string, number | null>
+  >(new Map())
+  // One list per batch: the dialog prices it once, not on every render.
+  const confirmFiles = useMemo(
+    () =>
+      pendingUpload.map((f) => ({
+        name: f.name,
+        sourceType: sourceTypeForExtension(
+          f.name.split('.').pop()?.toLowerCase() ?? '',
+        ),
+        durationSec: pendingDurations.get(f.name) ?? null,
+        file: f,
+      })),
+    [pendingUpload, pendingDurations],
+  )
   const [newTitle, setNewTitle] = useState('')
   const [renameTitle, setRenameTitle] = useState(position.nodeTitle)
   const [busy, setBusy] = useState(false)
@@ -208,37 +232,60 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
     }
   }, [position, refreshTree, onClose, navigate])
 
+  // Start again every failed material of the node; refusals read together.
+  const retryFailed = useCallback(
+    async (failed: AuthoredDocumentResponse[]) => {
+      setBusy(true)
+      try {
+        // One refusal does not stop the rest; the author reads them together.
+        const refused: string[] = []
+        for (const doc of failed) {
+          try {
+            await documentsApi.retry(doc.id)
+          } catch {
+            refused.push(documentLabel(doc))
+          }
+        }
+        await refreshTree()
+        if (refused.length > 0) {
+          setProcessNotice({ kind: 'refused', names: refused })
+        } else {
+          onClose()
+        }
+      } finally {
+        setBusy(false)
+      }
+    },
+    [refreshTree, onClose],
+  )
+
   const processMaterials = useCallback(async () => {
     setBusy(true)
+    let failed: AuthoredDocumentResponse[]
+    let line: string | null = null
     try {
       const documents = await documentsApi.list(position.nodeId)
       // Only a failed material is started again (answer 23.2): a ready one is
       // refused without force, which this item does not send. A test is never
       // processed, so it is never failed and falls out here too.
-      const failed = documents.filter((doc) => doc.state === 'error')
+      failed = documents.filter((doc) => doc.state === 'error')
       if (failed.length === 0) {
         setProcessNotice({ kind: 'nothing_failed' })
         return
       }
-      // One refusal does not stop the rest; the author reads them together.
-      const refused: string[] = []
-      for (const doc of failed) {
-        try {
-          await documentsApi.retry(doc.id)
-        } catch {
-          refused.push(documentLabel(doc))
-        }
-      }
-      await refreshTree()
-      if (refused.length > 0) {
-        setProcessNotice({ kind: 'refused', names: refused })
-      } else {
-        onClose()
-      }
+      // The price first, with a kind alone (the materials are on the server):
+      // one line for the whole node, not one per material.
+      const kind = estimateKindOf(failed[0]!.source_type)
+      if (kind) line = await kindOnlyPriceLine(position.nodeId, kind, failed.length)
     } finally {
       setBusy(false)
     }
-  }, [position.nodeId, refreshTree, onClose])
+    if (line !== null) {
+      setProcessNotice({ kind: 'price', line, failed })
+      return
+    }
+    await retryFailed(failed)
+  }, [position.nodeId, retryFailed])
 
   const closeProcessNotice = useCallback(() => {
     setProcessNotice(null)
@@ -273,12 +320,14 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
     input.onchange = async () => {
       if (!input.files?.length) return
       // Same pre-send checks as the side panel (Е2 parity — the canvas ran none).
-      const { accepted, rejectionMessage } = await validateUploadFiles(
-        Array.from(input.files),
-      )
+      const { accepted, durations, rejectionMessage } =
+        await validateUploadFiles(Array.from(input.files))
       // Always called, empty list included — see the panel's onDrop.
       reportFailures(rejectionMessage ? [rejectionMessage] : [])
-      if (accepted.length > 0) setPendingUpload(accepted)
+      if (accepted.length > 0) {
+        setPendingDurations(durations)
+        setPendingUpload(accepted)
+      }
     }
     input.click()
   }, [reportFailures])
@@ -513,7 +562,11 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
             : 'Обробити матеріали'
         }
       >
-        {processNotice?.kind === 'refused' ? (
+        {processNotice?.kind === 'price' ? (
+          <p className="text-sm text-ink-light leading-relaxed">
+            {processNotice.line}
+          </p>
+        ) : processNotice?.kind === 'refused' ? (
           <ul className="space-y-1 text-sm text-ink">
             {processNotice.names.map((name, i) => (
               // Two materials may share a name; the list never reorders.
@@ -528,11 +581,30 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
             обробляють наново кнопкою в його рядку.
           </p>
         )}
-        <div className="flex justify-end mt-4">
-          <button className="btn-secondary btn-sm" onClick={closeProcessNotice}>
-            Зрозуміло
-          </button>
-        </div>
+        {processNotice?.kind === 'price' ? (
+          <div className="flex justify-end gap-2 mt-4">
+            <button className="btn-secondary btn-sm" onClick={closeProcessNotice}>
+              Скасувати
+            </button>
+            <button
+              className="btn-primary btn-sm"
+              disabled={busy}
+              onClick={() => {
+                const { failed } = processNotice
+                setProcessNotice(null)
+                void retryFailed(failed)
+              }}
+            >
+              Обробити
+            </button>
+          </div>
+        ) : (
+          <div className="flex justify-end mt-4">
+            <button className="btn-secondary btn-sm" onClick={closeProcessNotice}>
+              Зрозуміло
+            </button>
+          </div>
+        )}
       </Modal>
 
       {/* Add child modal */}
@@ -615,12 +687,8 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
       {/* «Тип документа» — the SAME dialog as the side-zone path (R6). */}
       <UploadConfirmDialog
         open={pendingUpload.length > 0}
-        files={pendingUpload.map((f) => ({
-          name: f.name,
-          sourceType: sourceTypeForExtension(
-            f.name.split('.').pop()?.toLowerCase() ?? '',
-          ),
-        }))}
+        files={confirmFiles}
+        nodeId={position.nodeId}
         onConfirm={handleConfirmUpload}
         onCancel={() => setPendingUpload([])}
       />

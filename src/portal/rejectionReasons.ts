@@ -96,6 +96,19 @@ const WHOLE_FILE: Record<string, ReasonArticle> = {
       'чи зміненого файла з кодом або текстом порівняно зі стартовим проєктом.',
     action: 'Внесіть свої зміни в проєкт і надішліть роботу знову.',
   },
+  // A project whose new or changed files the doors could read none of —
+  // mentor-rebuild, project chain K6 fix, #677; refused before anything is paid
+  // for; its files come in not_opened below the phrase; wording ratified by the
+  // operator 2026-11-16.
+  no_readable_changes: {
+    what:
+      'Серед ваших нових і змінених файлів немає жодного, який перевірка ' +
+      'змогла прочитати: файлів із кодом чи текстом немає або їх не ' +
+      'вдалося відкрити (перелік і причини — нижче).',
+    action:
+      'Додайте чи виправте файли з кодом або текстом (текст зберігайте ' +
+      'в кодуванні UTF-8) і надішліть роботу знову.',
+  },
   suspicious_unicode: {
     what: 'У тексті є приховані або підмінені символи.',
     action: 'Приберіть їх і подайте знову.',
