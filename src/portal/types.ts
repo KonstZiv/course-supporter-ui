@@ -431,6 +431,47 @@ export interface ReviewRemark {
   todo: string
   read: ReviewReference[]
   position: ReviewPosition | null
+  item_id?: string | null
+}
+
+// Task 12a: Comments and replies on review remarks
+export type RemarkCommentAuthor = 'student' | 'mentor'
+
+export type RemarkCommentKind =
+  | 'question'
+  | 'objection'
+  | 'comment'
+  | 'answer'
+
+export type StudentRemarkCommentKind = 'question' | 'objection' | 'comment'
+
+export interface RemarkComment {
+  id: string
+  submission_id: string
+  item_id: string
+  parent_id: string | null
+  author: RemarkCommentAuthor
+  kind: RemarkCommentKind
+  body: string
+  created_at: string
+  answered_in_submission_id: string | null
+}
+
+export interface RemarkThread {
+  item_id: string
+  comments: RemarkComment[]
+}
+
+export interface RemarkThreads {
+  accepting_replies: boolean
+  threads: RemarkThread[]
+}
+
+export interface CreateRemarkComment {
+  item_id: string
+  kind: StudentRemarkCommentKind
+  body: string
+  parent_id?: string | null
 }
 
 export type ReviewReplyKind = 'question' | 'objection' | 'comment'

@@ -2,6 +2,7 @@ import { usePortalSession } from '../stores/session'
 import { loginAddress } from '../signInReturn'
 import type {
   ConfirmRecoveryEmailRequest,
+  CreateRemarkComment,
   FeedbackTouch,
   FeedbackValue,
   ForgotPasswordRequest,
@@ -34,6 +35,8 @@ import type {
   PortalUnitsShortfall,
   RecoveryEmailRequest,
   RecoveryEmailResponse,
+  RemarkComment,
+  RemarkThreads,
   ResetPasswordRequest,
   TestStructureResponse,
 } from '../types'
@@ -97,6 +100,26 @@ export function doorRefusal(err: unknown): PortalDoorRefusal | null {
   const { code, details } = detail as { code?: unknown; details?: unknown }
   if (typeof code !== 'string') return null
   return { code, details: typeof details === 'string' ? details : null }
+}
+
+export interface ReplyRefusal {
+  code: string
+  details: Record<string, unknown>
+}
+
+// Refusal on a remark reply (task 12a). Unlike doorRefusal, details is an
+// object (e.g. { max: 5 }, { category: '...' }) instead of a string.
+export function replyRefusal(err: unknown): ReplyRefusal | null {
+  if (!(err instanceof PortalApiError)) return null
+  const detail = (err.body as { detail?: unknown } | null)?.detail
+  if (detail === null || typeof detail !== 'object') return null
+  const { code, details } = detail as { code?: unknown; details?: unknown }
+  if (typeof code !== 'string') return null
+  const detailsObj =
+    details !== null && typeof details === 'object' && !Array.isArray(details)
+      ? (details as Record<string, unknown>)
+      : {}
+  return { code, details: detailsObj }
 }
 
 // Unauthenticated login. Does NOT attach a bearer and does NOT trigger the
@@ -260,6 +283,16 @@ export const portalApi = {
   submission: (submissionId: string) =>
     authGet<PortalSubmissionDetail>(
       `/api/v1/portal/submissions/${submissionId}`,
+    ),
+  // Task 12a: Remark comments and replies
+  remarkThreads: (submissionId: string) =>
+    authGet<RemarkThreads>(
+      `/api/v1/portal/submissions/${submissionId}/comments`,
+    ),
+  replyToRemark: (submissionId: string, req: CreateRemarkComment) =>
+    postAuthJson<RemarkComment>(
+      `/api/v1/portal/submissions/${submissionId}/comments`,
+      req,
     ),
   // KD18 P5: presigned download of a project task's active base ORIGINAL archive
   // (D2 option B — served on demand, not baked into the descriptor). A visible

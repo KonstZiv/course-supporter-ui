@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { MarkdownContent } from './MarkdownContent'
+import { RemarkThreads } from './RemarkThreads'
 import { Loader2 } from 'lucide-react'
 import { portalApi, PortalApiError } from '../api/portalClient'
 import type {
@@ -340,6 +341,12 @@ export function PortalReviewDetail({ row }: { row: PortalSubmissionListItem }) {
         <MarkdownContent markdown={detail.review_markdown} />
       ) : (
         <div className="text-sm text-ink-muted">Рецензію ще не сформовано.</div>
+      )}
+      {detail.review_markdown && (
+        <RemarkThreads
+          submissionId={submissionId}
+          structure={detail.structure}
+        />
       )}
       {detail.review_markdown && (
         <ReviewTouch
