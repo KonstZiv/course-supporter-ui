@@ -278,8 +278,8 @@ describe('PortalSubmissionsList — what an attempt is told (task 03)', () => {
 
     fireEvent.click(screen.getByText('Призупинено'))
 
-    expect(screen.getByText(/продовжиться автоматично/)).toBeInTheDocument()
-    expect(screen.getByText(/Надсилати роботу знову не потрібно/)).toBeInTheDocument()
+    expect(screen.getByText(/продовжиться сама/)).toBeInTheDocument()
+    expect(screen.getByText(/надсилати роботу знову не потрібно/)).toBeInTheDocument()
     expect(mockedSubmission).not.toHaveBeenCalled()
   })
 })

@@ -25,11 +25,13 @@ import type {
   SubmissionPolicyResponse,
   PortalMe,
   PortalMediaResponse,
+  PortalReviewEstimate,
   PortalSubmissionDetail,
   PortalSubmissionListItem,
   PortalSubmitResponse,
   PortalTestSubmitRequest,
   PortalTouchRequest,
+  PortalUnitsShortfall,
   RecoveryEmailRequest,
   RecoveryEmailResponse,
   ResetPasswordRequest,
@@ -218,6 +220,18 @@ export const portalApi = {
   // refuses them names its reason — read it with ``doorRefusal``.
   testStructure: (taskId: string) =>
     authGet<TestStructureResponse>(`/api/v1/portal/tasks/${taskId}/test`),
+  // BIL-E: the price of a review of this task before it is sent. Without a
+  // file — the task's typical price; with one — the price of that file (read
+  // by the doors, never stored). A file the doors refuse is a 422 with their
+  // code, as the submission would be: read it with ``doorRefusal``.
+  estimateTask: (taskId: string, file?: File | null) => {
+    const body = new FormData()
+    if (file) body.append('file', file)
+    return authPost<PortalReviewEstimate>(
+      `/api/v1/portal/tasks/${taskId}/estimate`,
+      body,
+    )
+  },
   submitTest: (taskId: string, body: PortalTestSubmitRequest) =>
     postAuthJson<PortalSubmitResponse>(
       `/api/v1/portal/tasks/${taskId}/test-submissions`,
@@ -312,4 +326,28 @@ export const portalApi = {
 // The reason code of a billing refusal (``detail.code``), or null.
 export function billingReason(err: unknown): string | null {
   return doorRefusal(err)?.code ?? null
+}
+
+// The code of a submission refused for want of units.
+export const INSUFFICIENT_UNITS = 'insufficient_units'
+
+const isCount = (v: unknown): v is number =>
+  typeof v === 'number' && Number.isFinite(v)
+
+// The numbers of a 402 ``insufficient_units`` refusal, or null for any other
+// failure — and for one whose numbers did not come whole (the caller then
+// says what it says of any refusal).
+export function unitsShortfall(err: unknown): PortalUnitsShortfall | null {
+  if (!(err instanceof PortalApiError) || err.status !== 402) return null
+  const detail = (err.body as { detail?: unknown } | null)?.detail
+  if (detail === null || typeof detail !== 'object') return null
+  const { code, details } = detail as { code?: unknown; details?: unknown }
+  if (code !== INSUFFICIENT_UNITS || details === null || typeof details !== 'object') {
+    return null
+  }
+  const { price_units, available_units, missing_units } = details as Record<string, unknown>
+  if (!isCount(price_units) || !isCount(available_units) || !isCount(missing_units)) {
+    return null
+  }
+  return { price_units, available_units, missing_units }
 }

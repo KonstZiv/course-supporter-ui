@@ -1,11 +1,46 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ChevronRight, Loader2 } from 'lucide-react'
 import { usePortalSession } from '../stores/session'
 import { portalApi, PortalApiError } from '../api/portalClient'
 import { PortalHeader } from '../components/PortalHeader'
 import { RecoveryEmailSection } from '../components/RecoveryEmailSection'
 import type { PortalCourseListItem } from '../types'
+import { useAvailableUnits, useStudentOutlook } from '../hooks/useStudentOutlook'
+import { UnitsReminders } from '../components/billing/UnitsReminders'
+import { SITE_TEXT_LINK_CLASS } from '../../components/site/siteLinks'
+import { availableLine, BUY_UNITS } from '../unitsTexts'
+
+/**
+ * Under the greeting, for a student who pays for their reviews: what is
+ * available and how many reviews it covers, and the reminders. Nothing while
+ * the answers are on their way, when one failed, when the author pays, or
+ * while charging is off (operator 2026-11-16, A).
+ */
+function UnitsOutlook({ tenantId }: { tenantId: string | undefined }) {
+  const { outlook } = useStudentOutlook()
+  const available = useAvailableUnits()
+  if (outlook?.paid_by !== 'self' || !outlook.charging_enabled) return null
+  const units = `/${tenantId}/billing`
+  return (
+    <div className="mt-4">
+      <UnitsReminders
+        outlook={outlook}
+        lead={available === null ? null : availableLine(available, outlook.reviews_left)}
+        buy={
+          <Link to={units} className={SITE_TEXT_LINK_CLASS}>
+            {BUY_UNITS}
+          </Link>
+        }
+        units={
+          <Link to={units} className={SITE_TEXT_LINK_CLASS}>
+            Юніти
+          </Link>
+        }
+      />
+    </div>
+  )
+}
 
 // Portal landing (Phase 6 / T4b, c2): the student's enrolled courses
 // (GET /portal/courses). The greeting name comes from the session store
@@ -40,6 +75,7 @@ export function PortalHomePage() {
 
       <main className="max-w-4xl mx-auto px-6 py-12">
         <h1 className="page-title">Вітаємо, {name}!</h1>
+        <UnitsOutlook tenantId={tenantId} />
         <p className="page-subtitle">Ваші курси</p>
 
         {error && (

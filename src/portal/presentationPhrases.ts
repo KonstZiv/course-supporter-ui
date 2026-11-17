@@ -39,9 +39,11 @@ const STATE_PHRASE: Record<PortalPresentationState, string> = {
   not_an_attempt:
     'Надіслане не схоже на рішення цього завдання. ' +
     'Перевірте, що подаєте правильний файл.',
+  // The student's own units; the author's have their article
+  // (``awaiting_author_funds``), which the code reaches first.
   awaiting_funds:
-    'Перевірку призупинено — вона продовжиться автоматично, ' +
-    'щойно ліміт поновлять. Надсилати роботу знову не потрібно.',
+    'Перевірку призупинено: на початок перевірки не вистачило юнітів. ' +
+    'Після купівлі перевірка продовжиться сама — надсилати роботу знову не потрібно.',
   in_progress: 'Рецензія зʼявиться, коли перевірка завершиться.',
   reviewed: 'Роботу перевірено.',
 }
@@ -62,6 +64,21 @@ const UNKNOWN_STATE_LABEL = 'Стан невідомий'
 
 export function stateLabel(state: string): string {
   return STATE_LABEL[state as PortalPresentationState] ?? UNKNOWN_STATE_LABEL
+}
+
+// The label of an attempt, where the reason says more than the state: a review
+// waiting for the AUTHOR's units is not paused by anything the student did.
+const REASON_LABEL: Record<string, string> = {
+  awaiting_author_funds: 'Чекає перевірки',
+}
+
+/**
+ * The label for the server's whole answer — the state's, unless the reason
+ * code has one of its own. The tone stays the state's (``stateTone``).
+ */
+export function presentationLabel(presentation: PortalPresentation): string {
+  const { state, reason_code: code } = presentation
+  return (code !== null && REASON_LABEL[code]) || stateLabel(state)
 }
 
 export function stateTone(state: string): string {

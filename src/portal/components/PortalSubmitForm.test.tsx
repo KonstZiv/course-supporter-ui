@@ -14,6 +14,17 @@ vi.mock('../api/portalClient', async (importOriginal) => {
     portalApi: {
       ...actual.portalApi,
       submitTask: vi.fn(),
+      // Stage 2b: the price before a submission. Charging off — the form as
+      // it was before the price, which is what every test here holds.
+      estimateTask: vi.fn().mockResolvedValue({
+        price_units: 0,
+        available_units: 0,
+        enough: true,
+        missing_units: 0,
+        charging_enabled: false,
+        basis: 'typical',
+        paid_by: 'self',
+      }),
       // Step Г2 §2.1: the form now reads the language list and the student's
       // standing preference on mount. Both are mocked so the field's two
       // sources are controlled, and so the suite makes no real calls.

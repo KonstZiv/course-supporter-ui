@@ -1,9 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Loader2, Send, CheckCircle2, AlertCircle, HelpCircle } from 'lucide-react'
-import { doorRefusal, portalApi, PortalApiError } from '../api/portalClient'
+import { doorRefusal, portalApi, PortalApiError, unitsShortfall } from '../api/portalClient'
 import type { PortalLanguageEntry, TestStructureResponse } from '../types'
 import { getPortalLanguages } from '../languages'
 import { submitErrorMessage } from '../submissionCodes'
+import { TEST_THRESHOLD, testCostView } from '../reviewCost'
+import { useReviewEstimate } from '../hooks/useReviewEstimate'
+import { useUnitsWait } from '../hooks/useUnitsWait'
+import { PAID_BY_AUTHOR, TEST_NEEDS_PACKAGE } from '../unitsTexts'
+import { CostCard, UnitsShortPanel } from './billing/UnitsCost'
 
 type TestFormState = 'idle' | 'confirming' | 'submitting' | 'success' | 'error'
 
@@ -34,6 +39,11 @@ function unansweredWarning(numbers: string[]): string {
 // After a submission the attempts list below takes over, exactly as for a
 // file: ``onSubmitted`` reloads it and the tree, and the notice here retires
 // once the list shows the attempt.
+//
+// Units (BIL-E, stage 2b): a test is reviewed without them while something of
+// a package is left. The form asks the same estimate as the file form, without
+// a file, and says only two things: who pays when the author does, and — when
+// nothing is left — a panel in place of the button that waits for a purchase.
 export function PortalTestForm({
   taskId,
   courseLanguage = null,
@@ -60,6 +70,10 @@ export function PortalTestForm({
   const [sentId, setSentId] = useState<string | null>(null)
   const [language, setLanguage] = useState('')
   const [languages, setLanguages] = useState<PortalLanguageEntry[]>([])
+
+  const estimate = useReviewEstimate(taskId, null)
+  const cost = testCostView(estimate.outcome, estimate.last)
+  useUnitsWait(cost === 'panel' ? TEST_THRESHOLD : null, estimate.askAgain)
 
   useEffect(() => {
     let active = true
@@ -165,6 +179,14 @@ export function PortalTestForm({
       onSubmitted(res.submission_id)
     } catch (err) {
       if (err instanceof PortalApiError && err.status === 401) return // centralised
+      // Nothing of a package is left after all: the panel, the ticks stay.
+      const shortfall = unitsShortfall(err)
+      if (shortfall !== null) {
+        setState('idle')
+        setMessage('')
+        estimate.refused(shortfall)
+        return
+      }
       setState('error')
       setMessage(submitErrorMessage(err))
       if (doorRefusal(err)?.code === 'TEST_VERSION_CHANGED') {
@@ -176,6 +198,7 @@ export function PortalTestForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (structure === null || state === 'submitting') return // no double POST
+    if (cost === 'panel') return // no button; this holds an Enter submit
     if (unanswered.length > 0 && state !== 'confirming') {
       setState('confirming')
       return
@@ -291,6 +314,10 @@ export function PortalTestForm({
                 </div>
               ) : (
                 <>
+                  {cost === 'author' && (
+                    <p className="text-sm text-ink-light">{PAID_BY_AUTHOR}</p>
+                  )}
+                  {cost === 'now_enough' && <CostCard nowEnough />}
                   {message && (
                     <div
                       className={`flex items-start gap-2 p-3 rounded-xl text-sm ${tone}`}
@@ -299,20 +326,24 @@ export function PortalTestForm({
                       {message}
                     </div>
                   )}
-                  <button
-                    type="submit"
-                    disabled={state === 'submitting'}
-                    className="btn-primary"
-                  >
-                    {state === 'submitting' ? (
-                      <Loader2 size={18} className="animate-spin" />
-                    ) : (
-                      <>
-                        <Send size={16} />
-                        Надіслати відповіді
-                      </>
-                    )}
-                  </button>
+                  {cost === 'panel' ? (
+                    <UnitsShortPanel text={TEST_NEEDS_PACKAGE} fileChosen={false} />
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={state === 'submitting'}
+                      className="btn-primary"
+                    >
+                      {state === 'submitting' ? (
+                        <Loader2 size={18} className="animate-spin" />
+                      ) : (
+                        <>
+                          <Send size={16} />
+                          Надіслати відповіді
+                        </>
+                      )}
+                    </button>
+                  )}
                 </>
               )}
             </>
