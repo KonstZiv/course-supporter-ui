@@ -14,12 +14,13 @@ import { availableLine, BUY_UNITS } from '../unitsTexts'
 /**
  * Under the greeting, for a student who pays for their reviews: what is
  * available and how many reviews it covers, and the reminders. Nothing while
- * the answers are on their way, when one failed, or when the author pays.
+ * the answers are on their way, when one failed, when the author pays, or
+ * while charging is off (operator 2026-11-16, A).
  */
 function UnitsOutlook({ tenantId }: { tenantId: string | undefined }) {
   const { outlook } = useStudentOutlook()
   const available = useAvailableUnits()
-  if (outlook?.paid_by !== 'self') return null
+  if (outlook?.paid_by !== 'self' || !outlook.charging_enabled) return null
   const units = `/${tenantId}/billing`
   return (
     <div className="mt-4">

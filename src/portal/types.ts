@@ -714,6 +714,9 @@ export interface PortalBillingOutlook {
   warning: 'low' | 'next_may_fail' | null
   expiring_soon: { units: number; expires_on: string } | null
   paid_by: 'self' | 'author'
+  // The switch ``BILLING_CHARGING_ENABLED``: while it is off nothing is
+  // charged, and the student is told nothing about units running short.
+  charging_enabled: boolean
 }
 
 // POST /portal/tasks/{authored_document_id}/estimate (BIL-E, part B): what a

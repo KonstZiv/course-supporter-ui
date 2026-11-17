@@ -50,10 +50,12 @@ function scrollToPackages() {
 
 /**
  * Under "Доступно": how many reviews the units cover, and the reminders —
- * only for a student who pays for their reviews.
+ * only for a student who pays for their reviews, and only while charging is
+ * on (operator 2026-11-16, A: while it is off, nothing about units running
+ * short).
  */
 function OutlookLines({ outlook }: { outlook: PortalBillingOutlook | null }) {
-  if (outlook?.paid_by !== 'self') return null
+  if (outlook?.paid_by !== 'self' || !outlook.charging_enabled) return null
   return (
     <UnitsReminders
       outlook={outlook}

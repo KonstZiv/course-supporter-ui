@@ -10,8 +10,9 @@ import { formatReviews } from '../../utils/units'
 
 // Stage 2b, 5.4: "вистачить приблизно на N перевірок" and the reminders, on
 // "Юніти" under what is available and on "Мої курси" under the greeting —
-// only for a student who pays; nothing while the answer is on its way, when
-// it failed, or when the author pays.
+// only for a student who pays, and only while charging is on (operator
+// 2026-11-16, A); nothing while the answer is on its way, when it failed, or
+// when the author pays.
 
 const api = vi.hoisted(() => ({
   billingBalance: vi.fn(),
@@ -48,7 +49,16 @@ const outlook = (over: Partial<PortalBillingOutlook> = {}): PortalBillingOutlook
   warning: null,
   expiring_soon: null,
   paid_by: 'self',
+  charging_enabled: true,
   ...over,
+})
+
+// Charging off, with everything the outlook could warn about.
+const CHARGING_OFF = outlook({
+  charging_enabled: false,
+  reviews_left: 0,
+  warning: 'next_may_fail',
+  expiring_soon: { units: 500, expires_on: '2026-12-01' },
 })
 
 const LOW = 'Юнітів вистачить приблизно на 2 перевірки. Купіть пакет заздалегідь, щоб подавати роботи без перерви.'
@@ -171,6 +181,47 @@ describe('"Юніти"', () => {
     const place = (await screen.findByText('Доступно: 120 юнітів')).nextElementSibling
     await settle()
     expect(place).toBeEmptyDOMElement()
+  })
+})
+
+describe('charging off (operator 2026-11-16, A): nothing about units running short', () => {
+  it('"Юніти": what is available and the packages stay; no "Вистачить…", no reminders', async () => {
+    api.billingOutlook.mockResolvedValue(CHARGING_OFF)
+    renderAt(`/${T}/billing`)
+    const main = await screen.findByText('Доступно: 120 юнітів')
+    expect(await screen.findByRole('button', { name: 'Купити' })).toBeInTheDocument()
+    await settle()
+    expect(main.nextElementSibling).toBeEmptyDOMElement()
+    expect(screen.queryByText(/Вистачить приблизно/)).toBeNull()
+    expect(screen.queryByText(NEXT)).toBeNull()
+    expect(screen.queryByText(EXPIRY)).toBeNull()
+    expect(screen.queryByRole('list', { name: 'Нагадування про юніти' })).toBeNull()
+  })
+
+  it('"Мої курси": no line about units and no reminders', async () => {
+    api.billingOutlook.mockResolvedValue(CHARGING_OFF)
+    renderAt(`/${T}/home`)
+    await screen.findByText('Вас поки не зараховано на жоден курс.')
+    await settle()
+    expect(api.billingOutlook).toHaveBeenCalled()
+    expect(screen.queryByText(/Доступно|вистачить|згорить/i)).toBeNull()
+    expect(screen.queryByText(NEXT)).toBeNull()
+    expect(screen.queryByRole('list', { name: 'Нагадування про юніти' })).toBeNull()
+  })
+
+  it('charging turned on while the tab was away → the lines come on its return', async () => {
+    api.billingOutlook.mockResolvedValue(CHARGING_OFF)
+    renderAt(`/${T}/home`)
+    await screen.findByText('Вас поки не зараховано на жоден курс.')
+    await settle()
+    expect(screen.queryByText(NEXT)).toBeNull()
+    api.billingOutlook.mockResolvedValue({ ...CHARGING_OFF, charging_enabled: true })
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible')
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    expect(screen.getByText(NEXT)).toBeInTheDocument()
+    expect(screen.getByText('Доступно 120 юнітів — вистачить приблизно на 0 перевірок.')).toBeInTheDocument()
   })
 })
 
