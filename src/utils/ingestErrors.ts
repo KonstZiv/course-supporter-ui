@@ -65,6 +65,11 @@ const INGEST_ERROR_MESSAGES: Record<string, string> = {
   slide_count_limit:
     'У презентації забагато слайдів. Розділіть її на частини й завантажте ' +
     'кожну окремо.',
+  // Not a fault of the material: the author's units did not cover its
+  // processing (BIL-E). The material stays; the card offers the purchase.
+  insufficient_units:
+    'Обробку не почато: на неї не вистачило юнітів. Матеріал збережено — ' +
+    'після купівлі юнітів запустіть обробку ще раз.',
 }
 
 /**

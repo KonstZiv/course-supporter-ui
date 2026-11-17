@@ -10,11 +10,25 @@ import { ApiError } from '../api/client'
 import { markRolesIntroSeen } from '../components/ui/rolesIntro'
 import { ConfirmRolesPage } from './ConfirmRolesPage'
 
-const { getMock, confirmMock, navigateMock } = vi.hoisted(() => ({
+const { getMock, confirmMock, navigateMock, estimateMock } = vi.hoisted(() => ({
   getMock: vi.fn(),
   confirmMock: vi.fn(),
   navigateMock: vi.fn(),
+  estimateMock: vi.fn(),
 }))
+// The confirmation starts a paid processing (BIL-E, place 5): its price is
+// asked with the kind alone. Charging is off unless a test says otherwise.
+vi.mock('../api/billing', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../api/billing')>()),
+  estimateProcessing: estimateMock,
+}))
+const CHARGING_OFF = {
+  price_units: 0,
+  available_units: null,
+  enough: true,
+  missing_units: null,
+  charging_enabled: false,
+}
 vi.mock('../api/documents', () => ({
   documentsApi: { get: getMock, confirmFileRoles: confirmMock },
 }))
@@ -57,6 +71,13 @@ function makeDoc(fileRoles: FileRoles | null): AuthoredDocumentResponse {
   }
 }
 
+// The button waits for the price of the processing (place 5); then the click.
+async function clickSave() {
+  const save = await screen.findByRole('button', { name: 'Підтвердити й обробити' })
+  await waitFor(() => expect(save).toBeEnabled())
+  fireEvent.click(save)
+}
+
 function renderPage() {
   render(
     <MemoryRouter initialEntries={['/document/doc-1/confirm-roles']}>
@@ -75,6 +96,8 @@ describe('ConfirmRolesPage', () => {
     getMock.mockReset()
     confirmMock.mockReset()
     navigateMock.mockReset()
+    estimateMock.mockReset()
+    estimateMock.mockResolvedValue(CHARGING_OFF)
     // Default: the educational block is already acknowledged, so the behaviour
     // tests below run without the first-visit modal. The modal-specific tests
     // clear the flag explicitly.
@@ -127,7 +150,7 @@ describe('ConfirmRolesPage', () => {
     renderPage()
     const appSelect = await screen.findByLabelText('Роль файла src/app.ts')
     fireEvent.change(appSelect, { target: { value: 'auxiliary' } })
-    fireEvent.click(screen.getByText('Підтвердити й обробити'))
+    await clickSave()
     await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(1))
     expect(confirmMock).toHaveBeenCalledWith('doc-1', {
       files: { 'src/app.ts': 'auxiliary', 'package.json': 'structure_only' },
@@ -146,7 +169,7 @@ describe('ConfirmRolesPage', () => {
       new ApiError(409, 'stale', { code: 'file_roles_stale' }),
     )
     renderPage()
-    fireEvent.click(await screen.findByText('Підтвердити й обробити'))
+    await clickSave()
     await waitFor(() => expect(getMock).toHaveBeenCalledTimes(2))
     expect(navigateMock).not.toHaveBeenCalled()
     expect(await screen.findByText(/екран оновлено/)).toBeInTheDocument()
@@ -158,7 +181,7 @@ describe('ConfirmRolesPage', () => {
       new ApiError(422, 'incomplete', { code: 'file_roles_incomplete' }),
     )
     renderPage()
-    fireEvent.click(await screen.findByText('Підтвердити й обробити'))
+    await clickSave()
     expect(await screen.findByText(/зайвий шлях/)).toBeInTheDocument()
     expect(navigateMock).not.toHaveBeenCalled()
   })
@@ -276,5 +299,72 @@ describe('ConfirmRolesPage', () => {
       expect(screen.queryByText('Прочитав, зрозуміло')).toBeNull()
       expect(screen.getByText('Закрити')).toBeInTheDocument()
     })
+  })
+})
+
+describe('ConfirmRolesPage — the price of the processing (place 5)', () => {
+  const SAVE = 'Підтвердити й обробити'
+  const UNPRICED =
+    'Орієнтовну вартість цього матеріалу до обробки порахувати не вдалося.'
+
+  beforeEach(() => {
+    getMock.mockReset()
+    confirmMock.mockReset()
+    estimateMock.mockReset()
+    localStorage.clear()
+    markRolesIntroSeen()
+    getMock.mockResolvedValue(makeDoc({ proposal: PROPOSAL }))
+  })
+
+  it('asks with the kind alone, for the node of the material', async () => {
+    estimateMock.mockResolvedValue(CHARGING_OFF)
+    renderPage()
+    await screen.findByText('app.ts')
+    await waitFor(() =>
+      expect(estimateMock).toHaveBeenCalledExactlyOnceWith('node-1', { kind: 'code' }),
+    )
+  })
+
+  it('while asked: the line, and the button waits', async () => {
+    estimateMock.mockReturnValue(new Promise(() => {}))
+    renderPage()
+    expect(await screen.findByText('Рахуємо орієнтовну вартість…')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: SAVE })).toBeDisabled()
+  })
+
+  it('1: charging off → nothing, and the confirmation runs', async () => {
+    estimateMock.mockResolvedValue(CHARGING_OFF)
+    confirmMock.mockResolvedValue(makeDoc({ proposal: PROPOSAL }))
+    renderPage()
+    const save = await screen.findByRole('button', { name: SAVE })
+    await waitFor(() => expect(save).toBeEnabled())
+    expect(screen.queryByText(/Орієнтовн/)).toBeNull()
+    fireEvent.click(save)
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(1))
+  })
+
+  it('2: the request failed → its line, and the confirmation runs', async () => {
+    estimateMock.mockRejectedValue(new TypeError('Failed to fetch'))
+    confirmMock.mockResolvedValue(makeDoc({ proposal: PROPOSAL }))
+    renderPage()
+    expect(
+      await screen.findByText('Орієнтовну вартість зараз порахувати не вдалося.'),
+    ).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: SAVE }))
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(1))
+  })
+
+  it('3: charging on → the unpriced line, no price; the confirmation runs', async () => {
+    estimateMock.mockResolvedValue({
+      ...CHARGING_OFF,
+      charging_enabled: true,
+      available_units: 10,
+    })
+    confirmMock.mockResolvedValue(makeDoc({ proposal: PROPOSAL }))
+    renderPage()
+    expect(await screen.findByText(UNPRICED)).toBeInTheDocument()
+    expect(screen.queryByText(/приблизно/)).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: SAVE }))
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(1))
   })
 })

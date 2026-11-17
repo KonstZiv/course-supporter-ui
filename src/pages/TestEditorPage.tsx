@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AlertCircle, ListChecks, Loader2, Plus } from 'lucide-react'
 import { ContactAdmin } from '../components/ui/ContactAdmin'
@@ -25,6 +33,8 @@ import {
   type EditorAddress,
 } from '../components/testEditor/useTestEditor'
 import { useLeaveGuard } from '../hooks/useLeaveGuard'
+import { useActionPrice, type PriceRequest } from '../hooks/useActionPrice'
+import { estimateKeyExplanation } from '../api/billing'
 import {
   addOption,
   addQuestion,
@@ -83,8 +93,12 @@ export function TestEditorPage() {
 
   // Where focus goes once the render after an action is on screen: into a
   // field just added, onto the arrow that moved an item, next to what went.
+  // A layout effect, run in the very commit that draws the action: a passive
+  // one of an earlier render (an answer that came in meanwhile, the price of
+  // the check) could still be pending when the author acts, and would take
+  // the focus on the screen as it was before the action.
   const pendingFocus = useRef<string | null>(null)
-  useEffect(() => {
+  useLayoutEffect(() => {
     const id = pendingFocus.current
     if (id === null) return
     pendingFocus.current = null
@@ -103,6 +117,32 @@ export function TestEditorPage() {
     () => optionLetters(editor.language),
     [editor.language],
   )
+
+  // The explanations of the key are paid (BIL-E, places 6 and 7) — but only
+  // while the draft as it stands has none asked for: a check that is ready or
+  // in progress costs nothing again, and a checked draft is published without
+  // more. A failed check is asked for again, so it is priced.
+  const testId = saved?.id ?? null
+  const paidCheck =
+    saved?.check.state === 'not_checked' || saved?.check.state === 'failed'
+  const checkPossible =
+    paidCheck && !editor.unsaved && editor.incomplete.length === 0
+  const checkPriceRequests = useMemo(
+    (): PriceRequest[] =>
+      testId !== null && checkPossible
+        ? [{ estimate: () => estimateKeyExplanation(testId), priced: true }]
+        : [],
+    [testId, checkPossible],
+  )
+  const checkPrice = useActionPrice(checkPriceRequests)
+  const publishPriceRequests = useMemo(
+    (): PriceRequest[] =>
+      testId !== null && paidCheck && publishing
+        ? [{ estimate: () => estimateKeyExplanation(testId), priced: true }]
+        : [],
+    [testId, paidCheck, publishing],
+  )
+  const publishPrice = useActionPrice(publishPriceRequests)
 
   const change = useCallback(
     (next: TestDraft, focus: string | null = null) => {
@@ -304,6 +344,7 @@ export function TestEditorPage() {
         view={view}
         status={editor.status}
         onSave={() => void save()}
+        checkPrice={checkPrice}
         onCheck={() => void editor.check()}
         onPublish={() => setPublishing(true)}
         onView={setView}
@@ -440,6 +481,7 @@ export function TestEditorPage() {
           firstPublication={saved.published === null}
           checkState={saved.check.state}
           busy={editor.busy === 'publish'}
+          price={publishPrice}
           onCancel={() => setPublishing(false)}
           onConfirm={() => {
             setPublishing(false)

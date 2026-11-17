@@ -12,11 +12,14 @@ import type {
   BillingStatementItem,
 } from '../types/api'
 import { BalanceCard } from '../components/billing/BalanceCard'
+import { PACKAGES_ANCHOR_ID } from '../components/billing/BuyUnitsAction'
+import { OutlookReminders } from '../components/billing/OutlookReminders'
 import { CheckoutNotice } from '../components/billing/CheckoutNotice'
 import { PackagesSection } from '../components/billing/PackagesSection'
 import { StatementSection } from '../components/billing/StatementSection'
 import { ContactAdmin } from '../components/ui/ContactAdmin'
 import { LOAD_FAILED } from '../utils/billingWords'
+import { useOutlookStore } from '../stores/billingOutlook'
 
 // The address parameter that carries the checkout the author came back from
 // (App's `billing/checkouts/:checkoutRef` route moves its number here).
@@ -121,8 +124,14 @@ export function BillingPage() {
     if (checkout !== null && OLD_FORM.includes(checkout)) dropCheckout()
   }, [checkout, dropCheckout])
 
+  // Units came: the balance, the statement and the outlook (the reminders and
+  // the students' reviews waiting for units) are read again.
   const afterCredit = useCallback(async () => {
-    const [available] = await Promise.all([loadBalance(), loadStatement()])
+    const [available] = await Promise.all([
+      loadBalance(),
+      loadStatement(),
+      useOutlookStore.getState().refresh(),
+    ])
     return available
   }, [loadBalance, loadStatement])
 
@@ -154,13 +163,19 @@ export function BillingPage() {
         </div>
       )}
 
-      {balance ? <BalanceCard balance={balance} /> : !loadFailed && <Loading />}
-
-      {packages ? (
-        <PackagesSection packages={packages} onStale={() => void loadPackages()} />
+      {balance ? (
+        <BalanceCard balance={balance} reminders={<OutlookReminders />} />
       ) : (
         !loadFailed && <Loading />
       )}
+
+      <div id={PACKAGES_ANCHOR_ID} className="scroll-mt-24">
+        {packages ? (
+          <PackagesSection packages={packages} onStale={() => void loadPackages()} />
+        ) : (
+          !loadFailed && <Loading />
+        )}
+      </div>
 
       {statement ? (
         <StatementSection
