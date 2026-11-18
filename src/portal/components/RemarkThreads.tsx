@@ -207,11 +207,14 @@ export function RemarkThreads({
     return null
   }
 
+  const hasOpenForm = formState !== null
+
   // If accepting_replies is false and no threads have comments, do not show block
+  // (unless a form is currently open, e.g. holding an error)
   const hasAnyComments = threadsData.threads.some(
     (t) => t.comments && t.comments.length > 0,
   )
-  if (!threadsData.accepting_replies && !hasAnyComments) {
+  if (!threadsData.accepting_replies && !hasAnyComments && !hasOpenForm) {
     return null
   }
 
@@ -220,8 +223,11 @@ export function RemarkThreads({
     threadsByItemId.set(t.item_id, t)
   }
 
-  // Filter visible remarks: must have comments or can reply
+  // Filter visible remarks: must have comments, can reply, or have an open form
   const visibleRemarks = remarkItems.filter((item) => {
+    if (formState?.itemId === item.item_id) {
+      return true
+    }
     const thread = threadsByItemId.get(item.item_id)
     const commentsCount = thread?.comments.length ?? 0
     const studentRepliesCount =
@@ -346,8 +352,7 @@ export function RemarkThreads({
           </p>
         ) : (
           <p className="text-xs text-ink-light mt-1">
-            Це рецензія попередньої спроби. Репліки приймаються до останньої
-            рецензії.
+            До цієї рецензії репліки вже не приймаються: є новіша рецензія або завдання змінилося.
           </p>
         )}
       </div>
@@ -366,6 +371,11 @@ export function RemarkThreads({
           const treeNodes = buildThreadTree(allComments)
           const isThisFormOpen = formState?.itemId === item.item_id
           const successNotice = successNotices[item.item_id]
+          const parentComment = formState?.parentId
+            ? allComments.find((c) => c.id === formState.parentId)
+            : null
+          const counterId = `${formIdPrefix}-${item.item_id}-counter`
+          const errorId = `${formIdPrefix}-${item.item_id}-error`
 
           return (
             <div
@@ -498,6 +508,13 @@ export function RemarkThreads({
                     </select>
                   </div>
 
+                  {parentComment && (
+                    <p className="text-xs font-medium text-ink-light">
+                      Відповідь на коментар Ментора від{' '}
+                      {formatCommentDate(parentComment.created_at)}
+                    </p>
+                  )}
+
                   <div>
                     <label
                       htmlFor={`${formIdPrefix}-${item.item_id}-body`}
@@ -516,7 +533,11 @@ export function RemarkThreads({
                       placeholder="Напишіть, із чим не згодні або що незрозуміло"
                       rows={3}
                       className="input text-xs"
-                      aria-describedby={`${formIdPrefix}-${item.item_id}-counter`}
+                      aria-describedby={
+                        formState.error
+                          ? `${counterId} ${errorId}`
+                          : counterId
+                      }
                       aria-invalid={
                         Boolean(formState.error) ||
                         noteLength(formState.body) > DEFAULT_COMMENT_MAX_CHARS ||
@@ -525,7 +546,7 @@ export function RemarkThreads({
                     />
 
                     <div
-                      id={`${formIdPrefix}-${item.item_id}-counter`}
+                      id={counterId}
                       className={`mt-1 flex flex-wrap items-center justify-between gap-2 text-xs ${
                         noteLength(formState.body) > DEFAULT_COMMENT_MAX_CHARS
                           ? 'text-coral'
@@ -552,6 +573,7 @@ export function RemarkThreads({
 
                   {formState.error && (
                     <div
+                      id={errorId}
                       role="alert"
                       className="text-xs text-coral bg-coral-pale/50 p-2 rounded"
                     >
@@ -563,6 +585,7 @@ export function RemarkThreads({
                     <button
                       type="submit"
                       disabled={
+                        !canReply ||
                         noteLength(formState.body) === 0 ||
                         noteLength(formState.body) > DEFAULT_COMMENT_MAX_CHARS ||
                         formState.submitting

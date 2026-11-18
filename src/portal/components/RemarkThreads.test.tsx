@@ -403,7 +403,7 @@ describe('RemarkThreads — display and nesting', () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          'Це рецензія попередньої спроби. Репліки приймаються до останньої рецензії.',
+          'До цієї рецензії репліки вже не приймаються: є новіша рецензія або завдання змінилося.',
         ),
       ).toBeInTheDocument()
     })
@@ -710,4 +710,170 @@ describe('RemarkThreads — reply submission and refusals', () => {
       }
     },
   )
+
+  it('keeps refusal reason and card on screen after not_latest_review when refetched threads has accepting_replies false, disables submit, and cancel closes form', async () => {
+    mockedRemarkThreads.mockResolvedValueOnce({
+      accepting_replies: true,
+      threads: [],
+    })
+
+    render(<RemarkThreads submissionId="sub-1" structure={structure} />)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: /відповісти/i }),
+      ).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /відповісти/i }))
+
+    const textarea = screen.getByPlaceholderText(
+      'Напишіть, із чим не згодні або що незрозуміло',
+    )
+    fireEvent.change(textarea, { target: { value: 'Мій набраний текст' } })
+
+    mockedReplyToRemark.mockRejectedValueOnce(
+      new PortalApiError(422, 'portal api 422', {
+        detail: { code: 'not_latest_review', details: {} },
+      }),
+    )
+
+    // Re-fetched threads answer with accepting_replies: false and no comments
+    mockedRemarkThreads.mockResolvedValueOnce({
+      accepting_replies: false,
+      threads: [],
+    })
+
+    const submitBtn = screen.getByRole('button', {
+      name: /надіслати репліку/i,
+    })
+    fireEvent.click(submitBtn)
+
+    // The error reason stays on screen
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'Ця рецензія вже не остання — відповідати можна на зауваження останньої рецензії. Оновіть сторінку.',
+        ),
+      ).toBeInTheDocument()
+    })
+
+    // The remark card and form are still on screen
+    expect(screen.getByText('Зауваження 1')).toBeInTheDocument()
+    expect(textarea).toBeInTheDocument()
+
+    // Submit button is disabled because accepting_replies is now false
+    expect(submitBtn).toBeDisabled()
+
+    // Clicking "Скасувати" closes the form
+    const cancelBtn = screen.getByRole('button', { name: /скасувати/i })
+    fireEvent.click(cancelBtn)
+
+    // Now standard rules apply: accepting_replies is false and no comments, so block hides
+    await waitFor(() => {
+      expect(screen.queryByText('Зауваження 1')).not.toBeInTheDocument()
+    })
+  })
+
+  it('links the error message to the textarea via aria-describedby', async () => {
+    mockedRemarkThreads.mockResolvedValueOnce({
+      accepting_replies: true,
+      threads: [],
+    })
+
+    render(<RemarkThreads submissionId="sub-1" structure={structure} />)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: /відповісти/i }),
+      ).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: /відповісти/i }))
+
+    const textarea = screen.getByPlaceholderText(
+      'Напишіть, із чим не згодні або що незрозуміло',
+    )
+
+    // Before error: only counter in aria-describedby
+    const descBefore = textarea.getAttribute('aria-describedby') || ''
+    expect(descBefore).toMatch(/-c1-counter$/)
+
+    fireEvent.change(textarea, { target: { value: 'Тестовий текст' } })
+
+    mockedReplyToRemark.mockRejectedValueOnce(
+      new PortalApiError(422, 'portal api 422', {
+        detail: { code: 'comment_rejected', details: {} },
+      }),
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /надіслати репліку/i }),
+    )
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+    })
+
+    const errorBlock = screen.getByRole('alert')
+    expect(errorBlock.id).toBeTruthy()
+    const descAfter = textarea.getAttribute('aria-describedby') || ''
+    expect(descAfter).toContain(errorBlock.id)
+    expect(descAfter).toContain(descBefore)
+  })
+
+  it('shows mentor comment context above textarea when replying to mentor, and hides it when replying via bottom button', async () => {
+    mockedRemarkThreads.mockResolvedValueOnce({
+      accepting_replies: true,
+      threads: [
+        {
+          item_id: 'c1',
+          comments: [
+            {
+              id: 'comm-mentor-1',
+              submission_id: 'sub-1',
+              item_id: 'c1',
+              parent_id: null,
+              author: 'mentor',
+              kind: 'answer',
+              body: 'Відповідь Ментора',
+              created_at: '2026-11-17T12:00:00Z',
+              answered_in_submission_id: null,
+            },
+          ],
+        },
+      ],
+    })
+
+    render(<RemarkThreads submissionId="sub-1" structure={structure} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Відповідь Ментора')).toBeInTheDocument()
+    })
+
+    // Click mentor reply button (has parent_id)
+    const replyButtons = screen.getAllByRole('button', { name: /відповісти/i })
+    expect(replyButtons[0]).toBeDefined()
+    fireEvent.click(replyButtons[0]!)
+
+    expect(
+      screen.getByText(/Відповідь на коментар Ментора від/),
+    ).toBeInTheDocument()
+
+    // Cancel form
+    fireEvent.click(screen.getByRole('button', { name: /скасувати/i }))
+    expect(
+      screen.queryByText(/Відповідь на коментар Ментора від/),
+    ).not.toBeInTheDocument()
+
+    // Open via bottom reply button
+    const buttonsAfterCancel = screen.getAllByRole('button', { name: /відповісти/i })
+    const bottomReplyBtn = buttonsAfterCancel[1]
+    expect(bottomReplyBtn).toBeDefined()
+    fireEvent.click(bottomReplyBtn!)
+
+    expect(
+      screen.queryByText(/Відповідь на коментар Ментора від/),
+    ).not.toBeInTheDocument()
+  })
 })
