@@ -51,7 +51,7 @@ export function PortalForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-canvas flex items-center justify-center px-6">
+    <div className="flex-1 flex items-center justify-center px-6 py-10">
       <div className="w-full max-w-sm">
         <div className="flex items-center gap-3 mb-10">
           <div className="w-10 h-10 rounded-xl bg-navy flex items-center justify-center">

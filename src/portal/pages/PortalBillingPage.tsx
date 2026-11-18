@@ -176,7 +176,7 @@ export function PortalBillingPage() {
   }, [loadBalance, loadStatement, reloadOutlook])
 
   return (
-    <div className="min-h-screen bg-canvas">
+    <div className="flex-1">
       <PortalHeader current="units" />
 
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-8">

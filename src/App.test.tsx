@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 // The guarded render mounts the shell (activity strip) and the history page; mock
@@ -70,5 +70,34 @@ describe('App — /help route renders the seam stub (Є3, Р10)', () => {
       screen.getByText('Шлях автора за кроками й допомога'),
     ).toBeInTheDocument()
     expect(screen.queryByText('Цей розділ ще готується.')).toBeNull()
+  })
+})
+
+// The payment provider requires the support address on every screen: the
+// shell after sign-in and the sign-in page each show the site's footer once.
+describe('App — the support address in the site footer', () => {
+  const SUPPORT = 'support@pythoncourse.me'
+
+  beforeEach(() => {
+    localStorage.clear()
+    useAuthStore.setState({ apiKey: null, connected: false })
+  })
+
+  it.each(['/history', '/help'])('%s under the shell: one footer with the support link', async (path) => {
+    useAuthStore.setState({ apiKey: 'cs_live_key' })
+    renderAt(path)
+    await screen.findByRole('heading', { level: 1 })
+    expect(screen.getAllByRole('contentinfo')).toHaveLength(1)
+    expect(within(screen.getByRole('contentinfo')).getByRole('link', { name: SUPPORT })).toHaveAttribute(
+      'href',
+      `mailto:${SUPPORT}`,
+    )
+  })
+
+  it('/login: exactly one footer and one support link', async () => {
+    renderAt('/login')
+    await screen.findByRole('heading', { level: 1, name: 'Вхід для авторів курсів' })
+    expect(screen.getAllByRole('contentinfo')).toHaveLength(1)
+    expect(screen.getAllByRole('link', { name: SUPPORT })).toHaveLength(1)
   })
 })

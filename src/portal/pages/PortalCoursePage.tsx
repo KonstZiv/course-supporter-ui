@@ -39,7 +39,7 @@ export function PortalCoursePage() {
   }, [loadTree])
 
   return (
-    <div className="min-h-screen bg-canvas">
+    <div className="flex-1">
       <PortalHeader current="courses" />
 
       <main className="max-w-4xl mx-auto px-6 py-10">

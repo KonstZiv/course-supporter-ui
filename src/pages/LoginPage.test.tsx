@@ -115,6 +115,7 @@ describe('LoginPage', () => {
         'href',
         BECOME_AUTHOR_URL,
       )
+      expect(BECOME_AUTHOR_URL).toBe('https://pythoncourse.me/uk/become-author/')
     })
 
     it('offers a letter to the administrator, with the address as text', () => {
