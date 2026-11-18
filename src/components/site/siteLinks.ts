@@ -6,8 +6,8 @@
 /** Home page of the public site; the logo in SiteHeader leads here. */
 export const SITE_HOME_URL = 'https://pythoncourse.me/uk/'
 
-/** "How to become an author". Today the site's home page; the address of its own page goes here once it exists. */
-export const BECOME_AUTHOR_URL = 'https://pythoncourse.me/uk/'
+/** "How to become an author": the site's own page. */
+export const BECOME_AUTHOR_URL = 'https://pythoncourse.me/uk/become-author/'
 
 export const SITE_PRICING_URL = 'https://pythoncourse.me/uk/pricing/'
 export const SITE_TERMS_URL = 'https://pythoncourse.me/uk/terms/'

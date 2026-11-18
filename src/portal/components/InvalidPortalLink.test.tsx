@@ -47,7 +47,7 @@ describe('InvalidPortalLink — the neutral page', () => {
 
   it('links "Як стати студентом" to the address of one constant', () => {
     renderAt('/')
-    expect(BECOME_STUDENT_URL).toBe('https://pythoncourse.me/uk/')
+    expect(BECOME_STUDENT_URL).toBe('https://pythoncourse.me/uk/become-student/')
     expect(screen.getByRole('link', { name: 'Як стати студентом' })).toHaveAttribute(
       'href',
       BECOME_STUDENT_URL,
