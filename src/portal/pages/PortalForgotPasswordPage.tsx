@@ -4,15 +4,8 @@ import { BookOpen, ArrowRight, AlertCircle, CheckCircle2, Loader2 } from 'lucide
 import { portalApi, PortalApiError } from '../api/portalClient'
 import { isUuid } from '../uuid'
 import { InvalidPortalLink } from '../components/InvalidPortalLink'
-import {
-  FORGOT_TITLE,
-  FORGOT_DESCRIPTION,
-  FORGOT_LOGIN_LABEL,
-  FORGOT_SUBMIT,
-  FORGOT_SUCCESS,
-  FORGOT_BACK_TO_LOGIN,
-  flowError,
-} from '../recoveryTexts'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
+import { flowError } from '../recoveryTexts'
 
 // Public forgot-password screen (R3). Sibling of login, outside
 // PortalProtectedRoute. Sends {tenant_id, login} → always 202 (anti-
@@ -21,6 +14,8 @@ import {
 // URL segment (same guard as the login page).
 export function PortalForgotPasswordPage() {
   const { tenantId } = useParams()
+  const language = useLanguage()
+  const t = useT()
   const [login, setLogin] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
@@ -41,9 +36,9 @@ export function PortalForgotPasswordPage() {
       setSubmitted(true)
     } catch (err) {
       if (err instanceof PortalApiError && err.status === 429) {
-        setError(flowError('rateLimited'))
+        setError(flowError(language, 'rateLimited'))
       } else {
-        setError(flowError('network'))
+        setError(flowError(language, 'network'))
       }
     } finally {
       setLoading(false)
@@ -57,31 +52,31 @@ export function PortalForgotPasswordPage() {
           <div className="w-10 h-10 rounded-xl bg-navy flex items-center justify-center">
             <BookOpen size={20} className="text-amber-light" />
           </div>
-          <span className="font-display text-2xl text-ink">Навчальний портал</span>
+          <span className="font-display text-2xl text-ink">{t('portal.header.name')}</span>
         </div>
 
-        <h2 className="font-display text-2xl text-ink mb-2">{FORGOT_TITLE}</h2>
+        <h2 className="font-display text-2xl text-ink mb-2">{t('portal.recovery.forgot.title')}</h2>
 
         {submitted ? (
           <>
             <div className="flex items-start gap-2 p-3 rounded-xl bg-forest-pale text-forest text-sm mb-6">
               <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
-              {FORGOT_SUCCESS}
+              {t('portal.recovery.forgot.success')}
             </div>
             <Link to={`/${tenantId}/login`} className="btn-ghost btn-sm">
-              {FORGOT_BACK_TO_LOGIN}
+              {t('portal.recovery.forgot.backToLogin')}
             </Link>
           </>
         ) : (
           <>
-            <p className="text-ink-muted mb-8">{FORGOT_DESCRIPTION}</p>
+            <p className="text-ink-muted mb-8">{t('portal.recovery.forgot.description')}</p>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label
                   htmlFor="portal-forgot-login"
                   className="block text-sm font-medium text-ink mb-1.5"
                 >
-                  {FORGOT_LOGIN_LABEL}
+                  {t('portal.recovery.forgot.loginLabel')}
                 </label>
                 <input
                   id="portal-forgot-login"
@@ -109,7 +104,7 @@ export function PortalForgotPasswordPage() {
                   <Loader2 size={18} className="animate-spin" />
                 ) : (
                   <>
-                    {FORGOT_SUBMIT}
+                    {t('portal.recovery.forgot.submit')}
                     <ArrowRight size={18} />
                   </>
                 )}
@@ -119,7 +114,7 @@ export function PortalForgotPasswordPage() {
                 to={`/${tenantId}/login`}
                 className="block text-center text-sm text-ink-muted hover:text-ink"
               >
-                {FORGOT_BACK_TO_LOGIN}
+                {t('portal.recovery.forgot.backToLogin')}
               </Link>
             </form>
           </>

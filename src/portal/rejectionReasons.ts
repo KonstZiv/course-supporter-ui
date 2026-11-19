@@ -26,23 +26,28 @@
 // the student actually has an action. The second half is never invented to fill
 // the shape — a made-up instruction is worse than none.
 
+import { localeOf, type Language } from '../i18n/languages'
+import { translate, type MessageKey, type MessageValues } from '../i18n/translate'
 import type { PortalNotOpened, PortalRejection } from './types'
 
+/** An article by its catalog keys, and the values its sentences take. */
 export interface ReasonArticle {
-  what: string
-  action?: string
+  what: MessageKey
+  action?: MessageKey
+  values?: MessageValues
 }
 
-export function articlePhrase(a: ReasonArticle): string {
-  return a.action ? `${a.what} ${a.action}` : a.what
+export function articlePhrase(language: Language, a: ReasonArticle): string {
+  const what = translate(language, a.what, a.values)
+  return a.action ? `${what} ${translate(language, a.action, a.values)}` : what
 }
 
 // The last resort, once neither a code nor a status could say anything. Used by
 // the door (submissionCodes.ts); the review detail falls to its status phrase
 // first and only reaches a generic inside presentationPhrases.
 export const UNKNOWN_REASON: ReasonArticle = {
-  what: 'Під час обробки подачі сталася помилка.',
-  action: 'Спробуйте подати ще раз.',
+  what: 'portal.reason.unknown.what',
+  action: 'portal.reason.unknown.action',
 }
 
 // The structural guards share one answer: which of them tripped is a detail
@@ -53,69 +58,59 @@ export const UNKNOWN_REASON: ReasonArticle = {
 // start being raised the student gets this sentence instead of silently
 // dropping to the status phrase.
 const STRUCTURAL: ReasonArticle = {
-  what: 'Архів не пройшов перевірку структури.',
-  action:
-    'Перепакуйте роботу звичайним архіватором без посилань і вкладених архівів.',
+  what: 'portal.reason.structural.what',
+  action: 'portal.reason.structural.action',
 }
 
 // One whole file was refused — the submission never became a review. Keyed by
 // ErrorCategory value; the codes with no entry fall through to the status layer.
 const WHOLE_FILE: Record<string, ReasonArticle> = {
   forbidden_type: {
-    what: 'Цей формат файла не приймається.',
-    action:
-      'Надішліть роботу текстом (.md, .txt), документом (.docx, .pdf), ' +
-      'кодом або архівом (.zip, .tar.gz).',
+    what: 'portal.reason.wholeFile.forbiddenType.what',
+    action: 'portal.reason.wholeFile.forbiddenType.action',
   },
   magic_mismatch: {
-    what: 'Вміст файла не відповідає його розширенню.',
-    action: 'Перевірте, що файл не пошкоджений і збережений у заявленому форматі.',
+    what: 'portal.reason.wholeFile.magicMismatch.what',
+    action: 'portal.reason.wholeFile.magicMismatch.action',
   },
   charset_violation: {
-    what: 'Кодування файла не розпізнано: це не UTF-8.',
-    action: 'Відкрийте його у редакторі та збережіть як UTF-8.',
+    what: 'portal.reason.wholeFile.charsetViolation.what',
+    action: 'portal.reason.wholeFile.charsetViolation.action',
   },
   size_limit: {
-    what: 'Файл більший за дозволений розмір.',
-    action: 'Приберіть із роботи зайве (великі дані, збірки) і подайте знову.',
+    what: 'portal.reason.wholeFile.sizeLimit.what',
+    action: 'portal.reason.wholeFile.sizeLimit.action',
   },
   over_budget: {
-    what: 'Робота завелика для перевірки.',
-    action: 'Лишіть у роботі лише потрібне і подайте знову.',
+    what: 'portal.reason.wholeFile.overBudget.what',
+    action: 'portal.reason.wholeFile.overBudget.action',
   },
   empty_document: {
-    what: 'У поданому файлі немає тексту для перевірки.',
-    action: 'Надішліть текстову версію роботи (не скан і не порожній архів).',
+    what: 'portal.reason.wholeFile.emptyDocument.what',
+    action: 'portal.reason.wholeFile.emptyDocument.action',
   },
   // A project with no new or changed text file against the starting project
   // (mentor-rebuild, project chain K6): refused before anything is paid for.
   // Wording ratified by the operator 2026-11-15.
   no_changes: {
-    what:
-      'Надісланий архів не містить ваших змін: у ньому немає жодного нового ' +
-      'чи зміненого файла з кодом або текстом порівняно зі стартовим проєктом.',
-    action: 'Внесіть свої зміни в проєкт і надішліть роботу знову.',
+    what: 'portal.reason.wholeFile.noChanges.what',
+    action: 'portal.reason.wholeFile.noChanges.action',
   },
   // A project whose new or changed files the doors could read none of —
   // mentor-rebuild, project chain K6 fix, #677; refused before anything is paid
   // for; its files come in not_opened below the phrase; wording ratified by the
   // operator 2026-11-16.
   no_readable_changes: {
-    what:
-      'Серед ваших нових і змінених файлів немає жодного, який перевірка ' +
-      'змогла прочитати: файлів із кодом чи текстом немає або їх не ' +
-      'вдалося відкрити (перелік і причини — нижче).',
-    action:
-      'Додайте чи виправте файли з кодом або текстом (текст зберігайте ' +
-      'в кодуванні UTF-8) і надішліть роботу знову.',
+    what: 'portal.reason.wholeFile.noReadableChanges.what',
+    action: 'portal.reason.wholeFile.noReadableChanges.action',
   },
   suspicious_unicode: {
-    what: 'У тексті є приховані або підмінені символи.',
-    action: 'Приберіть їх і подайте знову.',
+    what: 'portal.reason.wholeFile.suspiciousUnicode.what',
+    action: 'portal.reason.wholeFile.suspiciousUnicode.action',
   },
   prompt_injection: {
-    what: 'Текст містить інструкції, адресовані системі перевірки.',
-    action: 'Приберіть їх і подайте знову.',
+    what: 'portal.reason.wholeFile.promptInjection.what',
+    action: 'portal.reason.wholeFile.promptInjection.action',
   },
   archive_violation: STRUCTURAL,
   archive_bomb: STRUCTURAL,
@@ -128,8 +123,8 @@ const WHOLE_FILE: Record<string, ReasonArticle> = {
 // framing yields archive_violation. So the extension is a sound discriminator
 // here, not a guess: magic_mismatch on a .gz/.tgz IS the single-file case.
 const BARE_GZIP: ReasonArticle = {
-  what: 'Це не архів проєкту, а стиснений одиночний файл.',
-  action: 'Запакуйте роботу як .zip або .tar.gz.',
+  what: 'portal.reason.bareGzip.what',
+  action: 'portal.reason.bareGzip.action',
 }
 
 // ``over_budget`` arrives from two places and means two different sizes. Stage 1
@@ -156,15 +151,12 @@ function overBudgetWithNumbers(details: string): ReasonArticle | null {
   // Both sides must be real counts: the character classes above also match a
   // run of spaces, and Number('') is a finite 0.
   if (!(chars > 0) || !(budget > 0)) return null
-  const uk = (n: number) => n.toLocaleString('uk-UA')
+  // Numbers in a message are formatted in its language's locale, as
+  // ``toLocaleString`` would.
   return {
-    what:
-      `Проєкт завеликий для перевірки: ${uk(chars)} знаків тексту після ` +
-      `очищення проти межі ${uk(budget)}.`,
-    action:
-      'До перевірки йдуть лише результати вашої роботи. Приберіть з архіву ' +
-      'автоматично створені файли, сторонні бібліотеки, теки залежностей і ' +
-      'кешів, великі дані та бінарні файли — і надішліть знову.',
+    what: 'portal.reason.overBudgetPair.what',
+    action: 'portal.reason.overBudgetPair.action',
+    values: { chars, budget },
   }
 }
 
@@ -178,12 +170,12 @@ const PATH_STATE: Record<string, ReasonArticle> = {
   // deliberately had no article of its own. With that layer gone (task 03) the
   // sentence moves here rather than disappearing.
   stage2_rejected: {
-    what: 'Рішення не пройшло перевірку безпеки.',
+    what: 'portal.reason.pathState.stage2Rejected.what',
   },
   // The run broke. Before this the student saw nothing but "Помилка".
   processing_failed: {
-    what: 'Не вдалося перевірити роботу.',
-    action: 'Надішліть її ще раз.',
+    what: 'portal.reason.pathState.processingFailed.what',
+    action: 'portal.reason.pathState.processingFailed.action',
   },
   // Held before anything was spent, for want of units. The server says whose
   // units it waits for (BIL-E2, 5a): the code was split in two once the
@@ -195,14 +187,13 @@ const PATH_STATE: Record<string, ReasonArticle> = {
   // of the same work — paid for twice, judged twice, and racing the first
   // (``DD-SP-AT``).
   awaiting_funds: {
-    what: 'Перевірку призупинено: на початок перевірки не вистачило юнітів.',
-    action:
-      'Після купівлі перевірка продовжиться сама — надсилати роботу знову не потрібно.',
+    what: 'portal.reason.pathState.awaitingFunds.what',
+    action: 'portal.reason.pathState.awaitingFunds.action',
   },
   // The author's, who pays for this course's reviews: the work is taken, and
   // there is nothing for the student to do — no action, no numbers.
   awaiting_author_funds: {
-    what: 'Роботу прийнято. Перевірка почнеться, коли автор курсу поповнить юніти.',
+    what: 'portal.reason.pathState.awaitingAuthorFunds.what',
   },
 }
 
@@ -212,17 +203,20 @@ export function reasonArticle(code: string): ReasonArticle | null {
 
 // The phrase for a refused attempt, or null when this dictionary has nothing to
 // say and the caller should fall to the status layer.
-export function rejectionPhrase(rejection: PortalRejection): string | null {
+export function rejectionPhrase(
+  language: Language,
+  rejection: PortalRejection,
+): string | null {
   const name = rejection.details ?? ''
   if (rejection.code === 'magic_mismatch' && /\.(gz|tgz)$/i.test(name)) {
-    return articlePhrase(BARE_GZIP)
+    return articlePhrase(language, BARE_GZIP)
   }
   if (rejection.code === 'over_budget') {
     const withNumbers = overBudgetWithNumbers(name)
-    if (withNumbers) return articlePhrase(withNumbers)
+    if (withNumbers) return articlePhrase(language, withNumbers)
   }
   const article = reasonArticle(rejection.code)
-  return article ? articlePhrase(article) : null
+  return article ? articlePhrase(language, article) : null
 }
 
 // --- One file inside an archive that was named but not read ---
@@ -239,19 +233,18 @@ export function rejectionPhrase(rejection: PortalRejection): string | null {
 // decision. Each line now says only the part the heading cannot: why.
 
 const IN_ARCHIVE: Record<string, ReasonArticle> = {
-  charset_violation: { what: 'Кодування не розпізнано.' },
-  nested_archive: { what: 'Архів усередині архіву.' },
-  over_budget: { what: 'Завеликий для перевірки.' },
+  charset_violation: { what: 'portal.reason.inArchive.charsetViolation.what' },
+  nested_archive: { what: 'portal.reason.inArchive.nestedArchive.what' },
+  over_budget: { what: 'portal.reason.inArchive.overBudget.what' },
   may_contain_secrets: {
-    what: 'Файл не відкривали: такі файли зазвичай містять секрети — ключі чи паролі.',
-    action:
-      'Не додавайте їх до роботи; якщо потрібен приклад, покладіть файл .env.example без справжніх значень.',
+    what: 'portal.reason.inArchive.mayContainSecrets.what',
+    action: 'portal.reason.inArchive.mayContainSecrets.action',
   },
 }
 
 const DOCUMENT_IN_ARCHIVE: ReasonArticle = {
-  what: 'Документи всередині архіву не читаються.',
-  action: 'Надішліть його окремим файлом.',
+  what: 'portal.reason.documentInArchive.what',
+  action: 'portal.reason.documentInArchive.action',
 }
 
 function basename(path: string): string {
@@ -268,8 +261,8 @@ export function notOpenedArticle(entry: PortalNotOpened): ReasonArticle {
     // No dot at all in the NAME (not the path): Makefile, README. A dotfile
     // like .gitignore does have one and lands on the ordinary phrase, which is
     // the honest answer — its extension simply is not accepted.
-    if (!name.includes('.')) return { what: 'Файл без розширення.' }
-    return { what: 'Формат не підтримується.' }
+    if (!name.includes('.')) return { what: 'portal.reason.inArchive.noExtension.what' }
+    return { what: 'portal.reason.inArchive.unsupportedFormat.what' }
   }
   // magic_mismatch inside an archive reuses the whole-file article: §4 marks
   // the encoding and budget rows as single-file-only but leaves this one
@@ -281,40 +274,38 @@ export function notOpenedArticle(entry: PortalNotOpened): ReasonArticle {
   // does not pretend to an explanation, and it does not go blank.
   return (
     IN_ARCHIVE[entry.reason] ??
-    reasonArticle(entry.reason) ?? { what: 'Причину не вказано.' }
+    reasonArticle(entry.reason) ?? { what: 'portal.reason.inArchive.noReason.what' }
   )
 }
 
-export function notOpenedPhrase(entry: PortalNotOpened): string {
-  return articlePhrase(notOpenedArticle(entry))
+export function notOpenedPhrase(language: Language, entry: PortalNotOpened): string {
+  return articlePhrase(language, notOpenedArticle(entry))
 }
 
-// Size as the student reads it, with the decimal comma Ukrainian uses. Shown
-// because "not read" invites the question "how much did I lose" — a 40-byte
-// .gitignore and a 4 MB dataset are very different answers.
-export function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} Б`
+// Size as the student reads it, with the decimal separator of their language
+// (the comma, in Ukrainian). Shown because "not read" invites the question "how
+// much did I lose" — a 40-byte .gitignore and a 4 MB dataset are very different
+// answers.
+export function formatFileSize(language: Language, bytes: number): string {
+  if (bytes < 1024) return translate(language, 'portal.size.bytes', { n: String(bytes) })
   const kb = bytes / 1024
-  if (kb < 1024) return `${round(kb)} КБ`
-  return `${round(kb / 1024)} МБ`
+  if (kb < 1024) return translate(language, 'portal.size.kilobytes', { n: round(language, kb) })
+  return translate(language, 'portal.size.megabytes', { n: round(language, kb / 1024) })
 }
 
-function round(n: number): string {
-  return (n < 10 ? n.toFixed(1) : String(Math.round(n))).replace('.', ',')
+function decimalSeparator(language: Language): string {
+  const parts = new Intl.NumberFormat(localeOf(language)).formatToParts(1.5)
+  return parts.find((p) => p.type === 'decimal')?.value ?? '.'
+}
+
+function round(language: Language, n: number): string {
+  return n < 10 ? n.toFixed(1).replace('.', decimalSeparator(language)) : String(Math.round(n))
 }
 
 // "3 файли не прочитано" for the attempts list. Ukrainian needs three forms and
 // picking one would be visibly wrong two thirds of the time — the list is where
 // a student first sees that something was skipped, so the sentence has to read
-// like a sentence.
-export function notOpenedCountLabel(count: number): string {
-  const last = count % 10
-  const teens = count % 100
-  const noun =
-    last === 1 && teens !== 11
-      ? 'файл'
-      : last >= 2 && last <= 4 && (teens < 12 || teens > 14)
-        ? 'файли'
-        : 'файлів'
-  return `${count} ${noun} не прочитано`
+// like a sentence. The count is written as is, without grouping.
+export function notOpenedCountLabel(language: Language, count: number): string {
+  return translate(language, 'portal.reason.notOpenedCount', { count, n: String(count) })
 }

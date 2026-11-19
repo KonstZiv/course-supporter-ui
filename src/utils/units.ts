@@ -1,27 +1,42 @@
-// Units, prices and dates as the author and the student read them, in
-// Ukrainian. A pure module — no React — shared by the author app and the portal.
+// Units, prices and dates as the author and the student read them. A pure
+// module — no React — shared by the author app and the portal. The words are
+// in the catalog (`shared.units.*`); the numbers are formatted in the
+// language's locale.
 //
 // Thousands are grouped with a no-break space (U+00A0), as on the platform
 // site's pricing page ("1 500 юнітів"); it is set here rather than left to the
 // browser's locale data, so every browser writes the same.
 
-const GROUP_SEPARATOR = ' '
+import { localeOf, type Language } from '../i18n/languages'
+import { translate } from '../i18n/translate'
 
-const INTEGER = new Intl.NumberFormat('uk-UA', { maximumFractionDigits: 0 })
-const MINOR_UNITS = new Intl.NumberFormat('uk-UA', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-})
-const PLURAL = new Intl.PluralRules('uk-UA')
+const GROUP_SEPARATOR = '\u00a0'
 
-const UNIT_WORD: Record<Intl.LDMLPluralRule, string> = {
-  zero: 'юнітів',
-  one: 'юніт',
-  two: 'юніти',
-  few: 'юніти',
-  many: 'юнітів',
-  other: 'юніта',
+/** One formatter per locale, made on first use. */
+function perLocale<T>(make: (locale: string) => T): (language: Language) => T {
+  const made = new Map<string, T>()
+  return (language) => {
+    const locale = localeOf(language)
+    let value = made.get(locale)
+    if (value === undefined) {
+      value = make(locale)
+      made.set(locale, value)
+    }
+    return value
+  }
 }
+
+const INTEGER = perLocale(
+  (locale) => new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }),
+)
+const MINOR_UNITS = perLocale(
+  (locale) =>
+    new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }),
+)
+const PLURAL = new Intl.PluralRules('uk-UA')
 
 function grouped(format: Intl.NumberFormat, n: number): string {
   return format
@@ -31,23 +46,26 @@ function grouped(format: Intl.NumberFormat, n: number): string {
 }
 
 /** A whole number with grouped thousands: 1500 → "1 500". */
-export function formatNumber(n: number): string {
-  return grouped(INTEGER, n)
+export function formatNumber(language: Language, n: number): string {
+  return grouped(INTEGER(language), n)
 }
 
 /**
  * A change of a whole number, signed: 500 → "+500", −120 → "−120" (the minus
  * sign U+2212, not a hyphen), 0 → "0".
  */
-export function formatSignedNumber(n: number): string {
-  if (n > 0) return `+${formatNumber(n)}`
-  if (n < 0) return `\u2212${formatNumber(-n)}`
-  return formatNumber(0)
+export function formatSignedNumber(language: Language, n: number): string {
+  if (n > 0) return `+${formatNumber(language, n)}`
+  if (n < 0) return `\u2212${formatNumber(language, -n)}`
+  return formatNumber(language, 0)
 }
 
 /** 1 → "1 юніт", 2 → "2 юніти", 5 → "5 юнітів", 1500 → "1 500 юнітів". */
-export function formatUnits(n: number): string {
-  return `${formatNumber(n)} ${UNIT_WORD[PLURAL.select(Math.abs(n))]}`
+export function formatUnits(language: Language, n: number): string {
+  return translate(language, 'shared.units.units', {
+    count: Math.abs(n),
+    n: formatNumber(language, n),
+  })
 }
 
 /** The forms of a Ukrainian noun after a number, by the plural category. */
@@ -74,57 +92,60 @@ export function pluralWord(n: number, forms: NounForms): string {
   }
 }
 
-function counted(n: number, forms: NounForms): string {
-  return `${formatNumber(n)} ${pluralWord(n, forms)}`
-}
-
 /** 1 → "1 день", 2 → "2 дні", 5 → "5 днів", 21 → "21 день". */
-export function formatDays(n: number): string {
-  return counted(n, { one: 'день', few: 'дні', many: 'днів', other: 'дня' })
-}
-
-/** 1 → "1 робота", 2 → "2 роботи", 5 → "5 робіт", 21 → "21 робота". */
-export function formatWorks(n: number): string {
-  return counted(n, {
-    one: 'робота',
-    few: 'роботи',
-    many: 'робіт',
-    other: 'роботи',
+export function formatDays(language: Language, n: number): string {
+  return translate(language, 'shared.units.days', {
+    count: Math.abs(n),
+    n: formatNumber(language, n),
   })
 }
 
-/** 1 → "1 перевірку", 2 → "2 перевірки", 5 → "5 перевірок", 21 → "21 перевірку". */
-export function formatReviews(n: number): string {
-  // The accusative after "на": "вистачить на 1 перевірку / 2 перевірки / 5 перевірок".
-  return counted(n, {
-    one: 'перевірку',
-    few: 'перевірки',
-    many: 'перевірок',
-    other: 'перевірки',
+/** 1 → "1 робота", 2 → "2 роботи", 5 → "5 робіт", 21 → "21 робота". */
+export function formatWorks(language: Language, n: number): string {
+  return translate(language, 'shared.units.works', {
+    count: Math.abs(n),
+    n: formatNumber(language, n),
+  })
+}
+
+/**
+ * 1 → "1 перевірку", 2 → "2 перевірки", 5 → "5 перевірок", 21 → "21 перевірку":
+ * the form that follows "вистачить на".
+ */
+export function formatReviews(language: Language, n: number): string {
+  return translate(language, 'shared.units.reviews', {
+    count: Math.abs(n),
+    n: formatNumber(language, n),
   })
 }
 
 /** A package's name, as on the site's pricing page: "1 500 юнітів". */
-export function formatPackageName(units: number): string {
-  return formatUnits(units)
+export function formatPackageName(language: Language, units: number): string {
+  return formatUnits(language, units)
 }
 
 /** A price in euro cents: 999 → "9,99 EUR". */
-export function formatPriceEur(minor: number): string {
-  return `${grouped(MINOR_UNITS, minor / 100)} EUR`
+export function formatPriceEur(language: Language, minor: number): string {
+  return `${grouped(MINOR_UNITS(language), minor / 100)} EUR`
 }
 
-const DATE_PARTS = new Intl.DateTimeFormat('uk-UA', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-})
-const DATE_PARTS_UTC = new Intl.DateTimeFormat('uk-UA', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  timeZone: 'UTC',
-})
+const DATE_PARTS = perLocale(
+  (locale) =>
+    new Intl.DateTimeFormat(locale, {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }),
+)
+const DATE_PARTS_UTC = perLocale(
+  (locale) =>
+    new Intl.DateTimeFormat(locale, {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }),
+)
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
 
 /**
@@ -132,8 +153,8 @@ const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
  * day (YYYY-MM-DD) is that day wherever the reader is; a moment is the day
  * it falls on in the reader's time zone.
  */
-export function formatDate(iso: string): string {
-  const format = DATE_ONLY.test(iso) ? DATE_PARTS_UTC : DATE_PARTS
+export function formatDate(language: Language, iso: string): string {
+  const format = (DATE_ONLY.test(iso) ? DATE_PARTS_UTC : DATE_PARTS)(language)
   const parts = format.formatToParts(new Date(iso))
   const v = (type: Intl.DateTimeFormatPartTypes): string =>
     parts.find((p) => p.type === type)?.value ?? ''

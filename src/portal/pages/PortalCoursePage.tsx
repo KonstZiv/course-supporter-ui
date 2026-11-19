@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useT } from '../../i18n/LanguageContext'
 import { useParams } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { portalApi, PortalApiError } from '../api/portalClient'
@@ -13,6 +14,7 @@ import { PortalHeader } from '../components/PortalHeader'
 // collapses to a generic 404 on the backend → a "course not found" screen.
 export function PortalCoursePage() {
   const { rootId } = useParams()
+  const t = useT()
 
   const [tree, setTree] = useState<PortalMaterialTreeNode | null>(null)
   const [error, setError] = useState<'notfound' | 'soft' | null>(null)
@@ -47,15 +49,15 @@ export function PortalCoursePage() {
         {tree === null && error === null && (
           <div className="flex items-center gap-2 text-ink-muted py-12">
             <Loader2 size={18} className="animate-spin" />
-            Завантаження…
+            {t('portal.common.loading')}
           </div>
         )}
         {error === 'notfound' && (
-          <div className="card p-8 text-ink-muted">Курс не знайдено.</div>
+          <div className="card p-8 text-ink-muted">{t('portal.course.notFound')}</div>
         )}
         {error === 'soft' && (
           <div className="p-3 rounded-xl bg-coral-pale text-coral text-sm max-w-md">
-            Не вдалося завантажити матеріали курсу.
+            {t('portal.course.loadFailed')}
           </div>
         )}
         {tree && (

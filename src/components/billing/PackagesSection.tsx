@@ -7,7 +7,7 @@ import {
 import { ApiError } from '../../api/client'
 import type { BillingPackagesResponse } from '../../types/api'
 import { CONSENT_LINES } from '../../utils/billingConsent'
-import { ACTION_FAILURE_TEXT } from '../../utils/billingWords'
+import { ACTION_FAILURE_TEXT } from '../../utils/authorBillingTexts'
 import { ContactAdmin } from '../ui/ContactAdmin'
 import { FailureWithLetter } from './FailureWithLetter'
 import { PackagesPurchase, type PurchaseApi } from './PackagesPurchase'

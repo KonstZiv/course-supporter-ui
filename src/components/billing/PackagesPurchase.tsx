@@ -12,6 +12,7 @@ import {
   type ActionFailure,
 } from '../../utils/billingWords'
 import { formatPackageName, formatPriceEur } from '../../utils/units'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 import { ConsentDialog } from './ConsentDialog'
 import { SITE_REFUNDS_URL, SITE_TERMS_URL } from '../site/siteLinks'
 import { NewTabLink } from './NewTabLink'
@@ -68,6 +69,8 @@ export function PackagesPurchase({
   closedNote,
   renderFailure,
 }: PackagesPurchaseProps) {
+  const language = useLanguage()
+  const t = useT()
   const [closedByRefusal, setClosedByRefusal] = useState(false)
   const [buyingId, setBuyingId] = useState<string | null>(null)
   const [opening, setOpening] = useState(false)
@@ -164,7 +167,7 @@ export function PackagesPurchase({
   return (
     <section aria-labelledby="billing-packages" className="space-y-4">
       <h2 id="billing-packages" className="font-display text-xl text-ink">
-        Пакети
+        {t('shared.packages.title')}
       </h2>
 
       {closed && <div className="card p-5 space-y-3">{closedNote}</div>}
@@ -187,16 +190,14 @@ export function PackagesPurchase({
               className="rounded-2xl bg-sky-pale border border-sky p-6 flex flex-col gap-2"
             >
               <h3 className="font-display text-lg text-ink">
-                {formatPackageName(pkg.units)}
+                {formatPackageName(language, pkg.units)}
               </h3>
               {price !== undefined && (
                 <p className="font-display font-semibold text-[1.875rem] text-navy-dark">
-                  {formatPriceEur(price)}
+                  {formatPriceEur(language, price)}
                 </p>
               )}
-              <p className="text-sm text-ink-light">
-                Діє шість місяців від дня купівлі.
-              </p>
+              <p className="text-sm text-ink-light">{t('shared.packages.validity')}</p>
               {!closed && (
                 <button
                   type="button"
@@ -205,7 +206,7 @@ export function PackagesPurchase({
                   onClick={() => void buy(pkg.id)}
                 >
                   {opensThis && <Loader2 size={16} className="animate-spin" />}
-                  {opensThis ? 'Відкриваємо сторінку оплати…' : 'Купити'}
+                  {opensThis ? t('shared.packages.opening') : t('shared.packages.buy')}
                 </button>
               )}
             </li>
@@ -214,18 +215,11 @@ export function PackagesPurchase({
       </ul>
 
       <div className="space-y-2 text-ink-light">
-        <p>
-          Ціни пакетів вказано в євро. Чи включають вони податки, залежить від
-          країни покупця; остаточну суму показано на сторінці оплати перед
-          оплатою.
-        </p>
-        <p>
-          Оплату приймає наш посередник-продавець; його назву показано на
-          сторінці оплати. Після оплати ви повернетеся на цю сторінку.
-        </p>
+        <p>{t('shared.packages.pricesNote')}</p>
+        <p>{t('shared.packages.sellerNote')}</p>
         <p className="flex flex-wrap gap-x-4 gap-y-1">
-          <NewTabLink href={SITE_TERMS_URL}>Умови користування</NewTabLink>
-          <NewTabLink href={SITE_REFUNDS_URL}>Повернення оплати</NewTabLink>
+          <NewTabLink href={SITE_TERMS_URL}>{t('shared.site.legal.terms')}</NewTabLink>
+          <NewTabLink href={SITE_REFUNDS_URL}>{t('shared.site.legal.refunds')}</NewTabLink>
         </p>
       </div>
 

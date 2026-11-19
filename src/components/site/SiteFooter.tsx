@@ -1,4 +1,7 @@
-import { SUPPORT_ADDRESS } from '../../utils/contactAdmin'
+import { useT } from '../../i18n/LanguageContext'
+import { Message } from '../../i18n/Message'
+import type { MessageKey } from '../../i18n/translate'
+import { SUPPORT_ADDRESS } from '../../utils/supportAddress'
 import {
   SITE_CONTACT_URL,
   SITE_NAV_LINK_CLASS,
@@ -6,14 +9,13 @@ import {
   SITE_REFUNDS_URL,
   SITE_TERMS_URL,
   SITE_TEXT_LINK_CLASS,
-  type SiteLink,
 } from './siteLinks'
 
-const LEGAL_LINKS: SiteLink[] = [
-  { label: 'Умови користування', href: SITE_TERMS_URL },
-  { label: 'Повернення оплати', href: SITE_REFUNDS_URL },
-  { label: 'Конфіденційність', href: SITE_PRIVACY_URL },
-  { label: 'Контакти', href: SITE_CONTACT_URL },
+const LEGAL_LINKS: { label: MessageKey; href: string }[] = [
+  { label: 'shared.site.legal.terms', href: SITE_TERMS_URL },
+  { label: 'shared.site.legal.refunds', href: SITE_REFUNDS_URL },
+  { label: 'shared.site.legal.privacy', href: SITE_PRIVACY_URL },
+  { label: 'shared.site.legal.contact', href: SITE_CONTACT_URL },
 ]
 
 /**
@@ -22,26 +24,34 @@ const LEGAL_LINKS: SiteLink[] = [
  * too.
  */
 export function SiteFooter() {
+  const t = useT()
   return (
     <footer className="bg-canvas-dark">
       <div className="mx-auto max-w-[68.75rem] space-y-4 px-4 py-10 sm:px-6">
-        <nav aria-label="Правова інформація">
+        <nav aria-label={t('shared.site.legalNav')}>
           <ul className="flex flex-wrap gap-x-5 gap-y-2">
             {LEGAL_LINKS.map(({ label, href }) => (
               <li key={href}>
                 <a href={href} className={SITE_NAV_LINK_CLASS}>
-                  {label}
+                  {t(label)}
                 </a>
               </li>
             ))}
           </ul>
         </nav>
-        <p className="text-ink-light">EXSOL DOO, Чорногорія</p>
+        <p className="text-ink-light">{t('shared.site.company')}</p>
         <p className="text-ink-light">
-          Підтримка:{' '}
-          <a href={`mailto:${SUPPORT_ADDRESS}`} className={SITE_TEXT_LINK_CLASS}>
-            {SUPPORT_ADDRESS}
-          </a>
+          <Message
+            id="shared.site.support"
+            values={{
+              address: SUPPORT_ADDRESS,
+              mail: (chunks) => (
+                <a href={`mailto:${SUPPORT_ADDRESS}`} className={SITE_TEXT_LINK_CLASS}>
+                  {chunks}
+                </a>
+              ),
+            }}
+          />
         </p>
       </div>
     </footer>

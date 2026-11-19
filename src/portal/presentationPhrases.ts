@@ -17,16 +17,18 @@
 // So a code this build has never heard of still gets a true sentence, and a
 // state it has never heard of still gets one.
 
+import type { Language } from '../i18n/languages'
+import { translate, type MessageKey } from '../i18n/translate'
 import type { PortalPresentation, PortalPresentationState } from './types'
 import { articlePhrase, reasonArticle, UNKNOWN_REASON } from './rejectionReasons'
 
 // The short label on a chip or a badge — a state, in as few words as fit.
-const STATE_LABEL: Record<PortalPresentationState, string> = {
-  not_opened: 'Не відкрито',
-  not_an_attempt: 'Не схоже на спробу',
-  awaiting_funds: 'Призупинено',
-  in_progress: 'На перевірці',
-  reviewed: 'Перевірено',
+const STATE_LABEL: Record<PortalPresentationState, MessageKey> = {
+  not_opened: 'portal.state.label.notOpened',
+  not_an_attempt: 'portal.state.label.notAnAttempt',
+  awaiting_funds: 'portal.state.label.awaitingFunds',
+  in_progress: 'portal.state.label.inProgress',
+  reviewed: 'portal.state.label.reviewed',
 }
 
 // The sentence, where a chip is not enough — the review panel, mostly.
@@ -34,18 +36,14 @@ const STATE_LABEL: Record<PortalPresentationState, string> = {
 // ``not_an_attempt`` keeps the wording ratified in the doors pass, word for
 // word: it says more than any article keyed on the code could, which is why
 // ``mismatch`` deliberately has no article.
-const STATE_PHRASE: Record<PortalPresentationState, string> = {
-  not_opened: 'Роботу не перевірено. Спробуйте надіслати ще раз.',
-  not_an_attempt:
-    'Надіслане не схоже на рішення цього завдання. ' +
-    'Перевірте, що подаєте правильний файл.',
+const STATE_PHRASE: Record<PortalPresentationState, MessageKey> = {
+  not_opened: 'portal.state.phrase.notOpened',
+  not_an_attempt: 'portal.state.phrase.notAnAttempt',
   // The student's own units; the author's have their article
   // (``awaiting_author_funds``), which the code reaches first.
-  awaiting_funds:
-    'Перевірку призупинено: на початок перевірки не вистачило юнітів. ' +
-    'Після купівлі перевірка продовжиться сама — надсилати роботу знову не потрібно.',
-  in_progress: 'Рецензія зʼявиться, коли перевірка завершиться.',
-  reviewed: 'Роботу перевірено.',
+  awaiting_funds: 'portal.state.phrase.awaitingFunds',
+  in_progress: 'portal.state.phrase.inProgress',
+  reviewed: 'portal.state.phrase.reviewed',
 }
 
 // Tone per state, so a chip in the tree and a chip in the list cannot drift
@@ -60,25 +58,26 @@ const STATE_TONE: Record<PortalPresentationState, string> = {
 
 // Last resort for a state this build does not know: the server may be newer.
 // Saying something true and useless beats saying nothing, and beats guessing.
-const UNKNOWN_STATE_LABEL = 'Стан невідомий'
+const UNKNOWN_STATE_LABEL: MessageKey = 'portal.state.label.unknown'
 
-export function stateLabel(state: string): string {
-  return STATE_LABEL[state as PortalPresentationState] ?? UNKNOWN_STATE_LABEL
+export function stateLabel(language: Language, state: string): string {
+  return translate(language, STATE_LABEL[state as PortalPresentationState] ?? UNKNOWN_STATE_LABEL)
 }
 
 // The label of an attempt, where the reason says more than the state: a review
 // waiting for the AUTHOR's units is not paused by anything the student did.
-const REASON_LABEL: Record<string, string> = {
-  awaiting_author_funds: 'Чекає перевірки',
+const REASON_LABEL: Record<string, MessageKey> = {
+  awaiting_author_funds: 'portal.state.label.awaitingAuthorFunds',
 }
 
 /**
  * The label for the server's whole answer — the state's, unless the reason
  * code has one of its own. The tone stays the state's (``stateTone``).
  */
-export function presentationLabel(presentation: PortalPresentation): string {
+export function presentationLabel(language: Language, presentation: PortalPresentation): string {
   const { state, reason_code: code } = presentation
-  return (code !== null && REASON_LABEL[code]) || stateLabel(state)
+  const reasonLabel = code !== null ? REASON_LABEL[code] : undefined
+  return reasonLabel ? translate(language, reasonLabel) : stateLabel(language, state)
 }
 
 export function stateTone(state: string): string {
@@ -88,11 +87,12 @@ export function stateTone(state: string): string {
 // The full sentence for an attempt: the code's article if this build has one,
 // else the state's phrase, else the generic. Never the backend's message — that
 // is not on the contract and DD-6-D forbids it.
-export function presentationPhrase(presentation: PortalPresentation): string {
+export function presentationPhrase(language: Language, presentation: PortalPresentation): string {
   const { state, reason_code: code } = presentation
   const article = code ? reasonArticle(code) : null
-  if (article) return articlePhrase(article)
-  return STATE_PHRASE[state as PortalPresentationState] ?? articlePhrase(UNKNOWN_REASON)
+  if (article) return articlePhrase(language, article)
+  const phrase = STATE_PHRASE[state as PortalPresentationState]
+  return phrase ? translate(language, phrase) : articlePhrase(language, UNKNOWN_REASON)
 }
 
 // Does this state mean "there is a review to fetch"? The one question the

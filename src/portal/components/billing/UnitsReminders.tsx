@@ -1,5 +1,6 @@
 import type { PortalBillingOutlook } from '../../types'
-import { expiringReminder, lowReminder, NEXT_MAY_FAIL } from '../../unitsTexts'
+import { useLanguage, useT } from '../../../i18n/LanguageContext'
+import { expiringReminder, lowReminder } from '../../unitsTexts'
 
 interface Reminder {
   key: string
@@ -29,23 +30,25 @@ export function UnitsReminders({
   buy: React.ReactNode
   units?: React.ReactNode
 }) {
+  const language = useLanguage()
+  const t = useT()
   const reminders: Reminder[] = []
   if (outlook.warning === 'low' && outlook.reviews_left !== null) {
-    reminders.push({ key: 'low', text: lowReminder(outlook.reviews_left), action: buy })
+    reminders.push({ key: 'low', text: lowReminder(language, outlook.reviews_left), action: buy })
   }
   if (outlook.warning === 'next_may_fail') {
-    reminders.push({ key: 'next', text: NEXT_MAY_FAIL, action: buy })
+    reminders.push({ key: 'next', text: t('portal.units.nextMayFail'), action: buy })
   }
   if (outlook.expiring_soon) {
     const { units: expiring, expires_on: on } = outlook.expiring_soon
-    reminders.push({ key: 'expiry', text: expiringReminder(expiring, on), action: units })
+    reminders.push({ key: 'expiry', text: expiringReminder(language, expiring, on), action: units })
   }
   if (lead === null && reminders.length === 0) return null
   return (
     <div className="space-y-3">
       {lead !== null && <p className="text-ink">{lead}</p>}
       {reminders.length > 0 && (
-        <ul className="space-y-2" aria-label="Нагадування про юніти">
+        <ul className="space-y-2" aria-label={t('portal.units.remindersLabel')}>
           {reminders.map(({ key, text, action }) => (
             <li
               key={key}

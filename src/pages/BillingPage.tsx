@@ -18,7 +18,7 @@ import { CheckoutNotice } from '../components/billing/CheckoutNotice'
 import { PackagesSection } from '../components/billing/PackagesSection'
 import { StatementSection } from '../components/billing/StatementSection'
 import { ContactAdmin } from '../components/ui/ContactAdmin'
-import { LOAD_FAILED } from '../utils/billingWords'
+import { LOAD_FAILED } from '../utils/authorBillingTexts'
 import { useOutlookStore } from '../stores/billingOutlook'
 
 // The address parameter that carries the checkout the author came back from

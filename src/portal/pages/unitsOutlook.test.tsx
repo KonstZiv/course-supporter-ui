@@ -108,7 +108,7 @@ describe('formatReviews', () => {
     [22, '22 перевірки'],
     [25, '25 перевірок'],
   ])('%i → «%s»', (n, words) => {
-    expect(formatReviews(n)).toBe(words)
+    expect(formatReviews('uk', n)).toBe(words)
   })
 })
 

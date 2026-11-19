@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
+import { useT } from '../../i18n/LanguageContext'
 
 interface ModalProps {
   open: boolean
@@ -24,6 +25,7 @@ const FOCUSABLE = [
 export function Modal({ open, onClose, title, children, wide }: ModalProps) {
   const ref = useRef<HTMLDivElement>(null)
   const titleId = useId()
+  const t = useT()
 
   // What had focus when the window opened, to give focus back to. Read during
   // the render that opens it: by the time an effect runs, a field with
@@ -118,7 +120,7 @@ export function Modal({ open, onClose, title, children, wide }: ModalProps) {
               </h2>
               <button
                 type="button"
-                aria-label="Закрити вікно"
+                aria-label={t('shared.modal.close')}
                 onClick={onClose}
                 className="p-1.5 rounded-lg hover:bg-canvas-dark transition-colors"
               >

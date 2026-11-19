@@ -1,3 +1,4 @@
+import { useT } from '../../i18n/LanguageContext'
 import { SITE_HOME_URL, SITE_NAV_LINK_CLASS, type SiteLink } from './siteLinks'
 
 interface SiteHeaderProps {
@@ -11,6 +12,7 @@ interface SiteHeaderProps {
  * app state, so the portal can use it too.
  */
 export function SiteHeader({ links }: SiteHeaderProps) {
+  const t = useT()
   return (
     <header className="bg-canvas border-b border-canvas-dark">
       <div className="mx-auto flex max-w-[68.75rem] flex-wrap items-center justify-between gap-x-5 gap-y-2 px-4 py-4 sm:px-6">
@@ -21,7 +23,7 @@ export function SiteHeader({ links }: SiteHeaderProps) {
           Course Supporter
         </a>
         {links.length > 0 && (
-          <nav aria-label="Основна навігація">
+          <nav aria-label={t('shared.site.mainNav')}>
             <ul className="flex flex-wrap items-center gap-x-5 gap-y-2">
               {links.map(({ label, href }) => (
                 <li key={href}>

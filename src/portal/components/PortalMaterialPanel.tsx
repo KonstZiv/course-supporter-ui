@@ -6,6 +6,8 @@ import { PortalMaterialView } from './PortalMaterialView'
 import { PortalSubmitForm } from './PortalSubmitForm'
 import { PortalSubmissionsList } from './PortalSubmissionsList'
 import { PortalTestForm } from './PortalTestForm'
+import { useT } from '../../i18n/LanguageContext'
+import type { MessageKey } from '../../i18n/translate'
 
 // KD18 P5: the dedicated base-download section for a project task, driven by
 // ``item.base``. ready → an active download button (fetches a FRESH presigned
@@ -22,6 +24,7 @@ function ProjectBaseSection({
 }) {
   const [downloading, setDownloading] = useState(false)
   const [error, setError] = useState('')
+  const t = useT()
   const ready = base.state === 'ready'
 
   const download = () => {
@@ -44,7 +47,7 @@ function ProjectBaseSection({
         setError(
           typeof body?.detail === 'string'
             ? body.detail
-            : 'Не вдалося завантажити базовий проєкт.',
+            : t('portal.base.loadFailed'),
         )
       })
       .finally(() => setDownloading(false))
@@ -52,7 +55,7 @@ function ProjectBaseSection({
 
   return (
     <section className="space-y-2">
-      <h3 className="font-display text-sm text-ink">Базовий проєкт</h3>
+      <h3 className="font-display text-sm text-ink">{t('portal.base.title')}</h3>
       <button
         type="button"
         onClick={download}
@@ -64,13 +67,13 @@ function ProjectBaseSection({
         ) : (
           <Download size={16} />
         )}
-        Завантажити базовий проєкт
+        {t('portal.base.download')}
       </button>
       {!ready && (
         <p className="text-xs text-ink-muted">
           {base.state === 'pending'
-            ? 'Базовий проєкт готується — спробуйте пізніше.'
-            : 'Базовий проєкт не вдалося обробити.'}
+            ? t('portal.base.pending')
+            : t('portal.base.failed')}
         </p>
       )}
       {error && <p className="text-xs text-coral">{error}</p>}
@@ -106,7 +109,8 @@ export function PortalMaterialPanel({
   onSubmitted: () => void
 }) {
   const [media, setMedia] = useState<PortalMediaResponse | null>(null)
-  const [error, setError] = useState('')
+  const [error, setError] = useState<MessageKey | null>(null)
+  const t = useT()
   // c3b: a successful submit (c3a calls onSubmitted only on success, never on a
   // duplicate — corrective 1) bumps this so the attempts list re-fetches the new
   // row alongside the tree overlay (Q7).
@@ -124,7 +128,7 @@ export function PortalMaterialPanel({
   useEffect(() => {
     let active = true
     setMedia(null)
-    setError('')
+    setError(null)
     portalApi
       .material(item.id)
       .then((m) => {
@@ -135,8 +139,8 @@ export function PortalMaterialPanel({
         if (err instanceof PortalApiError && err.status === 401) return // centralised
         setError(
           err instanceof PortalApiError && err.status === 404
-            ? 'Матеріал недоступний.'
-            : 'Не вдалося завантажити матеріал.',
+            ? 'portal.material.unavailable'
+            : 'portal.material.loadFailed',
         )
       })
     return () => {
@@ -159,13 +163,13 @@ export function PortalMaterialPanel({
             <h2 className="font-display text-xl text-ink truncate">{item.label}</h2>
             {item.task_type === 'project' && (
               <span className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap bg-canvas-dark text-ink-muted shrink-0">
-                Проєкт
+                {t('portal.material.project')}
               </span>
             )}
           </div>
           <button
             onClick={onClose}
-            aria-label="Закрити"
+            aria-label={t('portal.material.close')}
             className="btn-ghost btn-sm shrink-0"
           >
             <X size={18} />
@@ -176,12 +180,12 @@ export function PortalMaterialPanel({
           {media === null && !error && (
             <div className="flex items-center justify-center gap-2 text-ink-muted py-12">
               <Loader2 size={18} className="animate-spin" />
-              Завантаження…
+              {t('portal.common.loading')}
             </div>
           )}
           {error && (
             <div className="p-3 rounded-xl bg-coral-pale text-coral text-sm">
-              {error}
+              {t(error)}
             </div>
           )}
           {media && <PortalMaterialView media={media} item={item} />}

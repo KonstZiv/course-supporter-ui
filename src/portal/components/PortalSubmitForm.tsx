@@ -15,6 +15,7 @@ import { costView } from '../reviewCost'
 import { useReviewEstimate } from '../hooks/useReviewEstimate'
 import { useUnitsWait } from '../hooks/useUnitsWait'
 import { CostCard, UnitsShortPanel } from './billing/UnitsCost'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 
 type SubmitState = 'idle' | 'submitting' | 'success' | 'duplicate' | 'error'
 
@@ -78,8 +79,11 @@ export function PortalSubmitForm({
   // the SAME file again still fires a change event.
   const [pickerKey, setPickerKey] = useState(0)
 
+  // The reader's language — not the review's (``language`` above).
+  const uiLanguage = useLanguage()
+  const t = useT()
   const estimate = useReviewEstimate(taskId, file)
-  const cost = costView(estimate.outcome, estimate.last)
+  const cost = costView(uiLanguage, estimate.outcome, estimate.last)
   useUnitsWait(cost.kind === 'panel' ? cost.threshold : null, estimate.askAgain)
   // The answer is on its way and charging is known to be on: no sending yet.
   const costGated = cost.kind === 'line' && cost.gated
@@ -184,7 +188,9 @@ export function PortalSubmitForm({
     // answers.
     if (policy !== null && file.size > policy.max_bytes) {
       setState('error')
-      setMessage(`Файл завеликий — максимум ${formatFileSize(policy.max_bytes)}.`)
+      setMessage(
+        t('portal.submit.fileTooLarge', { max: formatFileSize(uiLanguage, policy.max_bytes) }),
+      )
       return
     }
     setState('submitting')
@@ -209,10 +215,10 @@ export function PortalSubmitForm({
       if (res.duplicate) {
         // corrective 1: neutral, NOT an error; no new attempt → no re-fetch.
         setState('duplicate')
-        setMessage('Цей файл уже подано раніше — нову спробу не створено.')
+        setMessage(t('portal.submit.duplicate'))
       } else {
         setState('success')
-        setMessage('Рішення надіслано — очікує перевірки.')
+        setMessage(t('portal.submit.sent'))
         // The work is sent; the form is not a record of it. Leaving the file,
         // the note and an enabled button behind invites a second identical
         // submission that only the server's hash check refuses.
@@ -235,7 +241,7 @@ export function PortalSubmitForm({
         return
       }
       setState('error')
-      setMessage(submitErrorMessage(err))
+      setMessage(submitErrorMessage(uiLanguage, err))
     }
   }
 
@@ -252,8 +258,10 @@ export function PortalSubmitForm({
   const courseLanguageName = languages.find((l) => l.code === courseLanguage)
   const courseLanguageLabel =
     courseLanguageName === undefined
-      ? 'Мовою курсу'
-      : `Мовою курсу (${courseLanguageName.name_native || courseLanguageName.name_en})`
+      ? t('portal.submit.courseLanguage')
+      : t('portal.submit.courseLanguageNamed', {
+          name: courseLanguageName.name_native || courseLanguageName.name_en,
+        })
 
   const tone =
     state === 'success'
@@ -266,20 +274,20 @@ export function PortalSubmitForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <h3 className="font-display text-lg text-ink">Надіслати рішення</h3>
+      <h3 className="font-display text-lg text-ink">{t('portal.submit.title')}</h3>
       <input
         key={pickerKey}
         type="file"
         accept={policy?.accept.join(',')}
         onChange={handleFile}
-        aria-label="Файл рішення"
+        aria-label={t('portal.submit.fileLabel')}
         className="block w-full text-sm text-ink-light file:mr-3 file:rounded-lg
                    file:border-0 file:bg-canvas-dark file:px-3 file:py-1.5
                    file:text-ink file:cursor-pointer"
       />
       <label className="block">
         <span className="block text-sm font-medium text-ink mb-1.5">
-          Мова рецензії
+          {t('portal.submit.reviewLanguage')}
         </span>
         <select
           value={language}
@@ -307,8 +315,8 @@ export function PortalSubmitForm({
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Коментар або питання (необовʼязково)"
-          aria-label="Коментар"
+          placeholder={t('portal.submit.notePlaceholder')}
+          aria-label={t('portal.submit.noteLabel')}
           aria-describedby={noteCounterId}
           aria-invalid={noteTooLong || undefined}
           rows={2}
@@ -322,8 +330,7 @@ export function PortalSubmitForm({
         >
           <span aria-live="polite">
             {noteTooLong &&
-              `Коментар задовгий — максимум ${formatCount(STUDENT_NOTE_MAX_CHARS)} знаків. ` +
-                'Скоротіть його, щоб надіслати рішення.'}
+              t('portal.submit.noteTooLong', { max: formatCount(STUDENT_NOTE_MAX_CHARS) })}
           </span>
           <span className="shrink-0 tabular-nums">
             {formatCount(noteChars)} / {formatCount(STUDENT_NOTE_MAX_CHARS)}
@@ -359,7 +366,7 @@ export function PortalSubmitForm({
             noteTooLong ||
             costGated
           }
-          title={baseNotReady ? 'Базовий проєкт ще не готовий.' : undefined}
+          title={baseNotReady ? t('portal.submit.baseNotReadyTitle') : undefined}
           className="btn-primary"
         >
           {state === 'submitting' ? (
@@ -367,14 +374,14 @@ export function PortalSubmitForm({
           ) : (
             <>
               <Upload size={16} />
-              Надіслати
+              {t('portal.submit.send')}
             </>
           )}
         </button>
       )}
       {baseNotReady && (
         <p className="text-xs text-ink-muted">
-          Подача стане доступною, коли автор підготує базовий проєкт.
+          {t('portal.submit.baseNotReadyNote')}
         </p>
       )}
     </form>

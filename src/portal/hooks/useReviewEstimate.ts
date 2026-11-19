@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { doorRefusal, portalApi, PortalApiError } from '../api/portalClient'
+import { useLanguage } from '../../i18n/LanguageContext'
+import type { Language } from '../../i18n/languages'
 import { submitErrorMessage } from '../submissionCodes'
 import { shortfallEstimate, type EstimateOutcome } from '../reviewCost'
 import type { PortalReviewEstimate, PortalUnitsShortfall } from '../types'
 
-function failureOf(err: unknown): EstimateOutcome {
+function failureOf(language: Language, err: unknown): EstimateOutcome {
   if (err instanceof PortalApiError && err.status === 401) return { status: 'silent' }
   // The doors refuse the file: the words the submission would get.
   if (err instanceof PortalApiError && err.status === 422 && doorRefusal(err) !== null) {
-    return { status: 'refused', message: submitErrorMessage(err) }
+    return { status: 'refused', message: submitErrorMessage(language, err) }
   }
   return { status: 'failed' }
 }
@@ -37,6 +39,7 @@ export function useReviewEstimate(taskId: string, file: File | null) {
   })
   // The number of the latest request; an answer to any other is stale.
   const latest = useRef(0)
+  const language = useLanguage()
 
   const ask = useCallback(
     (sent: File | null, afterWait: boolean) => {
@@ -49,11 +52,11 @@ export function useReviewEstimate(taskId: string, file: File | null) {
         },
         (err: unknown) => {
           if (asked !== latest.current) return
-          setState((s) => ({ ...s, outcome: failureOf(err) }))
+          setState((s) => ({ ...s, outcome: failureOf(language, err) }))
         },
       )
     },
-    [taskId],
+    [taskId, language],
   )
 
   useEffect(() => {

@@ -4,15 +4,8 @@ import { BookOpen, ArrowRight, AlertCircle, CheckCircle2, Loader2 } from 'lucide
 import { portalApi, PortalApiError } from '../api/portalClient'
 import { isUuid } from '../uuid'
 import { InvalidPortalLink } from '../components/InvalidPortalLink'
-import {
-  CONFIRM_TITLE,
-  CONFIRM_DESCRIPTION,
-  CONFIRM_SUBMIT,
-  CONFIRM_SUCCESS,
-  CONFIRM_GO_TO_PORTAL,
-  CONFIRM_INVALID_HINT,
-  flowError,
-} from '../recoveryTexts'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
+import { flowError } from '../recoveryTexts'
 
 // Public confirm-email landing (R3). The token rides in the query string of the
 // email link. Redemption is behind an EXPLICIT button, never auto-fired on
@@ -23,6 +16,8 @@ import {
 // login).
 export function PortalConfirmEmailPage() {
   const { tenantId } = useParams()
+  const language = useLanguage()
+  const t = useT()
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token')
 
@@ -42,9 +37,9 @@ export function PortalConfirmEmailPage() {
           <div className="w-10 h-10 rounded-xl bg-navy flex items-center justify-center">
             <BookOpen size={20} className="text-amber-light" />
           </div>
-          <span className="font-display text-2xl text-ink">Навчальний портал</span>
+          <span className="font-display text-2xl text-ink">{t('portal.header.name')}</span>
         </div>
-        <h2 className="font-display text-2xl text-ink mb-2">{CONFIRM_TITLE}</h2>
+        <h2 className="font-display text-2xl text-ink mb-2">{t('portal.recovery.confirm.title')}</h2>
         {children}
       </div>
     </div>
@@ -57,16 +52,16 @@ export function PortalConfirmEmailPage() {
           <AlertCircle size={16} className="shrink-0 mt-0.5" />
           {message}
         </div>
-        <p className="text-sm text-ink-muted">{CONFIRM_INVALID_HINT}</p>
+        <p className="text-sm text-ink-muted">{t('portal.recovery.confirm.invalidHint')}</p>
       </>,
     )
 
   if (!token) {
-    return invalidPanel(flowError('missingToken'))
+    return invalidPanel(flowError(language, 'missingToken'))
   }
 
   if (tokenRejected) {
-    return invalidPanel(flowError('invalidToken'))
+    return invalidPanel(flowError(language, 'invalidToken'))
   }
 
   if (done) {
@@ -74,10 +69,10 @@ export function PortalConfirmEmailPage() {
       <>
         <div className="flex items-start gap-2 p-3 rounded-xl bg-forest-pale text-forest text-sm mb-6">
           <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
-          {CONFIRM_SUCCESS}
+          {t('portal.recovery.confirm.success')}
         </div>
         <Link to={`/${tenantId}`} className="btn-primary btn-sm">
-          {CONFIRM_GO_TO_PORTAL}
+          {t('portal.recovery.confirm.goToPortal')}
         </Link>
       </>,
     )
@@ -93,7 +88,7 @@ export function PortalConfirmEmailPage() {
       if (err instanceof PortalApiError && err.status === 400) {
         setTokenRejected(true)
       } else {
-        setError(flowError('network'))
+        setError(flowError(language, 'network'))
       }
     } finally {
       setLoading(false)
@@ -102,7 +97,7 @@ export function PortalConfirmEmailPage() {
 
   return shell(
     <>
-      <p className="text-ink-muted mb-8">{CONFIRM_DESCRIPTION}</p>
+      <p className="text-ink-muted mb-8">{t('portal.recovery.confirm.description')}</p>
 
       {error && (
         <div className="flex items-start gap-2 p-3 rounded-xl bg-coral-pale text-coral text-sm mb-4">
@@ -121,7 +116,7 @@ export function PortalConfirmEmailPage() {
           <Loader2 size={18} className="animate-spin" />
         ) : (
           <>
-            {CONFIRM_SUBMIT}
+            {t('portal.recovery.confirm.submit')}
             <ArrowRight size={18} />
           </>
         )}

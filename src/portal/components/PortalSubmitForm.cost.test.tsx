@@ -180,7 +180,7 @@ describe('table 5.1 — what the student sees before sending', () => {
     mockedEstimate.mockResolvedValueOnce(estimate()).mockRejectedValueOnce(refusal)
     renderForm()
     pickFile('a.exe')
-    expect(await screen.findByText(submitErrorMessage(refusal))).toBeInTheDocument()
+    expect(await screen.findByText(submitErrorMessage('uk', refusal))).toBeInTheDocument()
     expect(screen.queryByText(/English text/)).toBeNull()
     expect(submitBtn()).toBeEnabled()
   })

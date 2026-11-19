@@ -122,8 +122,8 @@ export const AFTER_PURCHASE =
 export const UNITS_NOW_ENOUGH = 'Юнітів тепер вистачає.'
 
 export function priceEnoughText(price: number, available: number | null): string {
-  const head = `Орієнтовна вартість: приблизно ${formatUnits(price)}.`
-  return available === null ? head : `${head} У вас доступно ${formatUnits(available)}.`
+  const head = `Орієнтовна вартість: приблизно ${formatUnits('uk', price)}.`
+  return available === null ? head : `${head} У вас доступно ${formatUnits('uk', available)}.`
 }
 
 /** "Для 1 з 3 файлів порахувати до обробки не вдалося." */
@@ -142,5 +142,5 @@ export function priceShortText(
   available: number,
   missing: number,
 ): string {
-  return `Ця дія коштує приблизно ${formatUnits(price)}, у вас ${formatUnits(available)}. Не вистачає ${formatUnits(missing)}.`
+  return `Ця дія коштує приблизно ${formatUnits('uk', price)}, у вас ${formatUnits('uk', available)}. Не вистачає ${formatUnits('uk', missing)}.`
 }
