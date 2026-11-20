@@ -11,8 +11,10 @@ import { usePortalSession } from '../stores/session'
 import { portalLogin, PortalApiError } from '../api/portalClient'
 import { isUuid } from '../uuid'
 import { InvalidPortalLink } from '../components/InvalidPortalLink'
+import { PublicPage } from '../components/PublicPage'
 import { afterSignIn, nextOf } from '../signInReturn'
 import { useT } from '../../i18n/LanguageContext'
+import { applySignInLanguage } from '../stores/language'
 
 // Student portal login (Phase 6 / T4b, c1). The tenant comes from the URL
 // segment (ratify Q3) and is sent as ``tenant_id`` in the unauthenticated
@@ -64,6 +66,9 @@ export function PortalLoginPage() {
         studentId: res.student_id,
         displayName: res.display_name,
       })
+      // The language kept in the student's account, or — with none kept —
+      // this browser's choice goes there.
+      applySignInLanguage(res.access_token, res.interface_language)
       navigate(target, { replace: true })
     } catch (err) {
       if (err instanceof PortalApiError && err.status === 401) {
@@ -79,7 +84,7 @@ export function PortalLoginPage() {
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center px-6 py-10">
+    <PublicPage>
       <div className="w-full max-w-sm">
         <div className="flex items-center gap-3 mb-10">
           <div className="w-10 h-10 rounded-xl bg-navy flex items-center justify-center">
@@ -151,6 +156,6 @@ export function PortalLoginPage() {
           </button>
         </form>
       </div>
-    </div>
+    </PublicPage>
   )
 }

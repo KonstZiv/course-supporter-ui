@@ -18,6 +18,10 @@ export interface PortalLoginResponse {
   token_type: string
   student_id: string
   display_name: string | null
+  // The language of the pages the student chose (ISO 639-3: "eng"), or null
+  // while they have not chosen. Optional on the wire: a server from before
+  // the field leaves it out, and the portal reads that as null.
+  interface_language?: string | null
 }
 
 export interface PortalMe {
@@ -33,9 +37,21 @@ export interface PortalMe {
   recovery_email_confirmed: boolean
   // The language this student last asked a review in (ISO 639-3), null until
   // they ask for one. Written server-side on a submission that names a
-  // language; served here so the submit form can open on the standing choice
-  // instead of only remembering it (step Г2 §1.1).
+  // language. The review-language field no longer opens on it: its default
+  // is the language of the pages (Г-1 §5).
   preferred_language: string | null
+  // As on the sign-in answer: the language of the pages, or null.
+  interface_language?: string | null
+}
+
+// ``PUT /api/v1/portal/me/interface-language``: the server takes a two- or
+// three-letter code and answers with what it now keeps, in three letters.
+export interface PortalInterfaceLanguageRequest {
+  language: string
+}
+
+export interface PortalInterfaceLanguage {
+  interface_language: string
 }
 
 // Response of ``GET /api/v1/portal/languages`` — the whitelist the review-

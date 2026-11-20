@@ -4,6 +4,7 @@ import { usePortalSession } from '../stores/session'
 import { isUuid } from '../uuid'
 import { loginAddress } from '../signInReturn'
 import { InvalidPortalLink } from './InvalidPortalLink'
+import { syncServerLanguage } from '../stores/language'
 
 // Guards portal routes that require an authenticated session (ratify Q3 + Q5).
 //
@@ -35,6 +36,13 @@ export function PortalProtectedRoute({ children }: { children: React.ReactNode }
       clear()
     }
   }, [tenantMismatch, clear])
+
+  // The language kept in the student's account, read once per session — for
+  // a session the portal opened with (a sign-in answers it by itself).
+  const validTenant = isUuid(tenantId)
+  useEffect(() => {
+    if (validTenant && token !== null && !tenantMismatch) syncServerLanguage(token)
+  }, [validTenant, token, tenantMismatch])
 
   if (!isUuid(tenantId)) {
     return <InvalidPortalLink />

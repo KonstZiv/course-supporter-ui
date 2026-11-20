@@ -18,6 +18,8 @@ export const STORAGE_KEYS = {
   portalName: 'cs_portal_name',
   /** Author app: the "already seen" flag of the roles intro dialog. */
   rolesIntroSeen: 'cs_roles_intro_seen',
+  /** Portal: the language of the pages the reader chose (a language code: "en"). */
+  portalLanguage: 'cs_ui_language',
 } as const
 
 /** The only modules that may touch browser storage (paths from the repo root). */
@@ -25,4 +27,5 @@ export const STORAGE_MODULES = [
   'src/stores/auth.ts',
   'src/portal/stores/session.ts',
   'src/components/ui/rolesIntro.ts',
+  'src/portal/stores/language.ts',
 ] as const

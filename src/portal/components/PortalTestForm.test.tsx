@@ -4,6 +4,7 @@ import { PortalTestForm } from './PortalTestForm'
 import { submissionCodePhrase } from '../submissionCodes'
 import { portalApi, PortalApiError } from '../api/portalClient'
 import { resetPortalLanguages } from '../languages'
+import { LanguageProvider } from '../../i18n/LanguageProvider'
 import type { PortalMe, TestStructureResponse } from '../types'
 
 vi.mock('../api/portalClient', async (importOriginal) => {
@@ -189,16 +190,43 @@ describe('PortalTestForm — прапорці й подача', () => {
     )
   })
 
-  it('sends the stored preference as the review language', async () => {
-    mockedMe.mockResolvedValue(me({ preferred_language: 'eng' }))
+  // Г-1 §5, the product owner's decision: the field opens on the language of
+  // the pages; the last review's language (``preferred_language``) is no
+  // longer read for it.
+  it('on an English page opens on English and sends it, without a choice', async () => {
     mockedSubmitTest.mockResolvedValue({ submission_id: 'sub-1', status: 'received', duplicate: false })
-    renderForm()
+    render(
+      <LanguageProvider language="en">
+        <PortalTestForm taskId="task-1" courseLanguage="ukr" onSubmitted={vi.fn()} />
+      </LanguageProvider>,
+    )
     await loaded()
-    await waitFor(() => expect(screen.getByLabelText('Мова рецензії')).toHaveValue('eng'))
+    await waitFor(() => expect(screen.getByLabelText('Review language')).toHaveValue('eng'))
     answerAll()
-    fireEvent.click(sendBtn())
+    fireEvent.click(screen.getByRole('button', { name: 'Send answers' }))
     await waitFor(() => expect(mockedSubmitTest).toHaveBeenCalledTimes(1))
     expect(mockedSubmitTest.mock.calls[0]![1].response_language).toBe('eng')
+  })
+
+  it('on a Ukrainian page of a Ukrainian course opens on "course language", whatever the last review was in', async () => {
+    mockedMe.mockResolvedValue(me({ preferred_language: 'eng' }))
+    renderForm()
+    await loaded()
+    await screen.findByRole('option', { name: 'English' })
+    expect(screen.getByLabelText('Мова рецензії')).toHaveValue('')
+    expect(mockedMe).not.toHaveBeenCalled()
+  })
+
+  it('opens on "course language" when the list does not offer the language of the pages', async () => {
+    mockedLanguages.mockResolvedValue({ items: [LANGUAGES[0]!], total: 1 })
+    render(
+      <LanguageProvider language="en">
+        <PortalTestForm taskId="task-1" courseLanguage="ukr" onSubmitted={vi.fn()} />
+      </LanguageProvider>,
+    )
+    await loaded()
+    await screen.findByRole('option', { name: 'українська' })
+    expect(screen.getByLabelText('Review language')).toHaveValue('')
   })
 
   it('says so when the test cannot be read', async () => {

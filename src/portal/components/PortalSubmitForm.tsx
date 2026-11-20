@@ -7,6 +7,8 @@ import type {
   SubmissionPolicyEntry,
 } from '../types'
 import { getPortalLanguages } from '../languages'
+import { defaultReviewLanguage } from '../reviewLanguage'
+import { iso3Of } from '../../i18n/languages'
 import { formatFileSize } from '../rejectionReasons'
 import { getSubmissionPolicy, policyFor } from '../submissionPolicy'
 import { submitErrorMessage } from '../submissionCodes'
@@ -27,9 +29,9 @@ type SubmitState = 'idle' | 'submitting' | 'success' | 'duplicate' | 'error'
 // server-computed overlay flips none→pending (corrective: no optimistic drift);
 // on duplicate NO re-fetch (no new attempt was created).
 //
-// It also READS on mount now (step Г2 §2.1): the allowed language list, and the
-// student's standing language preference. Both fail soft — neither is required
-// to submit, and a submission with no language named is resolved server-side.
+// It also READS on mount (step Г2 §2.1): the allowed language list. It fails
+// soft — the field is not required to submit. The field opens on the language
+// of the pages (Г-1 §5, ``defaultReviewLanguage``).
 //
 // And the price (BIL-E, stage 2b): before a submission the form asks what a
 // review of this task costs — on opening, and for every file chosen — and
@@ -69,7 +71,9 @@ export function PortalSubmitForm({
   // Empty string is the "course language" option — the absence of a choice,
   // not a choice of nothing. It is never sent (the server reads a blank form
   // value as "not given" anyway, but sending it would still be noise).
-  const [language, setLanguage] = useState('')
+  // The review language the student picked in the field; until then the
+  // field opens on the default (``defaultReviewLanguage``).
+  const [chosenLanguage, setChosenLanguage] = useState<string | null>(null)
   const [languages, setLanguages] = useState<PortalLanguageEntry[]>([])
   const [policy, setPolicy] = useState<SubmissionPolicyEntry | null>(null)
   // The attempt this form announced and is still announcing. Cleared when the
@@ -82,6 +86,8 @@ export function PortalSubmitForm({
   // The reader's language — not the review's (``language`` above).
   const uiLanguage = useLanguage()
   const t = useT()
+  const language =
+    chosenLanguage ?? defaultReviewLanguage(iso3Of(uiLanguage), courseLanguage, languages)
   const estimate = useReviewEstimate(taskId, file)
   const cost = costView(uiLanguage, estimate.outcome, estimate.last)
   useUnitsWait(cost.kind === 'panel' ? cost.threshold : null, estimate.askAgain)
@@ -120,27 +126,6 @@ export function PortalSubmitForm({
       active = false
     }
   }, [taskType])
-
-  // The student's standing preference, read here rather than held in the
-  // session store or a shared cache. A cache would need invalidating in two
-  // places — after the recovery-email save, and after every submission that
-  // names a language, because the server rewrites the column then — which is
-  // a module with two divergence points to save one light request per panel
-  // open. Read on mount instead, and let the server stay the single truth.
-  useEffect(() => {
-    let active = true
-    portalApi
-      .me()
-      .then((me) => {
-        if (active && me.preferred_language) setLanguage(me.preferred_language)
-      })
-      // No preference readable → the field stays on "course language", which
-      // is what the server would fall back to anyway.
-      .catch(() => undefined)
-    return () => {
-      active = false
-    }
-  }, [])
 
   // D5 gating: a project task whose base EXISTS but is not READY blocks submit
   // (the base is not usable yet). base === null (no base attached) is a DISTINCT
@@ -291,7 +276,7 @@ export function PortalSubmitForm({
         </span>
         <select
           value={language}
-          onChange={(e) => setLanguage(e.target.value)}
+          onChange={(e) => setChosenLanguage(e.target.value)}
           className="input"
         >
           {/* Hidden when the root carries no language — a CHECK forbids it,

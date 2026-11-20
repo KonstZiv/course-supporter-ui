@@ -6,6 +6,7 @@ import { usePortalSession } from '../stores/session'
 import { portalApi } from '../api/portalClient'
 import type { PortalBillingOutlook } from '../types'
 import { useT } from '../../i18n/LanguageContext'
+import { LanguageSwitcher } from './LanguageSwitcher'
 
 /** The portal's sections; the header marks the one a page belongs to. */
 export type PortalSection = 'courses' | 'units'
@@ -39,7 +40,8 @@ const ITEM =
 
 /**
  * The portal's header on every signed-in page: the portal's name, "Мої курси",
- * "Юніти" (unless the author pays for the student's reviews) and "Вийти".
+ * "Юніти" (unless the author pays for the student's reviews), the language
+ * switcher and "Вийти".
  */
 export function PortalHeader({ current }: { current: PortalSection }) {
   const { tenantId } = useParams()
@@ -99,7 +101,8 @@ export function PortalHeader({ current }: { current: PortalSection }) {
             })}
           </ul>
         </nav>
-        <button onClick={handleLogout} className="btn-ghost btn-sm ms-auto">
+        <LanguageSwitcher className="ms-auto" />
+        <button onClick={handleLogout} className="btn-ghost btn-sm">
           <LogOut size={16} aria-hidden />
           {t('portal.nav.logout')}
         </button>
