@@ -20,8 +20,8 @@ const ukCatalogs = import.meta.glob<Record<string, string>>(
 describe('contactAdminPlaces', () => {
   it('counts occurrences of "напишіть нам" across non-test source files and uk catalogs', () => {
     const EXPECTED_COUNTS: Record<string, number> = {
-      'NodeDetailPanel.tsx': 1,
-      'FlowContextMenu.tsx': 1,
+      'panel.flow.detail.startProcessingFailed': 1,
+      'panel.flow.contextMenu.renameFailed': 1,
       'ingestErrors.ts': 2,
       'testRefusals.ts': 2,
       'panel.routeError.description': 1,

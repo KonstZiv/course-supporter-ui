@@ -4,6 +4,7 @@ import { Modal } from '../ui/Modal'
 import { summaryApi, notYetGeneratedDetail } from '../../api/node-summary'
 import { ApiError } from '../../api/client'
 import { validationMessage } from '../../utils/apiError'
+import { useT } from '../../i18n/LanguageContext'
 import type {
   LearningOutcomeItem,
   NodeSummaryEditView,
@@ -157,6 +158,7 @@ function changedFieldSet(
  * metrics / approval stay read-only in both modes (Ratified #9 / Інваріант #3).
  */
 export function SummaryModal({ nodeId, nodeTitle, onClose, onChanged }: Props) {
+  const t = useT()
   const [view, setView] = useState<NodeSummaryEditView | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -190,18 +192,18 @@ export function SummaryModal({ nodeId, nodeTitle, onClose, onChanged }: Props) {
         if (err instanceof ApiError && err.status === 404) {
           setError(
             notYetGeneratedDetail(err.body)
-              ? 'Опис ще не згенеровано для цього вузла.'
-              : 'Опис недоступний — вузол не знайдено.',
+              ? t('panel.flow.summary.notYetGenerated')
+              : t('panel.flow.summary.nodeNotFound'),
           )
           return
         }
-        setError('Не вдалося завантажити опис.')
+        setError(t('panel.flow.summary.loadFailed'))
       },
     )
     return () => {
       cancelled = true
     }
-  }, [nodeId])
+  }, [nodeId, t])
 
   const runAction = useCallback(
     async (action: (id: string) => Promise<NodeSummaryFinal>) => {
@@ -242,11 +244,11 @@ export function SummaryModal({ nodeId, nodeTitle, onClose, onChanged }: Props) {
       setEditing(false)
       onChanged()
     } catch (err) {
-      setSaveError(validationMessage(err) ?? 'Не вдалося зберегти зміни.')
+      setSaveError(validationMessage(err) ?? t('panel.flow.summary.saveFailed'))
     } finally {
       setSaving(false)
     }
-  }, [nodeId, view, draft, onChanged])
+  }, [nodeId, view, draft, onChanged, t])
 
   const hasChanges =
     view !== null &&
@@ -254,7 +256,7 @@ export function SummaryModal({ nodeId, nodeTitle, onClose, onChanged }: Props) {
     Object.keys(buildChangedKeys(draft, pickEditable(view.final))).length > 0
 
   return (
-    <Modal open onClose={onClose} title={`Опис вузла — ${nodeTitle}`} wide>
+    <Modal open onClose={onClose} title={t('panel.flow.summary.modalTitle', { title: nodeTitle })} wide>
       {loading && (
         <div className="flex items-center justify-center py-12">
           <Loader2 size={28} className="animate-spin text-navy" />
@@ -307,6 +309,7 @@ function Overview({
   onApprove: () => void
   onAcceptRaw: () => void
 }) {
+  const t = useT()
   const f = view.final
   const hasSnapshot = view.previous_snapshot !== null
   const changed =
@@ -320,34 +323,34 @@ function Overview({
         <div>
           {f.approved_at ? (
             <span className="inline-flex items-center gap-1.5 text-forest font-medium">
-              <Check size={15} /> Затверджено
+              <Check size={15} /> {t('panel.flow.summary.approved')}
             </span>
           ) : (
-            <span className="text-ink-muted">Чернетка — не затверджено</span>
+            <span className="text-ink-muted">{t('panel.flow.summary.draftNotApproved')}</span>
           )}
         </div>
         <div className="flex gap-2 shrink-0">
           <button className="btn-secondary btn-sm" onClick={onEdit} disabled={acting}>
             <Pencil size={14} />
-            Редагувати
+            {t('panel.flow.summary.edit')}
           </button>
           <button
             className="btn-secondary btn-sm"
             onClick={onAcceptRaw}
             disabled={acting}
-            title="Перезаписати опис згенерованим (Raw) і затвердити"
+            title={t('panel.flow.summary.acceptRawHint')}
           >
             {acting ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-            Прийняти згенероване
+            {t('panel.flow.summary.acceptRaw')}
           </button>
           <button
             className="btn-primary btn-sm"
             onClick={onApprove}
             disabled={acting}
-            title="Затвердити поточний опис"
+            title={t('panel.flow.summary.approveHint')}
           >
             {acting ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-            Затвердити
+            {t('panel.flow.summary.approve')}
           </button>
         </div>
       </div>
@@ -359,50 +362,50 @@ function Overview({
           onClick={onToggleDiff}
         >
           {showDiff
-            ? 'Сховати порівняння'
-            : 'Порівняти з попередньою версією'}
+            ? t('panel.flow.summary.hideDiff')
+            : t('panel.flow.summary.showDiff')}
         </button>
       )}
 
-      <TextField label="Заголовок" value={f.title} changed={ch('title')} />
-      <TextField label="Опис" value={f.description} changed={ch('description')} />
+      <TextField label={t('panel.flow.summary.field.title')} value={f.title} changed={ch('title')} />
+      <TextField label={t('panel.flow.summary.field.description')} value={f.description} changed={ch('description')} />
       <ListField
-        label="Навчальні цілі"
+        label={t('panel.flow.summary.field.learningObjectives')}
         items={f.learning_objectives}
         changed={ch('learning_objectives')}
       />
       <PairField
-        label="Знання (буде знати)"
+        label={t('panel.flow.summary.field.knowledge')}
         items={f.knowledge}
         changed={ch('knowledge')}
       />
       <PairField
-        label="Навички (буде вміти)"
+        label={t('panel.flow.summary.field.skills')}
         items={f.skills}
         changed={ch('skills')}
       />
       <ListField
-        label="Критерії успіху"
+        label={t('panel.flow.summary.field.successCriteria')}
         items={f.success_criteria}
         changed={ch('success_criteria')}
       />
       <TextField
-        label="Підхід до оцінювання"
+        label={t('panel.flow.summary.field.assessmentApproach')}
         value={f.assessment_approach}
         changed={ch('assessment_approach')}
       />
       <TextField
-        label="Підхід до викладання"
+        label={t('panel.flow.summary.field.teachingApproach')}
         value={f.teaching_approach}
         changed={ch('teaching_approach')}
       />
       <ListField
-        label="Ключові активності"
+        label={t('panel.flow.summary.field.keyActivities')}
         items={f.key_activities}
         changed={ch('key_activities')}
       />
       <ListField
-        label="Типові помилки"
+        label={t('panel.flow.summary.field.commonMistakes')}
         items={f.common_mistakes}
         changed={ch('common_mistakes')}
       />
@@ -433,23 +436,24 @@ function EditForm({
   onSave: () => void
   onCancel: () => void
 }) {
+  const t = useT()
   const patch = (p: Partial<EditableDraft>) => setDraft({ ...draft, ...p })
   return (
     <div className="space-y-5 text-sm">
       <div className="flex items-center justify-between gap-4">
-        <span className="text-ink-muted">Режим редагування</span>
+        <span className="text-ink-muted">{t('panel.flow.summary.editMode')}</span>
         <div className="flex gap-2 shrink-0">
           <button className="btn-secondary btn-sm" onClick={onCancel} disabled={saving}>
-            Скасувати
+            {t('panel.flow.summary.cancel')}
           </button>
           <button
             className="btn-primary btn-sm"
             onClick={onSave}
             disabled={saving || !hasChanges}
-            title={hasChanges ? 'Зберегти зміни' : 'Немає змін'}
+            title={hasChanges ? t('panel.flow.summary.saveChangesHint') : t('panel.flow.summary.noChangesHint')}
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-            Зберегти
+            {t('panel.flow.summary.save')}
           </button>
         </div>
       </div>
@@ -461,56 +465,56 @@ function EditForm({
       )}
 
       <ScalarInput
-        label="Заголовок"
+        label={t('panel.flow.summary.field.title')}
         value={draft.title}
-        placeholder="Методичний заголовок"
+        placeholder={t('panel.flow.summary.placeholder.title')}
         onChange={(v) => patch({ title: v })}
       />
       <TextAreaInput
-        label="Опис"
+        label={t('panel.flow.summary.field.description')}
         value={draft.description}
-        placeholder="Методичний опис вузла"
+        placeholder={t('panel.flow.summary.placeholder.description')}
         onChange={(v) => patch({ description: v })}
       />
       <StringListEditor
-        label="Навчальні цілі"
+        label={t('panel.flow.summary.field.learningObjectives')}
         items={draft.learning_objectives}
         onChange={(v) => patch({ learning_objectives: v })}
       />
       <PairEditor
-        label="Знання (буде знати)"
+        label={t('panel.flow.summary.field.knowledge')}
         items={draft.knowledge}
         onChange={(v) => patch({ knowledge: v })}
       />
       <PairEditor
-        label="Навички (буде вміти)"
+        label={t('panel.flow.summary.field.skills')}
         items={draft.skills}
         onChange={(v) => patch({ skills: v })}
       />
       <StringListEditor
-        label="Критерії успіху"
+        label={t('panel.flow.summary.field.successCriteria')}
         items={draft.success_criteria}
         onChange={(v) => patch({ success_criteria: v })}
       />
       <TextAreaInput
-        label="Підхід до оцінювання"
+        label={t('panel.flow.summary.field.assessmentApproach')}
         value={draft.assessment_approach}
-        placeholder="Як перевіряється досягнення цілей"
+        placeholder={t('panel.flow.summary.placeholder.assessmentApproach')}
         onChange={(v) => patch({ assessment_approach: v })}
       />
       <TextAreaInput
-        label="Підхід до викладання"
+        label={t('panel.flow.summary.field.teachingApproach')}
         value={draft.teaching_approach}
-        placeholder="Методика подачі матеріалу"
+        placeholder={t('panel.flow.summary.placeholder.teachingApproach')}
         onChange={(v) => patch({ teaching_approach: v })}
       />
       <StringListEditor
-        label="Ключові активності"
+        label={t('panel.flow.summary.field.keyActivities')}
         items={draft.key_activities}
         onChange={(v) => patch({ key_activities: v })}
       />
       <StringListEditor
-        label="Типові помилки"
+        label={t('panel.flow.summary.field.commonMistakes')}
         items={draft.common_mistakes}
         onChange={(v) => patch({ common_mistakes: v })}
       />
@@ -530,31 +534,35 @@ function ReadOnlyContext({
   // Diff predicate (overview only); absent in edit mode → no highlight.
   changed?: (key: string) => boolean
 }) {
+  const t = useT()
   const f = view.final
   const ch = (key: string) => (changed ? changed(key) : false)
   return (
     <>
       <ChipField
-        label="Основні концепти"
+        label={t('panel.flow.summary.field.mainConcepts')}
         items={f.main_concepts}
         changed={ch('main_concepts')}
       />
       <ChipField
-        label="Другорядні концепти"
+        label={t('panel.flow.summary.field.secondaryConcepts')}
         items={f.secondary_concepts}
         changed={ch('secondary_concepts')}
       />
       <TextField
-        label="Охоплюючий контекст"
+        label={t('panel.flow.summary.field.enclosingContext')}
         value={f.enclosing_context}
         changed={ch('enclosing_context')}
       />
       {/* raw_observations is not in the snapshot — never diffed */}
-      <ListField label="Спостереження методиста" items={view.raw_observations} />
+      <ListField label={t('panel.flow.summary.field.rawObservations')} items={view.raw_observations} />
       <div className="text-xs text-ink-muted border-t border-canvas-dark/30 pt-3">
-        Документів: {f.own_documents_count} (з піддеревом{' '}
-        {f.cumulative_documents_count}) · символів: {f.own_chars_count} (з
-        піддеревом {f.cumulative_chars_count})
+        {t('panel.flow.summary.metrics', {
+          docs: f.own_documents_count,
+          cumDocs: f.cumulative_documents_count,
+          chars: f.own_chars_count,
+          cumChars: f.cumulative_chars_count,
+        })}
       </div>
     </>
   )
@@ -571,6 +579,7 @@ function FieldShell({
   changed?: boolean
   children: React.ReactNode
 }) {
+  const t = useT()
   // Diff highlight is a READ-ONLY visual marker — same read-only field, a
   // tinted frame + a "змінено" chip. It implies no editability (Ratified #9).
   return (
@@ -579,7 +588,7 @@ function FieldShell({
         {label}
         {changed && (
           <span className="text-[9px] px-1.5 py-px rounded-full bg-amber/15 text-amber-dark normal-case tracking-normal">
-            змінено
+            {t('panel.flow.summary.changed')}
           </span>
         )}
       </p>
@@ -747,6 +756,7 @@ function StringListEditor({
   items: string[]
   onChange: (items: string[]) => void
 }) {
+  const t = useT()
   const set = (i: number, v: string) =>
     onChange(items.map((it, idx) => (idx === i ? v : it)))
   const remove = (i: number) => onChange(items.filter((_, idx) => idx !== i))
@@ -764,7 +774,7 @@ function StringListEditor({
             <button
               className="p-2 rounded-lg hover:bg-coral-pale text-coral shrink-0"
               onClick={() => remove(i)}
-              title="Видалити"
+              title={t('panel.flow.summary.deleteItem')}
             >
               <Trash2 size={14} />
             </button>
@@ -772,7 +782,7 @@ function StringListEditor({
         ))}
         <button className="btn-secondary btn-sm" onClick={add}>
           <Plus size={14} />
-          Додати
+          {t('panel.flow.summary.addItem')}
         </button>
       </div>
     </FieldShell>
@@ -788,6 +798,7 @@ function PairEditor({
   items: LearningOutcomeItem[]
   onChange: (items: LearningOutcomeItem[]) => void
 }) {
+  const t = useT()
   // Canonical field order { name, description } — keeps JSON.stringify a
   // faithful change-detector (see buildChangedKeys).
   const set = (i: number, patch: Partial<LearningOutcomeItem>) =>
@@ -806,19 +817,19 @@ function PairEditor({
             <input
               className="input w-1/3"
               value={item.name}
-              placeholder="Назва"
+              placeholder={t('panel.flow.summary.pair.namePlaceholder')}
               onChange={(e) => set(i, { name: e.target.value })}
             />
             <input
               className="input flex-1"
               value={item.description}
-              placeholder="Опис"
+              placeholder={t('panel.flow.summary.pair.descriptionPlaceholder')}
               onChange={(e) => set(i, { description: e.target.value })}
             />
             <button
               className="p-2 rounded-lg hover:bg-coral-pale text-coral shrink-0"
               onClick={() => remove(i)}
-              title="Видалити"
+              title={t('panel.flow.summary.deleteItem')}
             >
               <Trash2 size={14} />
             </button>
@@ -826,7 +837,7 @@ function PairEditor({
         ))}
         <button className="btn-secondary btn-sm" onClick={add}>
           <Plus size={14} />
-          Додати пару
+          {t('panel.flow.summary.pair.addPair')}
         </button>
       </div>
     </FieldShell>

@@ -6,13 +6,14 @@ import type { FlowNodeData } from '../../../utils/treeToFlow'
 import { SummaryBadge } from '../SummaryBadge'
 import { pillHint, pillVocab, phasePillClass } from '../../../utils/stateVocabulary'
 import { documentLabel } from '../../../utils/documentLabel'
-import { useLanguage } from '../../../i18n/LanguageContext'
+import { useLanguage, useT } from '../../../i18n/LanguageContext'
 
 export const SectionNode = memo(function SectionNode({
   data,
   selected,
 }: NodeProps & { data: FlowNodeData }) {
   const language = useLanguage()
+  const t = useT()
   const docs = data.authored_documents
   const hasError = docs.some((m) => m.processing_phase === 'error')
   const hasAwaiting = docs.some((m) => m.processing_phase === 'awaiting_author')
@@ -107,7 +108,7 @@ export const SectionNode = memo(function SectionNode({
       {/* Footer stats */}
       {data.childrenCount > 0 && (
         <div className="text-[11px] text-ink-muted mt-2">
-          {data.childrenCount} підрозділів
+          {t('panel.flow.sectionNode.subsectionsCount', { count: data.childrenCount })}
         </div>
       )}
 

@@ -6,13 +6,14 @@ import type { FlowNodeData } from '../../../utils/treeToFlow'
 import { SummaryBadge } from '../SummaryBadge'
 import { pillHint, pillVocab, phasePillClass } from '../../../utils/stateVocabulary'
 import { documentLabel } from '../../../utils/documentLabel'
-import { useLanguage } from '../../../i18n/LanguageContext'
+import { useLanguage, useT } from '../../../i18n/LanguageContext'
 
 export const CourseRootNode = memo(function CourseRootNode({
   data,
   selected,
 }: NodeProps & { data: FlowNodeData }) {
   const language = useLanguage()
+  const t = useT()
   return (
     <div
       className={`
@@ -55,11 +56,11 @@ export const CourseRootNode = memo(function CourseRootNode({
       <div className="flex items-center gap-4 text-sm text-ink-muted">
         <span className="flex items-center gap-1.5">
           <Layers size={14} />
-          {data.childrenCount} розділів
+          {t('panel.flow.courseRootNode.sectionsCount', { count: data.childrenCount })}
         </span>
         <span className="flex items-center gap-1.5">
           <Paperclip size={14} />
-          {data.authored_documents.length} документів
+          {t('panel.flow.courseRootNode.documentsCount', { count: data.authored_documents.length })}
         </span>
       </div>
 

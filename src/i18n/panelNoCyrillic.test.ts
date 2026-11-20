@@ -32,12 +32,25 @@ export const MIGRATED_PANEL_FILES = [
   '/src/utils/relativeTime.ts',
   '/src/utils/formatDuration.ts',
   '/src/utils/formatBytes.ts',
+  '/src/components/flow/SummaryModal.tsx',
+  '/src/components/flow/NodeDetailPanel.tsx',
+  '/src/components/flow/FlowContextMenu.tsx',
+  '/src/components/flow/BaseManifestView.tsx',
+  '/src/components/flow/ProjectBaseSection.tsx',
+  '/src/components/flow/RejectionNotice.tsx',
+  '/src/components/flow/baseErrors.ts',
+  '/src/components/flow/SummaryBadge.tsx',
+  '/src/components/flow/RunStatePanel.tsx',
+  '/src/components/flow/ProjectBaseBadge.tsx',
+  '/src/components/flow/DocumentStructureBlock.tsx',
+  '/src/components/flow/nodes/CourseRootNode.tsx',
+  '/src/components/flow/nodes/SectionNode.tsx',
 ]
 
 const CYRILLIC = /[Ѐ-ӿ]/
 
 describe('the author panel migrated files have no Cyrillic', () => {
-  it('no literal in package 1 files contains Cyrillic characters', () => {
+  it('no literal in migrated files contains Cyrillic characters', () => {
     const found = MIGRATED_PANEL_FILES.flatMap((file) =>
       literalsOf(file)
         .filter((text) => CYRILLIC.test(text))
