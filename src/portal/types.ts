@@ -19,9 +19,8 @@ export interface PortalLoginResponse {
   student_id: string
   display_name: string | null
   // The language of the pages the student chose (ISO 639-3: "eng"), or null
-  // while they have not chosen. Optional on the wire: a server from before
-  // the field leaves it out, and the portal reads that as null.
-  interface_language?: string | null
+  // while they have not chosen.
+  interface_language: string | null
 }
 
 export interface PortalMe {
@@ -41,7 +40,7 @@ export interface PortalMe {
   // is the language of the pages (Г-1 §5).
   preferred_language: string | null
   // As on the sign-in answer: the language of the pages, or null.
-  interface_language?: string | null
+  interface_language: string | null
 }
 
 // ``PUT /api/v1/portal/me/interface-language``: the server takes a two- or
@@ -641,6 +640,8 @@ export interface PortalBillingConsent {
 export interface PortalBillingPackage {
   id: string
   units: number
+  // How long the package's units are valid from the day of purchase, in months.
+  validity_months: number
   // Price per currency (ISO 4217) in minor units; EUR always.
   prices_minor: Record<string, number>
 }

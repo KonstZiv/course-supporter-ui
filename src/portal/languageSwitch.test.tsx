@@ -28,6 +28,7 @@ import { portalLogin, PortalApiError } from './api/portalClient'
 import { PortalLanguageProvider } from './components/PortalLanguageProvider'
 import { usePortalLanguage } from './stores/language'
 import { usePortalSession } from './stores/session'
+import type { PortalLoginResponse } from './types'
 import { resetPortalLanguages } from './languages'
 import { resetSubmissionPolicy } from './submissionPolicy'
 import { STORAGE_KEYS } from '../privacy/surface'
@@ -136,7 +137,7 @@ describe('the sign-in', () => {
       student_id: 's',
       display_name: 'Olena',
       ...(interfaceLanguage === undefined ? {} : { interface_language: interfaceLanguage }),
-    })
+    } as unknown as PortalLoginResponse)
     renderAt(`/${T}/login`)
     fireEvent.change(screen.getByLabelText('Логін'), { target: { value: 'olena' } })
     fireEvent.change(screen.getByLabelText('Пароль'), { target: { value: 'secret' } })

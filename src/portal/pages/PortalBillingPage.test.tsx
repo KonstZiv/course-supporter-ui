@@ -67,10 +67,10 @@ const FULL_BALANCE: PortalBillingBalance = {
 // Ids no screen text would ever contain, so their absence is meaningful.
 const PACKAGES: PortalBillingPackages = {
   packages: [
-    { id: 'pkgid_alpha', units: 500, prices_minor: { EUR: 999 } },
-    { id: 'pkgid_beta', units: 1500, prices_minor: { EUR: 1499 } },
-    { id: 'pkgid_gamma', units: 5000, prices_minor: { EUR: 3999 } },
-    { id: 'pkgid_delta', units: 10000, prices_minor: { EUR: 6999 } },
+    { id: 'pkgid_alpha', units: 500, validity_months: 6, prices_minor: { EUR: 999 } },
+    { id: 'pkgid_beta', units: 1500, validity_months: 6, prices_minor: { EUR: 1499 } },
+    { id: 'pkgid_gamma', units: 5000, validity_months: 6, prices_minor: { EUR: 3999 } },
+    { id: 'pkgid_delta', units: 10000, validity_months: 6, prices_minor: { EUR: 6999 } },
   ],
   purchase: { open: true, reason: null },
 }

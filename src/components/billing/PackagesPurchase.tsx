@@ -197,7 +197,7 @@ export function PackagesPurchase({
                   {formatPriceEur(language, price)}
                 </p>
               )}
-              <p className="text-sm text-ink-light">{t('shared.packages.validity')}</p>
+              <p className="text-sm text-ink-light">{t('shared.packages.validity', { months: pkg.validity_months })}</p>
               {!closed && (
                 <button
                   type="button"

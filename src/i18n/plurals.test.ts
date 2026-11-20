@@ -103,3 +103,21 @@ describe('plural forms in uk, as before the catalog', () => {
     ).toBe(text)
   })
 })
+
+describe('package validity plural forms', () => {
+  it.each([
+    [1, 'Діє 1 місяць від дня купівлі.'],
+    [3, 'Діє 3 місяці від дня купівлі.'],
+    [12, 'Діє 12 місяців від дня купівлі.'],
+  ])('uk: %i months → %s', (months, text) => {
+    expect(translate('uk', 'shared.packages.validity', { months })).toBe(text)
+  })
+
+  it.each([
+    [1, 'Valid for 1 month from the day of purchase.'],
+    [3, 'Valid for 3 months from the day of purchase.'],
+    [12, 'Valid for 12 months from the day of purchase.'],
+  ])('en: %i months → %s', (months, text) => {
+    expect(translate('en', 'shared.packages.validity', { months })).toBe(text)
+  })
+})

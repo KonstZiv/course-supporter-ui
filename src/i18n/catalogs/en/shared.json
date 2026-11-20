@@ -67,9 +67,9 @@
   "shared.statement.unchanged": "Balance unchanged",
   "shared.statement.more": "Show more",
   "shared.packages.title": "Packages",
-  "shared.packages.validity": "Valid for six months from the day of purchase.",
+  "shared.packages.validity": "Valid for {months, plural, one {# month} other {# months}} from the day of purchase.",
   "shared.packages.opening": "Opening the checkout page…",
   "shared.packages.buy": "Buy",
-  "shared.packages.pricesNote": "Package prices are in euros. Whether they include taxes depends on the buyer’s country; the final amount is shown on the checkout page before payment.",
+  "shared.packages.pricesNote": "Package prices are in euros. Prices are shown excluding taxes, which may be charged in addition depending on the laws of your country of tax residence; the final amount is shown on the checkout page before payment.",
   "shared.packages.sellerNote": "Payment is accepted by our merchant of record; its name is shown on the checkout page. After payment, you will return to this page."
 }

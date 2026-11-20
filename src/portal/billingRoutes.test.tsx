@@ -109,6 +109,7 @@ describe('portal billing routes', () => {
       token_type: 'bearer',
       student_id: '019edaa5-1111-7000-8000-000000000001',
       display_name: 'Олена',
+      interface_language: null,
     })
     const router = renderAt(`/${T}/billing/checkouts/abc`)
     expect(await screen.findByLabelText('Логін')).toBeInTheDocument()
