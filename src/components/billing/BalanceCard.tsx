@@ -1,7 +1,7 @@
 import type { BillingBalanceResponse } from '../../types/api'
 import { useLanguage, useT } from '../../i18n/LanguageContext'
 import { formatDate, formatUnits } from '../../utils/units'
-import { SITE_PRICING_URL } from '../site/siteLinks'
+import { siteUrl } from '../site/siteLinks'
 import { NewTabLink } from './NewTabLink'
 
 interface BalanceCardProps {
@@ -33,11 +33,11 @@ export function BalanceCard({
   const { reserved, held, next_expiry: expiry } = balance
   const difference = withDifference ? balance.difference : 0
   const nothing =
-    balance.balance === 0 &&
-    reserved === 0 &&
-    held === 0 &&
-    difference === 0 &&
-    expiry === null
+  balance.balance === 0 &&
+  reserved === 0 &&
+  held === 0 &&
+  difference === 0 &&
+  expiry === null
 
   return (
     <section aria-labelledby="billing-balance" className="card p-6 space-y-3">
@@ -72,7 +72,7 @@ export function BalanceCard({
         {nothing && <p>{t('shared.balance.nothing')}</p>}
       </div>
       <p>
-        <NewTabLink href={SITE_PRICING_URL}>{t('shared.balance.pricingLink')}</NewTabLink>
+        <NewTabLink href={siteUrl(language, 'pricing')}>{t('shared.balance.pricingLink')}</NewTabLink>
       </p>
     </section>
   )

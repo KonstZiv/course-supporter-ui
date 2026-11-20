@@ -1,4 +1,7 @@
 import { ContactAdmin } from '../components/ui/ContactAdmin'
+import { docsUrl } from '../components/site/siteLinks'
+import { useLanguage } from '../i18n/LanguageContext'
+import type { Language } from '../i18n/languages'
 
 // Help page: brief author path with links to the documentation site,
 // and direct contact affordance for the platform administrator.
@@ -12,107 +15,112 @@ interface StepItem {
   parts: StepPart[]
 }
 
-const AUTHOR_STEPS: StepItem[] = [
-  {
-    parts: [
-      { text: 'Увійдіть у програму автора ключем доступу — ' },
-      {
-        text: 'Вхід і перший курс',
-        href: 'https://about.pythoncourse.me/uk/authors/first-course/',
-      },
-      { text: '.' },
-    ],
-  },
-  {
-    parts: [
-      { text: 'Створіть курс і вкажіть його мову — ' },
-      {
-        text: 'там само',
-        href: 'https://about.pythoncourse.me/uk/authors/first-course/',
-      },
-      { text: '.' },
-    ],
-  },
-  {
-    parts: [
-      {
-        text: 'Створіть розділи курсу — одразу в тому порядку, у якому їх має бачити студент: ',
-      },
-      {
-        text: 'Структура курсу',
-        href: 'https://about.pythoncourse.me/uk/authors/structure/',
-      },
-      { text: '.' },
-    ],
-  },
-  {
-    parts: [
-      {
-        text: 'Завантажте в кожен розділ матеріали: навчальні — для студентів, методичні — для помічників платформи: ',
-      },
-      {
-        text: 'Матеріали',
-        href: 'https://about.pythoncourse.me/uk/authors/materials/',
-      },
-      { text: '.' },
-    ],
-  },
-  {
-    parts: [
-      { text: 'Додайте завдання й тести: ' },
-      {
-        text: 'Завдання',
-        href: 'https://about.pythoncourse.me/uk/authors/tasks/',
-      },
-      { text: ', ' },
-      {
-        text: 'Тести',
-        href: 'https://about.pythoncourse.me/uk/authors/tests/',
-      },
-      { text: '.' },
-    ],
-  },
-  {
-    parts: [
-      { text: 'Коли залито все, запустіть Методиста для всього курсу — ' },
-      {
-        text: 'Описи розділів: Методист',
-        href: 'https://about.pythoncourse.me/uk/authors/methodist/#when',
-      },
-      { text: '.' },
-    ],
-  },
-  {
-    parts: [
-      {
-        text: 'Перегляньте описи розділів, виправте, що треба, і затвердьте — ',
-      },
-      {
-        text: 'там само',
-        href: 'https://about.pythoncourse.me/uk/authors/methodist/#edit',
-      },
-      { text: '.' },
-    ],
-  },
-  {
-    parts: [{ text: 'Додайте студентів і зарахуйте їх на курс.' }],
-  },
-  {
-    parts: [
-      { text: 'Стежте за витратами — ' },
-      {
-        text: 'Витрати й історія',
-        href: 'https://about.pythoncourse.me/uk/authors/costs-history/',
-      },
-      { text: '.' },
-    ],
-  },
-]
+function getAuthorSteps(language: Language): StepItem[] {
+  return [
+    {
+      parts: [
+        { text: 'Увійдіть у програму автора ключем доступу — ' },
+        {
+          text: 'Вхід і перший курс',
+          href: docsUrl(language, 'authors/first-course/'),
+        },
+        { text: '.' },
+      ],
+    },
+    {
+      parts: [
+        { text: 'Створіть курс і вкажіть його мову — ' },
+        {
+          text: 'там само',
+          href: docsUrl(language, 'authors/first-course/'),
+        },
+        { text: '.' },
+      ],
+    },
+    {
+      parts: [
+        {
+          text: 'Створіть розділи курсу — одразу в тому порядку, у якому їх має бачити студент: ',
+        },
+        {
+          text: 'Структура курсу',
+          href: docsUrl(language, 'authors/structure/'),
+        },
+        { text: '.' },
+      ],
+    },
+    {
+      parts: [
+        {
+          text: 'Завантажте в кожен розділ матеріали: навчальні — для студентів, методичні — для помічників платформи: ',
+        },
+        {
+          text: 'Матеріали',
+          href: docsUrl(language, 'authors/materials/'),
+        },
+        { text: '.' },
+      ],
+    },
+    {
+      parts: [
+        { text: 'Додайте завдання й тести: ' },
+        {
+          text: 'Завдання',
+          href: docsUrl(language, 'authors/tasks/'),
+        },
+        { text: ', ' },
+        {
+          text: 'Тести',
+          href: docsUrl(language, 'authors/tests/'),
+        },
+        { text: '.' },
+      ],
+    },
+    {
+      parts: [
+        { text: 'Коли залито все, запустіть Методиста для всього курсу — ' },
+        {
+          text: 'Описи розділів: Методист',
+          href: docsUrl(language, 'authors/methodist/#when'),
+        },
+        { text: '.' },
+      ],
+    },
+    {
+      parts: [
+        {
+          text: 'Перегляньте описи розділів, виправте, що треба, і затвердьте — ',
+        },
+        {
+          text: 'там само',
+          href: docsUrl(language, 'authors/methodist/#edit'),
+        },
+        { text: '.' },
+      ],
+    },
+    {
+      parts: [{ text: 'Додайте студентів і зарахуйте їх на курс.' }],
+    },
+    {
+      parts: [
+        { text: 'Стежте за витратами — ' },
+        {
+          text: 'Витрати й історія',
+          href: docsUrl(language, 'authors/costs-history/'),
+        },
+        { text: '.' },
+      ],
+    },
+  ]
+}
 
 // прибрати, коли на сайті з'явиться сторінка про студентів
 export const STEPS_IN_PROGRESS_NOTE = 'Сторінка про крок 8 ще готується.'
 
 export function HelpPage() {
+  const language = useLanguage()
+  const authorSteps = getAuthorSteps(language)
+
   return (
     <div className="max-w-[1600px] mx-auto px-6 py-8">
       <div className="max-w-3xl space-y-8">
@@ -132,7 +140,7 @@ export function HelpPage() {
           </p>
 
           <ol className="list-decimal list-inside space-y-2 text-ink">
-            {AUTHOR_STEPS.map((step, idx) => (
+            {authorSteps.map((step, idx) => (
               <li key={idx} className="text-ink">
                 {step.parts.map((part, pIdx) =>
                   part.href ? (
@@ -158,7 +166,7 @@ export function HelpPage() {
             <p>
               Хто з помічників що читає —{' '}
               <a
-                href="https://about.pythoncourse.me/uk/authors/how-it-works/"
+                href={docsUrl(language, 'authors/how-it-works/')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-navy underline underline-offset-2 hover:text-navy-light"
@@ -167,7 +175,7 @@ export function HelpPage() {
               </a>
               . Усі сторінки для авторів —{' '}
               <a
-                href="https://about.pythoncourse.me/uk/authors/"
+                href={docsUrl(language, 'authors/')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-navy underline underline-offset-2 hover:text-navy-light"
