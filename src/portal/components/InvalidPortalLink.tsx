@@ -7,6 +7,7 @@ import {
 import { useLanguage, useT } from '../../i18n/LanguageContext'
 import { Message } from '../../i18n/Message'
 import { AUTHOR_APP_URL } from '../portalLinks'
+import { PublicLanguageBar } from './LanguageSwitcher'
 
 /**
  * The portal's neutral page: any address that is not a portal page — the
@@ -24,6 +25,7 @@ export function InvalidPortalLink() {
   ]
   return (
     <div className="flex-1 flex flex-col">
+      <PublicLanguageBar />
       <SiteHeader links={headerLinks} />
 
       <main className="flex-1 w-full max-w-[36rem] mx-auto px-4 py-10 sm:py-16">

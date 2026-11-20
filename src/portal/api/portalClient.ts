@@ -18,6 +18,8 @@ import type {
   PortalBillingTerms,
   PortalCourseListItem,
   PortalDoorRefusal,
+  PortalInterfaceLanguage,
+  PortalInterfaceLanguageRequest,
   PortalLanguagesResponse,
   PortalLoginRequest,
   PortalLoginResponse,
@@ -179,18 +181,19 @@ async function authPost<T>(path: string, body: FormData): Promise<T> {
   return res.json() as Promise<T>
 }
 
-// Authenticated JSON POST (R3): the recovery-email set/change. Same bearer +
-// 401-clear-redirect contract as authGet/authPost, but a JSON body (the
-// existing authPost is multipart-only for file submission). Returns the parsed
-// 200 body; non-401 errors (422 validation) throw for inline rendering.
-async function postAuthJson<T>(path: string, body: unknown): Promise<T> {
+// Authenticated JSON request (R3): the recovery-email set/change, the
+// interface language. Same bearer + 401-clear-redirect contract as
+// authGet/authPost, but a JSON body (authPost is multipart-only for file
+// submission). Returns the parsed 200 body; non-401 errors (422 validation)
+// throw for inline rendering.
+async function sendAuthJson<T>(method: 'POST' | 'PUT', path: string, body: unknown): Promise<T> {
   const { token, tenantId } = usePortalSession.getState()
   if (!token) {
     redirectToLogin(tenantId)
     throw new PortalApiError(401, 'No portal session')
   }
   const res = await fetch(`${BASE_URL}${path}`, {
-    method: 'POST',
+    method,
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
@@ -208,8 +211,16 @@ async function postAuthJson<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>
 }
 
+const postAuthJson = <T>(path: string, body: unknown) => sendAuthJson<T>('POST', path, body)
+
 export const portalApi = {
   me: () => authGet<PortalMe>('/api/v1/portal/me'),
+  // Г-1: the language of the pages, kept in the student's account. The server
+  // answers with what it now keeps, in three letters ("eng").
+  setInterfaceLanguage: (language: string) =>
+    sendAuthJson<PortalInterfaceLanguage>('PUT', '/api/v1/portal/me/interface-language', {
+      language,
+    } satisfies PortalInterfaceLanguageRequest),
   submitTask: (taskId: string, body: FormData) =>
     authPost<PortalSubmitResponse>(
       `/api/v1/portal/tasks/${taskId}/submissions`,

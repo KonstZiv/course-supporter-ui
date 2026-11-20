@@ -4,6 +4,7 @@ import { BookOpen, ArrowRight, AlertCircle, CheckCircle2, Loader2 } from 'lucide
 import { portalApi, PortalApiError } from '../api/portalClient'
 import { isUuid } from '../uuid'
 import { InvalidPortalLink } from '../components/InvalidPortalLink'
+import { PublicPage } from '../components/PublicPage'
 import { useLanguage, useT } from '../../i18n/LanguageContext'
 import { PASSWORD_MIN_LENGTH, flowError } from '../recoveryTexts'
 
@@ -32,7 +33,7 @@ export function PortalResetPasswordPage() {
   }
 
   const shell = (children: React.ReactNode) => (
-    <div className="flex-1 flex items-center justify-center px-6 py-10">
+    <PublicPage>
       <div className="w-full max-w-sm">
         <div className="flex items-center gap-3 mb-10">
           <div className="w-10 h-10 rounded-xl bg-navy flex items-center justify-center">
@@ -43,7 +44,7 @@ export function PortalResetPasswordPage() {
         <h2 className="font-display text-2xl text-ink mb-2">{t('portal.recovery.reset.title')}</h2>
         {children}
       </div>
-    </div>
+    </PublicPage>
   )
 
   if (!token) {

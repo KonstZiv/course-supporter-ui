@@ -3,6 +3,8 @@ import { Loader2, Send, CheckCircle2, AlertCircle, HelpCircle } from 'lucide-rea
 import { doorRefusal, portalApi, PortalApiError, unitsShortfall } from '../api/portalClient'
 import type { PortalLanguageEntry, TestStructureResponse } from '../types'
 import { getPortalLanguages } from '../languages'
+import { defaultReviewLanguage } from '../reviewLanguage'
+import { iso3Of } from '../../i18n/languages'
 import { submitErrorMessage } from '../submissionCodes'
 import { TEST_THRESHOLD, testCostView } from '../reviewCost'
 import { useReviewEstimate } from '../hooks/useReviewEstimate'
@@ -65,12 +67,16 @@ export function PortalTestForm({
   const [state, setState] = useState<TestFormState>('idle')
   const [message, setMessage] = useState('')
   const [sentId, setSentId] = useState<string | null>(null)
-  const [language, setLanguage] = useState('')
+  // The review language the student picked in the field; until then the
+  // field opens on the default (``defaultReviewLanguage``).
+  const [chosenLanguage, setChosenLanguage] = useState<string | null>(null)
   const [languages, setLanguages] = useState<PortalLanguageEntry[]>([])
 
   // The reader's language — not the review's (``language`` above).
   const uiLanguage = useLanguage()
   const t = useT()
+  const language =
+    chosenLanguage ?? defaultReviewLanguage(iso3Of(uiLanguage), courseLanguage, languages)
   const estimate = useReviewEstimate(taskId, null)
   const cost = testCostView(estimate.outcome, estimate.last)
   useUnitsWait(cost === 'panel' ? TEST_THRESHOLD : null, estimate.askAgain)
@@ -96,26 +102,13 @@ export function PortalTestForm({
     }
   }, [taskId, reloadKey])
 
-  // The language list and the student's standing choice — the same two reads,
-  // failing soft the same way, as the file form's review-language field.
+  // The language list — the same read, failing soft the same way, as the file
+  // form's review-language field; the same default (``defaultReviewLanguage``).
   useEffect(() => {
     let active = true
     getPortalLanguages()
       .then((items) => {
         if (active) setLanguages(items)
-      })
-      .catch(() => undefined)
-    return () => {
-      active = false
-    }
-  }, [])
-
-  useEffect(() => {
-    let active = true
-    portalApi
-      .me()
-      .then((me) => {
-        if (active && me.preferred_language) setLanguage(me.preferred_language)
       })
       .catch(() => undefined)
     return () => {
@@ -279,7 +272,7 @@ export function PortalTestForm({
                 </span>
                 <select
                   value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
+                  onChange={(e) => setChosenLanguage(e.target.value)}
                   className="input"
                 >
                   {courseLanguage !== null && (

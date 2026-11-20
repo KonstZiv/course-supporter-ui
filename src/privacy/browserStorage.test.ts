@@ -15,11 +15,13 @@ const EXPECTED_KEYS = {
   portalStudent: 'cs_portal_student',
   portalName: 'cs_portal_name',
   rolesIntroSeen: 'cs_roles_intro_seen',
+  portalLanguage: 'cs_ui_language',
 }
 const EXPECTED_MODULES = [
   'src/stores/auth.ts',
   'src/portal/stores/session.ts',
   'src/components/ui/rolesIntro.ts',
+  'src/portal/stores/language.ts',
 ]
 
 // Source as the bundler sees it — tests excluded — and surface.ts itself.

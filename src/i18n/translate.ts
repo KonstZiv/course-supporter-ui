@@ -7,6 +7,8 @@
 // or a key its catalog lacks, falls back to the default language's message.
 
 import { IntlMessageFormat, type FormatXMLElementFn, type PrimitiveType } from 'intl-messageformat'
+import enPortal from './catalogs/en/portal.json'
+import enShared from './catalogs/en/shared.json'
 import ukPortal from './catalogs/uk/portal.json'
 import ukShared from './catalogs/uk/shared.json'
 import { DEFAULT_LANGUAGE, localeOf, type Language } from './languages'
@@ -22,7 +24,9 @@ export type MessageValues = Record<string, PrimitiveType>
 /** A message with markup also takes a function per tag: `<b>…</b>`. */
 export type RichValues<T> = Record<string, PrimitiveType | T | FormatXMLElementFn<T>>
 
-const CATALOGS: Partial<Record<Language, Partial<Catalog>>> = { uk: UK }
+const EN: Catalog = { ...enShared, ...enPortal }
+
+const CATALOGS: Partial<Record<Language, Partial<Catalog>>> = { uk: UK, en: EN }
 
 const compiledMessages = new Map<string, IntlMessageFormat>()
 

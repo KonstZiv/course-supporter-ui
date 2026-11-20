@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { IntlMessageFormat } from 'intl-messageformat'
 import ukPortal from './catalogs/uk/portal.json'
 import ukShared from './catalogs/uk/shared.json'
+import enShared from './catalogs/en/shared.json'
 import { localeOf } from './languages'
 import { SOURCES, literalsOf } from './sourceScan'
 
@@ -55,6 +56,11 @@ describe('the uk catalog', () => {
   it('the consent checkbox line holds the words its two links are made of', () => {
     expect(uk['shared.consent.checkbox']).toContain(uk['shared.consent.termsLinkWords'])
     expect(uk['shared.consent.checkbox']).toContain(uk['shared.consent.refundsLinkWords'])
+  })
+
+  it('the consent checkbox line holds the words of its two links in en too', () => {
+    expect(enShared['shared.consent.checkbox']).toContain(enShared['shared.consent.termsLinkWords'])
+    expect(enShared['shared.consent.checkbox']).toContain(enShared['shared.consent.refundsLinkWords'])
   })
 
   it('names the author of the course, never a teacher (5.6)', () => {
