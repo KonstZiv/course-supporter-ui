@@ -3,6 +3,7 @@ import type { CheckoutSource } from '../../hooks/useCheckoutWatch'
 import { ContactAdmin } from '../ui/ContactAdmin'
 import { PaymentResult } from './PaymentResult'
 import { ReturnToWork } from './ReturnToWork'
+import { useT } from '../../i18n/LanguageContext'
 
 // The author's checkouts, asked with the author's key.
 const AUTHOR_CHECKOUTS: CheckoutSource = {
@@ -30,6 +31,8 @@ export function CheckoutNotice({
   onCredited,
   onDismiss,
 }: CheckoutNoticeProps) {
+  const t = useT()
+
   return (
     <PaymentResult
       checkoutRef={checkoutRef}
@@ -40,8 +43,7 @@ export function CheckoutNotice({
       stoppedNote={
         <>
           <p>
-            Якщо ви сплатили, а юніти не з'являться протягом години,
-            напишіть адміністраторові платформи.
+            {t('panel.billing.checkoutNotice.hourNote')}
           </p>
           <ContactAdmin fallback="always" />
         </>

@@ -191,20 +191,20 @@ describe('batchPriceView — a batch of files', () => {
 
 describe('the words', () => {
   it('row 4', () => {
-    expect(priceEnoughText(1200, 1500)).toBe(
+    expect(priceEnoughText('uk', 1200, 1500)).toBe(
       `Орієнтовна вартість: приблизно 1${NB}200 юнітів. У вас доступно 1${NB}500 юнітів.`,
     )
   })
 
   it('row 5', () => {
-    expect(priceShortText(120, 40, 80)).toBe(
+    expect(priceShortText('uk', 120, 40, 80)).toBe(
       'Ця дія коштує приблизно 120 юнітів, у вас 40 юнітів. Не вистачає 80 юнітів.',
     )
   })
 
   it('files left out of a batch: "файл" after the number', () => {
-    expect(unpricedFilesText(1, 3)).toBe('Для 1 з 3 файлів порахувати до обробки не вдалося.')
-    expect(unpricedFilesText(2, 5)).toBe('Для 2 з 5 файлів порахувати до обробки не вдалося.')
-    expect(unpricedFilesText(1, 21)).toBe('Для 1 з 21 файла порахувати до обробки не вдалося.')
+    expect(unpricedFilesText('uk', 1, 3)).toBe('Для 1 з 3 файлів порахувати до обробки не вдалося.')
+    expect(unpricedFilesText('uk', 2, 5)).toBe('Для 2 з 5 файлів порахувати до обробки не вдалося.')
+    expect(unpricedFilesText('uk', 1, 21)).toBe('Для 1 з 21 файла порахувати до обробки не вдалося.')
   })
 })

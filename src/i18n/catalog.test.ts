@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { IntlMessageFormat } from 'intl-messageformat'
+import ukPanel from './catalogs/uk/panel.json'
 import ukPortal from './catalogs/uk/portal.json'
 import ukShared from './catalogs/uk/shared.json'
 import enShared from './catalogs/en/shared.json'
@@ -11,13 +12,14 @@ import { SOURCES, literalsOf } from './sourceScan'
 // formatter reads. Keys are written out in full where they are used — never
 // built from parts — so this reading of the code finds them all.
 
-const KEY = /^(portal|shared)(\.[A-Za-z0-9]+){2,}$/
+const KEY = /^(portal|shared|panel)(\.[A-Za-z0-9]+){2,}$/
 
-const catalogs = { 'portal.json': ukPortal, 'shared.json': ukShared } as Record<
-  string,
-  Record<string, string>
->
-const uk: Record<string, string> = { ...ukShared, ...ukPortal }
+const catalogs = {
+  'portal.json': ukPortal,
+  'shared.json': ukShared,
+  'panel.json': ukPanel,
+} as Record<string, Record<string, string>>
+const uk: Record<string, string> = { ...ukShared, ...ukPortal, ...ukPanel }
 
 const used = new Set(
   Object.keys(SOURCES).flatMap((file) => literalsOf(file).filter((text) => KEY.test(text))),
@@ -27,8 +29,9 @@ describe('the uk catalog', () => {
   it('each file holds its own keys, and no key is in both', () => {
     expect(Object.keys(ukPortal).every((key) => key.startsWith('portal.'))).toBe(true)
     expect(Object.keys(ukShared).every((key) => key.startsWith('shared.'))).toBe(true)
+    expect(Object.keys(ukPanel).every((key) => key.startsWith('panel.'))).toBe(true)
     expect(Object.keys(uk)).toHaveLength(
-      Object.keys(ukPortal).length + Object.keys(ukShared).length,
+      Object.keys(ukPortal).length + Object.keys(ukShared).length + Object.keys(ukPanel).length,
     )
   })
 

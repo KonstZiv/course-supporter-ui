@@ -35,6 +35,7 @@ import type {
   MaterialRole,
 } from '../../types/api'
 import { estimateKindOf, kindOnlyPriceLine } from '../../utils/kindOnlyPrice'
+import { useLanguage } from '../../i18n/LanguageContext'
 
 export interface MenuPosition {
   x: number
@@ -87,6 +88,7 @@ const PIPELINE_INFO: Record<string, { title: string; description: string }> = {
 }
 
 export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
+  const language = useLanguage()
   const ref = useRef<HTMLDivElement>(null)
   const [showRename, setShowRename] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
@@ -276,7 +278,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
       // The price first, with a kind alone (the materials are on the server):
       // one line for the whole node, not one per material.
       const kind = estimateKindOf(failed[0]!.source_type)
-      if (kind) line = await kindOnlyPriceLine(position.nodeId, kind, failed.length)
+      if (kind) line = await kindOnlyPriceLine(language, position.nodeId, kind, failed.length)
     } finally {
       setBusy(false)
     }
@@ -285,7 +287,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
       return
     }
     await retryFailed(failed)
-  }, [position.nodeId, retryFailed])
+  }, [language, position.nodeId, retryFailed])
 
   const closeProcessNotice = useCallback(() => {
     setProcessNotice(null)

@@ -9,6 +9,7 @@ import {
   structureReasonPhrase,
 } from '../../utils/codeStructureReasons'
 import { formatBytes } from '../../utils/formatBytes'
+import { useLanguage } from '../../i18n/LanguageContext'
 
 // What a code material's processing left out, on the author's own card
 // (step Г2 §2.6, the post-hoc half of R5 visibility).
@@ -39,6 +40,7 @@ function StructureGroup({
   title: string
   entries: DocumentStructureEntry[]
 }) {
+  const language = useLanguage()
   if (entries.length === 0) return null
   return (
     <div className="space-y-0.5">
@@ -60,7 +62,7 @@ function StructureGroup({
             )}
             <span className="text-ink-muted whitespace-nowrap">
               {' '}
-              ({formatBytes(e.size)})
+              ({formatBytes(language, e.size)})
             </span>
           </li>
         ))}

@@ -12,24 +12,24 @@ function ago(ms: number): string {
 
 describe('relativeTime', () => {
   it('renders "щойно" under a minute', () => {
-    expect(relativeTime(ago(10_000), NOW)).toBe('щойно')
+    expect(relativeTime('uk', ago(10_000), NOW)).toBe('щойно')
   })
 
   it('renders Ukrainian minute plurals', () => {
-    expect(relativeTime(ago(5 * MIN), NOW)).toContain('хвилин')
+    expect(relativeTime('uk', ago(5 * MIN), NOW)).toContain('хвилин')
   })
 
   it('renders hours within a day', () => {
-    expect(relativeTime(ago(3 * HOUR), NOW)).toContain('годин')
+    expect(relativeTime('uk', ago(3 * HOUR), NOW)).toContain('годин')
   })
 
   it('renders the day-ago word (numeric: auto — ICU spells it "учора")', () => {
     // Assert the stem, not the exact у/в spelling: CLDR uses "учора", and the
     // variant can shift with the ICU version. Both are correct Ukrainian.
-    expect(relativeTime(ago(1 * DAY), NOW)).toMatch(/чора/)
+    expect(relativeTime('uk', ago(1 * DAY), NOW)).toMatch(/чора/)
   })
 
   it('renders days beyond that', () => {
-    expect(relativeTime(ago(4 * DAY), NOW)).toContain('дн')
+    expect(relativeTime('uk', ago(4 * DAY), NOW)).toContain('дн')
   })
 })

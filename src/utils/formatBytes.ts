@@ -12,15 +12,23 @@
  * is not the reason to open it. If a third caller appears, that is the moment
  * to reconsider.
  */
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} Б`
+
+import type { Language } from '../i18n/languages'
+import { localeOf } from '../i18n/languages'
+import { translate } from '../i18n/translate'
+
+export function formatBytes(language: Language, bytes: number): string {
+  if (bytes < 1024) return translate(language, 'panel.size.bytes', { n: String(bytes) })
   const kb = bytes / 1024
-  if (kb < 1024) return `${round(kb)} КБ`
-  return `${round(kb / 1024)} МБ`
+  if (kb < 1024) return translate(language, 'panel.size.kilobytes', { n: round(language, kb) })
+  return translate(language, 'panel.size.megabytes', { n: round(language, kb / 1024) })
 }
 
-// The decimal comma Ukrainian uses; one decimal below ten, whole numbers above
-// — past ten the fraction is noise.
-function round(n: number): string {
-  return (n < 10 ? n.toFixed(1) : String(Math.round(n))).replace('.', ',')
+function decimalSeparator(language: Language): string {
+  const parts = new Intl.NumberFormat(localeOf(language)).formatToParts(1.5)
+  return parts.find((p) => p.type === 'decimal')?.value ?? '.'
+}
+
+function round(language: Language, n: number): string {
+  return n < 10 ? n.toFixed(1).replace('.', decimalSeparator(language)) : String(Math.round(n))
 }

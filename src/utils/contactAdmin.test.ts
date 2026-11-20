@@ -3,26 +3,26 @@ import { useAuthStore } from '../stores/auth'
 import {
   asksToWriteToAdmin,
   formatWhen,
-  LETTER_SUBJECT,
+  letterSubject,
   SUPPORT_ADDRESS,
   supportLetter,
-  WRITE_TO_US_PHRASE,
+  writeToUsPhrase,
 } from './contactAdmin'
 
 describe('contactAdmin', () => {
   it('exports constant phrase and support address', () => {
-    expect(WRITE_TO_US_PHRASE).toBe('напишіть нам')
+    expect(writeToUsPhrase('uk')).toBe('напишіть нам')
     expect(SUPPORT_ADDRESS).toBe('support@pythoncourse.me')
   })
 
   it('subject is literally "Course Supporter: звернення з програми автора"', () => {
-    expect(LETTER_SUBJECT).toBe('Course Supporter: звернення з програми автора')
-    const letter = supportLetter({})
+    expect(letterSubject('uk')).toBe('Course Supporter: звернення з програми автора')
+    const letter = supportLetter('uk', {})
     expect(letter.subject).toBe('Course Supporter: звернення з програми автора')
   })
 
   it('generates expected body without message (help page query)', () => {
-    const letter = supportLetter({})
+    const letter = supportLetter('uk', {})
     const expected = [
       'Добрий день!',
       '',
@@ -44,7 +44,7 @@ describe('contactAdmin', () => {
 
   it('generates expected body with message and all context fields', () => {
     const fixedNow = new Date('2026-11-03T14:32:00+01:00')
-    const letter = supportLetter({
+    const letter = supportLetter('uk', {
       message: 'Сторінку не вдалося показати. Оновіть її; якщо повториться, напишіть нам.',
       context: {
         course: 'Python',
@@ -83,7 +83,7 @@ describe('contactAdmin', () => {
   })
 
   it('omits empty, null, or missing context lines entirely', () => {
-    const letter = supportLetter({
+    const letter = supportLetter('uk', {
       message: 'Помилка мережі. Якщо повториться, напишіть нам.',
       context: {
         course: '',
@@ -119,7 +119,7 @@ describe('contactAdmin', () => {
     const longCourse = 'c'.repeat(150)
     const longSection = 's'.repeat(130)
 
-    const letter = supportLetter({
+    const letter = supportLetter('uk', {
       message: longMsg,
       context: {
         course: longCourse,
@@ -137,7 +137,7 @@ describe('contactAdmin', () => {
   })
 
   it('replaces linebreaks in values with a space', () => {
-    const letter = supportLetter({
+    const letter = supportLetter('uk', {
       message: 'Рядок 1\r\nРядок 2\nРядок 3',
       context: {
         course: 'Курс\nЧастина 1',
@@ -149,7 +149,7 @@ describe('contactAdmin', () => {
   })
 
   it('keeps href length <= 1900 even with a 5000-char message and four 500-char context values', () => {
-    const letter = supportLetter({
+    const letter = supportLetter('uk', {
       message: 'П'.repeat(5000),
       context: {
         course: 'К'.repeat(500),
@@ -172,7 +172,7 @@ describe('contactAdmin', () => {
     useAuthStore.setState({ apiKey: secretKey, connected: true })
     localStorage.setItem('cs_api_key', secretKey)
 
-    const letter = supportLetter({
+    const letter = supportLetter('uk', {
       message: 'Сталася помилка, напишіть нам.',
       context: {
         course: 'Python 101',
@@ -200,27 +200,28 @@ describe('contactAdmin', () => {
 
     for (const [index, text] of SEVEN_TEXTS.entries()) {
       it(`returns true for section 2 message #${index + 1}`, () => {
-        expect(asksToWriteToAdmin(text)).toBe(true)
+        expect(asksToWriteToAdmin('uk', text)).toBe(true)
       })
     }
 
     it('returns false for message without the phrase', () => {
       expect(
         asksToWriteToAdmin(
+          'uk',
           'Файл завеликий. Зменште його або розділіть на частини.',
         ),
       ).toBe(false)
     })
 
     it('returns false for null, undefined, and empty string', () => {
-      expect(asksToWriteToAdmin(null)).toBe(false)
-      expect(asksToWriteToAdmin(undefined)).toBe(false)
-      expect(asksToWriteToAdmin('')).toBe(false)
+      expect(asksToWriteToAdmin('uk', null)).toBe(false)
+      expect(asksToWriteToAdmin('uk', undefined)).toBe(false)
+      expect(asksToWriteToAdmin('uk', '')).toBe(false)
     })
 
     it('checks case-insensitively', () => {
-      expect(asksToWriteToAdmin('НАПИШІТЬ НАМ')).toBe(true)
-      expect(asksToWriteToAdmin('Напишіть нам')).toBe(true)
+      expect(asksToWriteToAdmin('uk', 'НАПИШІТЬ НАМ')).toBe(true)
+      expect(asksToWriteToAdmin('uk', 'Напишіть нам')).toBe(true)
     })
   })
 })

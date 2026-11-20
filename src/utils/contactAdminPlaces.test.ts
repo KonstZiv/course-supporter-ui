@@ -12,12 +12,10 @@ const sources = import.meta.glob<string>(
 describe('contactAdminPlaces', () => {
   it('counts occurrences of "напишіть нам" across non-test source files', () => {
     const EXPECTED_COUNTS: Record<string, number> = {
-      'RouteErrorPage.tsx': 1,
       'NodeDetailPanel.tsx': 1,
       'FlowContextMenu.tsx': 1,
       'ingestErrors.ts': 2,
       'testRefusals.ts': 2,
-      'authorBillingTexts.ts': 3,
     }
 
     const actualCounts: Record<string, number> = {}

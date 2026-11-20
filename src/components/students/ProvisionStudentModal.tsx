@@ -4,28 +4,8 @@ import { AlertCircle, Loader2 } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { studentsApi } from '../../api/students'
 import { studentErrorMessage } from './studentErrors'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 import type { ProvisionMode, ProvisionStudentRequest } from '../../types/api'
-
-// Author-language mode labels — NOT the backend taxonomy (generate/manual/
-// existing). Progressive disclosure: only the active mode's conditional field
-// is shown.
-const MODES: { value: ProvisionMode; label: string; hint: string }[] = [
-  {
-    value: 'generate',
-    label: 'Новий студент',
-    hint: 'Система згенерує external ID автоматично.',
-  },
-  {
-    value: 'manual',
-    label: 'Новий студент із власним ID',
-    hint: 'Ви вказуєте external ID вручну (з вашої системи).',
-  },
-  {
-    value: 'existing',
-    label: 'Дати доступ наявному студенту',
-    hint: 'Прикріпити портальний логін до наявного студента за його ID.',
-  },
-]
 
 const labelCls = 'block text-sm font-medium text-ink mb-1.5'
 
@@ -44,6 +24,30 @@ export function ProvisionStudentModal({ open, onClose, onCreated }: Props) {
   const [displayName, setDisplayName] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const language = useLanguage()
+  const t = useT()
+
+  // Author-language mode labels — NOT the backend taxonomy (generate/manual/
+  // existing). Progressive disclosure: only the active mode's conditional field
+  // is shown.
+  const modes: { value: ProvisionMode; label: string; hint: string }[] = [
+    {
+      value: 'generate',
+      label: t('panel.students.provision.autoTitle'),
+      hint: t('panel.students.provision.autoDesc'),
+    },
+    {
+      value: 'manual',
+      label: t('panel.students.provision.customTitle'),
+      hint: t('panel.students.provision.customDesc'),
+    },
+    {
+      value: 'existing',
+      label: t('panel.students.provision.existingTitle'),
+      hint: t('panel.students.provision.existingDesc'),
+    },
+  ]
 
   const reset = () => {
     setMode('generate')
@@ -64,11 +68,11 @@ export function ProvisionStudentModal({ open, onClose, onCreated }: Props) {
   // Client-side cross-field validation — mirrors the backend model_validator,
   // and keeps the array-shape 422 from ever reaching the error dictionary.
   const validate = (): string | null => {
-    if (!login.trim()) return 'Вкажіть логін.'
-    if (!password) return 'Вкажіть пароль.'
-    if (mode === 'manual' && !externalId.trim()) return 'Вкажіть external ID.'
+    if (!login.trim()) return t('panel.students.provision.loginRequired')
+    if (!password) return t('panel.students.provision.passwordRequired')
+    if (mode === 'manual' && !externalId.trim()) return t('panel.students.provision.externalIdRequired')
     if (mode === 'existing' && !studentId.trim())
-      return 'Вкажіть ID наявного студента.'
+      return t('panel.students.provision.existingIdRequired')
     return null
   }
 
@@ -94,16 +98,16 @@ export function ProvisionStudentModal({ open, onClose, onCreated }: Props) {
       close()
       onCreated()
     } catch (err) {
-      setError(studentErrorMessage('provision', err))
+      setError(studentErrorMessage(language, 'provision', err))
       setSubmitting(false)
     }
   }
 
   return (
-    <Modal open={open} onClose={close} title="Додати студента">
+    <Modal open={open} onClose={close} title={t('panel.students.provision.title')}>
       <form onSubmit={submit} className="space-y-4">
         <fieldset className="space-y-2">
-          {MODES.map((m) => (
+          {modes.map((m) => (
             <label
               key={m.value}
               className={clsx(
@@ -142,27 +146,27 @@ export function ProvisionStudentModal({ open, onClose, onCreated }: Props) {
               className="input"
               value={externalId}
               onChange={(e) => setExternalId(e.target.value)}
-              placeholder="ідентифікатор з вашої системи"
+              placeholder={t('panel.students.provision.externalIdPlaceholder')}
             />
           </div>
         )}
         {mode === 'existing' && (
           <div>
             <label className={labelCls}>
-              ID наявного студента <span className="text-coral">*</span>
+              {t('panel.students.provision.existingIdLabel')} <span className="text-coral">*</span>
             </label>
             <input
               className="input"
               value={studentId}
               onChange={(e) => setStudentId(e.target.value)}
-              placeholder="UUID студента"
+              placeholder={t('panel.students.provision.existingIdPlaceholder')}
             />
           </div>
         )}
 
         <div>
           <label className={labelCls}>
-            Логін <span className="text-coral">*</span>
+            {t('panel.students.provision.loginLabel')} <span className="text-coral">*</span>
           </label>
           <input
             className="input"
@@ -173,7 +177,7 @@ export function ProvisionStudentModal({ open, onClose, onCreated }: Props) {
         </div>
         <div>
           <label className={labelCls}>
-            Пароль <span className="text-coral">*</span>
+            {t('panel.students.provision.passwordLabel')} <span className="text-coral">*</span>
           </label>
           <input
             type="password"
@@ -184,7 +188,7 @@ export function ProvisionStudentModal({ open, onClose, onCreated }: Props) {
           />
         </div>
         <div>
-          <label className={labelCls}>Ім’я для показу</label>
+          <label className={labelCls}>{t('panel.students.provision.displayNameLabel')}</label>
           <input
             className="input"
             value={displayName}
@@ -201,13 +205,13 @@ export function ProvisionStudentModal({ open, onClose, onCreated }: Props) {
 
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" className="btn-ghost" onClick={close}>
-            Скасувати
+            {t('panel.students.provision.cancel')}
           </button>
           <button type="submit" className="btn-primary" disabled={submitting}>
             {submitting ? (
               <Loader2 size={16} className="animate-spin" />
             ) : (
-              'Створити'
+              t('panel.students.provision.submit')
             )}
           </button>
         </div>

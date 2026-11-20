@@ -3,7 +3,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 import { SpendingFrame } from '../components/cost/SpendingFrame'
 import type { BillingSpendingCourse } from '../types/api'
 import { formatNumber, formatUnits } from '../utils/units'
-import { UNTITLED_COURSE } from './CostPage'
+import { useLanguage, useT } from '../i18n/LanguageContext'
 
 // "Витрати ДЗ": the author's spending in units tied to homework — the reviews
 // of their students' work and the preparation of the tasks — by course and
@@ -15,8 +15,11 @@ const HEAD = 'px-3 py-2 text-end font-medium whitespace-nowrap'
 
 function CourseTasks({ course }: { course: BillingSpendingCourse }) {
   const [open, setOpen] = useState(false)
+  const language = useLanguage()
+  const t = useT()
   const billed = course.tasks.reduce((sum, t) => sum + t.billed_units, 0)
   const Chevron = open ? ChevronDown : ChevronRight
+
   return (
     <section className="card">
       <button
@@ -27,10 +30,10 @@ function CourseTasks({ course }: { course: BillingSpendingCourse }) {
       >
         <Chevron size={16} className="text-ink-light shrink-0" />
         <span className="font-medium text-ink flex-1 min-w-0 break-words">
-          {course.title ?? UNTITLED_COURSE}
+          {course.title ?? t('panel.cost.untitledCourse')}
         </span>
         <span className="text-ink-light text-sm">
-          Витрачено: {formatUnits('uk', billed)}
+          {t('panel.homeworkCost.spent')} {formatUnits(language, billed)}
         </span>
       </button>
       {open && (
@@ -39,11 +42,11 @@ function CourseTasks({ course }: { course: BillingSpendingCourse }) {
             <thead className="text-ink-light">
               <tr>
                 <th scope="col" className="px-3 py-2 text-start font-medium">
-                  Завдання
+                  {t('panel.homeworkCost.table.task')}
                 </th>
-                <th scope="col" className={HEAD}>Перевірок</th>
-                <th scope="col" className={HEAD}>Витрачено</th>
-                <th scope="col" className={HEAD}>Покрито</th>
+                <th scope="col" className={HEAD}>{t('panel.homeworkCost.table.reviews')}</th>
+                <th scope="col" className={HEAD}>{t('panel.homeworkCost.table.spent')}</th>
+                <th scope="col" className={HEAD}>{t('panel.homeworkCost.table.covered')}</th>
               </tr>
             </thead>
             <tbody>
@@ -53,11 +56,11 @@ function CourseTasks({ course }: { course: BillingSpendingCourse }) {
                   className="border-t border-canvas-dark/40"
                 >
                   <th scope="row" className="px-3 py-2 text-start font-normal break-words">
-                    {task.title ?? 'Завдання без назви'}
+                    {task.title ?? t('panel.homeworkCost.untitledTask')}
                   </th>
-                  <td className={CELL}>{formatNumber('uk', task.reviews)}</td>
-                  <td className={CELL}>{formatNumber('uk', task.billed_units)}</td>
-                  <td className={CELL}>{formatNumber('uk', task.covered_units)}</td>
+                  <td className={CELL}>{formatNumber(language, task.reviews)}</td>
+                  <td className={CELL}>{formatNumber(language, task.billed_units)}</td>
+                  <td className={CELL}>{formatNumber(language, task.covered_units)}</td>
                 </tr>
               ))}
             </tbody>
@@ -69,14 +72,14 @@ function CourseTasks({ course }: { course: BillingSpendingCourse }) {
 }
 
 export function HomeworkCostPage() {
+  const t = useT()
+
   return (
     <SpendingFrame
-      title="Витрати на перевірку ДЗ"
+      title={t('panel.homeworkCost.title')}
       idle={
         <p className="text-ink">
-          Тут будуть ваші витрати в юнітах, пов'язані з домашніми завданнями, — з
-          розбивкою по курсах і завданнях. Вони з'являться, щойно платформа почне
-          списувати юніти. Зараз юніти не списуються.
+          {t('panel.homeworkCost.idle')}
         </p>
       }
     >
@@ -85,7 +88,7 @@ export function HomeworkCostPage() {
         if (courses.length === 0) {
           return (
             <p className="text-ink">
-              За цей місяць витрат на домашні завдання немає.
+              {t('panel.homeworkCost.emptyMonth')}
             </p>
           )
         }

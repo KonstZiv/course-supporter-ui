@@ -22,13 +22,14 @@ import { validateUploadFiles } from '../../utils/uploadValidation'
 import { useUploadBatch, type UploadTask } from '../../hooks/useUploadBatch'
 import { ingestErrorMessage } from '../../utils/ingestErrors'
 import {
-  BUY_UNITS,
+  buyUnitsText,
   INSUFFICIENT_UNITS_CATEGORY,
 } from '../../utils/authorBillingTexts'
 import { NewTabLink } from '../billing/NewTabLink'
 import { Modal } from '../ui/Modal'
 import { estimateKindOf, kindOnlyPriceLine } from '../../utils/kindOnlyPrice'
-import { PRICE_PENDING } from '../../utils/priceEstimate'
+import { pricePendingText } from '../../utils/priceEstimate'
+import { useLanguage } from '../../i18n/LanguageContext'
 import {
   CODE_ELIGIBLE_TEXT_EXTENSIONS,
   sourceTypeForExtension,
@@ -85,6 +86,7 @@ function retryQuestion(mat: AuthoredDocumentSummary, force: boolean): string {
 }
 
 export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
+  const language = useLanguage()
   const tree = useCourseStore((s) => s.tree)
   const selectedNodeId = useCourseStore((s) => s.selectedNodeId)
   const setSelectedNodeId = useCourseStore((s) => s.setSelectedNodeId)
@@ -344,7 +346,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
       const kind = estimateKindOf(mat.source_type)
       setPricingId(mat.id)
       const line =
-        node && kind ? await kindOnlyPriceLine(node.id, kind) : null
+        node && kind ? await kindOnlyPriceLine(language, node.id, kind) : null
       setPricingId(null)
       if (line !== null) {
         setRetryAsk({ mat, force, line })
@@ -353,7 +355,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
       if (force && !confirm(retryQuestion(mat, force))) return
       await runRetry(mat, force)
     },
-    [node, runRetry],
+    [language, node, runRetry],
   )
 
   // Toggle material role on existing material (clickable badge)
@@ -627,7 +629,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                         {/* Beside the card's own retry: the purchase, in a new
                             tab; the retry stays as it is. */}
                         <p className="text-xs mt-1">
-                          <NewTabLink href="/billing">{BUY_UNITS}</NewTabLink>
+                          <NewTabLink href="/billing">{buyUnitsText(language)}</NewTabLink>
                         </p>
                       </>
                     )}
@@ -666,7 +668,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                       className="p-1.5 rounded-lg hover:bg-amber-pale transition-colors"
                       title={
                         pricingId === mat.id
-                          ? PRICE_PENDING
+                          ? pricePendingText(language)
                           : mat.state === 'error'
                             ? 'Повторити обробку'
                             : 'Перезапустити обробку (force)'

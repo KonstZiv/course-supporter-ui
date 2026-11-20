@@ -1,12 +1,13 @@
 import { clsx } from 'clsx'
 import { Trash2 } from 'lucide-react'
 import type { JobListItemResponse } from '../../types/api'
-import { JOB_STATE_LABEL, jobStateWordClass } from '../../utils/stateVocabulary'
+import { jobStateLabel, jobStateWordClass } from '../../utils/stateVocabulary'
 import { relativeTime } from '../../utils/relativeTime'
 import { formatDuration } from '../../utils/formatDuration'
 import { workProgressBar } from '../../utils/workProgress'
 import { deletedMaterialLabelShort } from '../../utils/materialLabel'
 import { ProgressMeter } from './ProgressMeter'
+import { useLanguage } from '../../i18n/LanguageContext'
 
 // One work-list row on the detailed floor — reused verbatim by the history-row
 // expansion (Д6), so the movement it shows appears there too without a second
@@ -28,14 +29,15 @@ export function ActivityStripRow({
   job: JobListItemResponse
   now: number
 }) {
+  const language = useLanguage()
   const bar = workProgressBar(job)
   const duration =
-    job.job_state === 'processing' ? formatDuration(job.started_at, now) : null
+    job.job_state === 'processing' ? formatDuration(language, job.started_at, now) : null
   const trailing = bar
     ? null
     : job.job_state === 'processing'
       ? duration // may be null (no start moment) → words alone (Д4)
-      : relativeTime(job.completed_at ?? job.queued_at, now)
+      : relativeTime(language, job.completed_at ?? job.queued_at, now)
 
   return (
     <div className="min-w-0">
@@ -43,7 +45,7 @@ export function ActivityStripRow({
         <span
           className={clsx('shrink-0 font-medium', jobStateWordClass(job.job_state))}
         >
-          {JOB_STATE_LABEL[job.job_state]}
+          {jobStateLabel(language, job.job_state)}
         </span>
         <span className="min-w-0 flex-1 flex items-center gap-1 text-ink-light">
           {job.display_deleted ? (

@@ -1,10 +1,18 @@
+import type { Language } from '../i18n/languages'
+import { translate } from '../i18n/translate'
 import { SUPPORT_ADDRESS } from './supportAddress'
 
 // The author's letter to support. Author app only: the portal takes the
 // address alone, from `supportAddress`.
 export { SUPPORT_ADDRESS }
-export const WRITE_TO_US_PHRASE = 'напишіть нам'
-export const LETTER_SUBJECT = 'Course Supporter: звернення з програми автора'
+
+export function writeToUsPhrase(language: Language): string {
+  return translate(language, 'panel.contactAdmin.writeToUsPhrase')
+}
+
+export function letterSubject(language: Language): string {
+  return translate(language, 'panel.contactAdmin.letterSubject')
+}
 
 export interface LetterContext {
   course?: string | null
@@ -31,9 +39,9 @@ const MAX_HREF_LENGTH = 1900
 const DEFAULT_MESSAGE_LIMIT = 600
 const DEFAULT_CONTEXT_LIMIT = 120
 
-export function asksToWriteToAdmin(text: string | null | undefined): boolean {
+export function asksToWriteToAdmin(language: Language, text: string | null | undefined): boolean {
   if (!text) return false
-  return text.toLowerCase().includes(WRITE_TO_US_PHRASE.toLowerCase())
+  return text.toLowerCase().includes(writeToUsPhrase(language).toLowerCase())
 }
 
 function cleanText(text: string): string {
@@ -64,6 +72,7 @@ export function formatWhen(now: Date): string {
 }
 
 function renderBody(
+  language: Language,
   rawMessage: string | null | undefined,
   context: LetterContext | undefined,
   rawPage: string | null | undefined,
@@ -76,11 +85,11 @@ function renderBody(
 
   if (!hasMessage) {
     return [
-      'Добрий день!',
+      translate(language, 'panel.contactAdmin.letter.greeting'),
       '',
-      'Звертаюся з програми автора Course Supporter.',
+      translate(language, 'panel.contactAdmin.letter.introNoMessage'),
       '',
-      'Моє питання:',
+      translate(language, 'panel.contactAdmin.letter.myQuestion'),
       '',
       '',
     ].join('\r\n')
@@ -91,42 +100,42 @@ function renderBody(
 
   const cleanCourse = context?.course ? cleanText(context.course) : ''
   if (cleanCourse) {
-    contextLines.push(`Курс: ${truncateText(cleanCourse, ctxLimit)}`)
+    contextLines.push(`${translate(language, 'panel.contactAdmin.letter.context.course')}: ${truncateText(cleanCourse, ctxLimit)}`)
   }
 
   const cleanSection = context?.section ? cleanText(context.section) : ''
   if (cleanSection) {
-    contextLines.push(`Розділ: ${truncateText(cleanSection, ctxLimit)}`)
+    contextLines.push(`${translate(language, 'panel.contactAdmin.letter.context.section')}: ${truncateText(cleanSection, ctxLimit)}`)
   }
 
   const cleanMaterial = context?.material ? cleanText(context.material) : ''
   if (cleanMaterial) {
-    contextLines.push(`Матеріал: ${truncateText(cleanMaterial, ctxLimit)}`)
+    contextLines.push(`${translate(language, 'panel.contactAdmin.letter.context.material')}: ${truncateText(cleanMaterial, ctxLimit)}`)
   }
 
   const cleanTest = context?.test ? cleanText(context.test) : ''
   if (cleanTest) {
-    contextLines.push(`Тест: ${truncateText(cleanTest, ctxLimit)}`)
+    contextLines.push(`${translate(language, 'panel.contactAdmin.letter.context.test')}: ${truncateText(cleanTest, ctxLimit)}`)
   }
 
   const cleanPage = rawPage ? cleanText(rawPage) : ''
   if (cleanPage) {
-    contextLines.push(`Сторінка: ${truncateText(cleanPage, ctxLimit)}`)
+    contextLines.push(`${translate(language, 'panel.contactAdmin.letter.context.page')}: ${truncateText(cleanPage, ctxLimit)}`)
   }
 
   if (now) {
-    contextLines.push(`Коли: ${formatWhen(now)}`)
+    contextLines.push(`${translate(language, 'panel.contactAdmin.letter.context.when')}: ${formatWhen(now)}`)
   }
 
   const lines = [
-    'Добрий день!',
+    translate(language, 'panel.contactAdmin.letter.greeting'),
     '',
-    'Звертаюся з програми автора Course Supporter. Програма показала повідомлення:',
+    translate(language, 'panel.contactAdmin.letter.introWithMessage'),
     `«${sanitizedMessage}»`,
     '',
     ...contextLines,
     ...(contextLines.length > 0 ? [''] : []),
-    'Що відбувалося перед цим — кілька слів:',
+    translate(language, 'panel.contactAdmin.letter.whatHappened'),
     '',
     '',
   ]
@@ -134,26 +143,24 @@ function renderBody(
   return lines.join('\r\n')
 }
 
-function buildHref(body: string): string {
+function buildHref(subject: string, body: string): string {
   return `mailto:${SUPPORT_ADDRESS}?subject=${encodeURIComponent(
-    LETTER_SUBJECT,
+    subject,
   )}&body=${encodeURIComponent(body)}`
 }
 
-export function supportLetter({
-  message,
-  context,
-  page,
-  now,
-}: SupportLetterOptions): SupportLetterResult {
+export function supportLetter(
+  language: Language,
+  { message, context, page, now }: SupportLetterOptions,
+): SupportLetterResult {
   const address = SUPPORT_ADDRESS
-  const subject = LETTER_SUBJECT
+  const subject = letterSubject(language)
 
   let msgLimit = DEFAULT_MESSAGE_LIMIT
   let ctxLimit = DEFAULT_CONTEXT_LIMIT
 
-  let body = renderBody(message, context, page, now, msgLimit, ctxLimit)
-  let href = buildHref(body)
+  let body = renderBody(language, message, context, page, now, msgLimit, ctxLimit)
+  let href = buildHref(subject, body)
 
   if (href.length <= MAX_HREF_LENGTH) {
     return { address, subject, body, href }
@@ -166,8 +173,8 @@ export function supportLetter({
 
   while (lowMsg <= highMsg) {
     const mid = Math.floor((lowMsg + highMsg) / 2)
-    const testBody = renderBody(message, context, page, now, mid, ctxLimit)
-    const testHref = buildHref(testBody)
+    const testBody = renderBody(language, message, context, page, now, mid, ctxLimit)
+    const testHref = buildHref(subject, testBody)
     if (testHref.length <= MAX_HREF_LENGTH) {
       bestMsg = mid
       lowMsg = mid + 1
@@ -177,8 +184,8 @@ export function supportLetter({
   }
 
   msgLimit = bestMsg
-  body = renderBody(message, context, page, now, msgLimit, ctxLimit)
-  href = buildHref(body)
+  body = renderBody(language, message, context, page, now, msgLimit, ctxLimit)
+  href = buildHref(subject, body)
 
   // If still exceeding, binary search ctxLimit down to 1
   if (href.length > MAX_HREF_LENGTH) {
@@ -189,8 +196,8 @@ export function supportLetter({
 
     while (lowCtx <= highCtx) {
       const mid = Math.floor((lowCtx + highCtx) / 2)
-      const testBody = renderBody(message, context, page, now, 1, mid)
-      const testHref = buildHref(testBody)
+      const testBody = renderBody(language, message, context, page, now, 1, mid)
+      const testHref = buildHref(subject, testBody)
       if (testHref.length <= MAX_HREF_LENGTH) {
         bestCtx = mid
         lowCtx = mid + 1
@@ -200,8 +207,8 @@ export function supportLetter({
     }
 
     ctxLimit = bestCtx
-    body = renderBody(message, context, page, now, 1, ctxLimit)
-    href = buildHref(body)
+    body = renderBody(language, message, context, page, now, 1, ctxLimit)
+    href = buildHref(subject, body)
   }
 
   return { address, subject, body, href }

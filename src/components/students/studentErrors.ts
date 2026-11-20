@@ -1,17 +1,6 @@
 import { ApiError } from '../../api/client'
-
-// Author-facing error phrases per (action + status), mirroring the backend's
-// HTTPException codes (404 / 409 / 422 — only 422 is auto-declared in OpenAPI,
-// the rest are raised in students.py). Client-side cross-field validation in
-// the provision form removes the array-shape 422 (missing external_id /
-// student_id), so a 422 reaching here is a server-side *string* detail
-// (weak password / non-root course). `body.detail` is used only as a
-// discriminator for the two-way 409/404 splits and as a last-resort fallback
-// for an unknown code — never rendered raw except that fallback.
-//
-// NOTE: this is the 4th instance of the "FE mirrors backend codes" pattern
-// (after c3b terminalStatus.ts et al.). If it recurs, it is a candidate for
-// OpenAPI-driven codegen rather than another hand-written table.
+import type { Language } from '../../i18n/languages'
+import { translate } from '../../i18n/translate'
 
 export type StudentAction =
   | 'provision'
@@ -26,9 +15,9 @@ function detailOf(err: ApiError): string {
   return typeof d === 'string' ? d.toLowerCase() : ''
 }
 
-export function studentErrorMessage(action: StudentAction, err: unknown): string {
+export function studentErrorMessage(language: Language, action: StudentAction, err: unknown): string {
   if (!(err instanceof ApiError)) {
-    return 'Не вдалося зв’язатися із сервером. Спробуйте ще раз.'
+    return translate(language, 'panel.students.error.network')
   }
   const detail = detailOf(err)
   const has = (s: string) => detail.includes(s)
@@ -37,42 +26,41 @@ export function studentErrorMessage(action: StudentAction, err: unknown): string
     case 'provision':
       if (err.status === 409) {
         return has('credential')
-          ? 'Цей студент уже має доступ до порталу.'
-          : 'Логін або external ID уже використовується.'
+          ? translate(language, 'panel.students.error.alreadyHasAccess')
+          : translate(language, 'panel.students.error.loginOrExternalIdInUse')
       }
-      if (err.status === 422) return 'Пароль не відповідає вимогам (замалий).'
-      if (err.status === 404) return 'Студента з таким ID не знайдено.'
+      if (err.status === 422) return translate(language, 'panel.students.error.passwordTooWeak')
+      if (err.status === 404) return translate(language, 'panel.students.error.studentWithIdNotFound')
       break
     case 'revoke':
     case 'restore':
       if (err.status === 404) {
         return has('credential')
-          ? 'У студента немає доступу до порталу.'
-          : 'Студента не знайдено.'
+          ? translate(language, 'panel.students.error.noAccess')
+          : translate(language, 'panel.students.error.studentNotFound')
       }
       break
     case 'bind':
-      if (err.status === 409) return 'Студент уже зарахований на цей курс.'
-      if (err.status === 422) return 'Це має бути кореневий курс.'
+      if (err.status === 409) return translate(language, 'panel.students.error.alreadyEnrolled')
+      if (err.status === 422) return translate(language, 'panel.students.error.mustBeRootCourse')
       if (err.status === 404) {
-        return has('course') ? 'Курс не знайдено.' : 'Студента не знайдено.'
+        return has('course')
+          ? translate(language, 'panel.students.error.courseNotFound')
+          : translate(language, 'panel.students.error.studentNotFound')
       }
       break
     case 'unbind':
-      if (err.status === 404) return 'Зарахування не знайдено.'
+      if (err.status === 404) return translate(language, 'panel.students.error.enrollmentNotFound')
       break
     case 'reset':
-      // DD-6-J author-side password reset. 422 = weak password (backend
-      // min-length floor); 404 splits like revoke/restore — no credential to
-      // reset vs unknown student.
-      if (err.status === 422) return 'Пароль не відповідає вимогам (замалий).'
+      if (err.status === 422) return translate(language, 'panel.students.error.passwordTooWeak')
       if (err.status === 404) {
         return has('credential')
-          ? 'У студента немає доступу до порталу.'
-          : 'Студента не знайдено.'
+          ? translate(language, 'panel.students.error.noAccess')
+          : translate(language, 'panel.students.error.studentNotFound')
       }
       break
   }
   // Unknown code for this action — fall back to the server phrase, else generic.
-  return detail || `Помилка (${err.status}).`
+  return detail || translate(language, 'panel.students.error.generic', { status: err.status })
 }

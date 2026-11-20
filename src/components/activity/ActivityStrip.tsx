@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { clsx } from 'clsx'
 import { Activity, ChevronDown, Trash2 } from 'lucide-react'
 import type { JobListItemResponse } from '../../types/api'
-import { JOB_STATE_LABEL, jobStateWordClass } from '../../utils/stateVocabulary'
+import { jobStateLabel, jobStateWordClass } from '../../utils/stateVocabulary'
 import { deletedMaterialLabelShort } from '../../utils/materialLabel'
 import { deriveFloors } from '../../utils/activityFloors'
 import { ActivityStripPanel } from './ActivityStripPanel'
+import { useLanguage } from '../../i18n/LanguageContext'
 
 // Collapsed floor (§2 / В4): pinned in the header. At `xl`+ it shows the window
 // compressed to one headline — the newest live job, else the newest finished in
@@ -23,6 +24,7 @@ import { ActivityStripPanel } from './ActivityStripPanel'
 // carries motion/mute/alarm-text, never a filled chip.
 export function ActivityStrip({ items }: { items: JobListItemResponse[] }) {
   const [open, setOpen] = useState(false)
+  const language = useLanguage()
   const now = Date.now()
   const { headline, moreCount, detailed } = deriveFloors(items)
 
@@ -59,7 +61,7 @@ export function ActivityStrip({ items }: { items: JobListItemResponse[] }) {
               jobStateWordClass(headline.job_state),
             )}
           >
-            {JOB_STATE_LABEL[headline.job_state]}
+            {jobStateLabel(language, headline.job_state)}
           </span>
           <span className="min-w-0 flex items-center gap-1 text-ink-light">
             {headline.display_deleted ? (

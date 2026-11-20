@@ -2,10 +2,11 @@ import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useSpending } from '../../hooks/useSpending'
 import type { BillingSpendingResponse } from '../../types/api'
-import { LOAD_FAILED } from '../../utils/authorBillingTexts'
+import { loadFailedText } from '../../utils/authorBillingTexts'
 import { monthOf, type Month } from '../../utils/spendingPeriod'
 import { ContactAdmin } from '../ui/ContactAdmin'
 import { MonthPicker } from './MonthPicker'
+import { useLanguage } from '../../i18n/LanguageContext'
 
 /**
  * The frame of the two spending pages: the title, the month, and — once the
@@ -22,6 +23,7 @@ export function SpendingFrame({
   idle: React.ReactNode
   children: (spending: BillingSpendingResponse, month: Month) => React.ReactNode
 }) {
+  const language = useLanguage()
   // The current month is read once per visit: a page left open over the turn
   // of a month keeps offering the month it opened in.
   const [current] = useState(() => monthOf(new Date()))
@@ -48,9 +50,9 @@ export function SpendingFrame({
       {state.status === 'failed' && (
         <div className="rounded-2xl bg-canvas-dark p-5 space-y-2">
           <p role="alert" className="text-ink">
-            {LOAD_FAILED}
+            {loadFailedText(language)}
           </p>
-          <ContactAdmin message={LOAD_FAILED} fallback="after-click" />
+          <ContactAdmin message={loadFailedText(language)} fallback="after-click" />
         </div>
       )}
       {state.status === 'loaded' &&
