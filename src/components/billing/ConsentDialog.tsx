@@ -2,8 +2,8 @@ import { useId } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { CONSENT_LINES, type ConsentLines } from '../../utils/billingConsent'
-import { useT } from '../../i18n/LanguageContext'
-import { SITE_REFUNDS_URL, SITE_TERMS_URL } from '../site/siteLinks'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
+import { siteUrl } from '../site/siteLinks'
 import { NewTabLink } from './NewTabLink'
 
 function escapeRegExp(text: string): string {
@@ -40,13 +40,14 @@ export function ConsentDialog({
   onCancel,
 }: ConsentDialogProps) {
   const checkboxId = useId()
+  const language = useLanguage()
   const t = useT()
   const [title, checkboxLine, summaryLine, changeLine] = lines
   // The checkbox line with its two phrases as links: the words stay exactly
   // the consent text's, so what the holder reads is what is fingerprinted.
   const links: Record<string, string> = {
-    [t('shared.consent.termsLinkWords')]: SITE_TERMS_URL,
-    [t('shared.consent.refundsLinkWords')]: SITE_REFUNDS_URL,
+    [t('shared.consent.termsLinkWords')]: siteUrl(language, 'terms'),
+    [t('shared.consent.refundsLinkWords')]: siteUrl(language, 'refunds'),
   }
   const linkPhrases = new RegExp(`(${Object.keys(links).map(escapeRegExp).join('|')})`)
   return (

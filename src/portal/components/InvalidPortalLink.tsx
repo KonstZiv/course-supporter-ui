@@ -1,11 +1,12 @@
 import { SiteHeader } from '../../components/site/SiteHeader'
 import {
-  SITE_PRICING_URL,
+  docsUrl,
+  siteUrl,
   SITE_TEXT_LINK_CLASS,
 } from '../../components/site/siteLinks'
-import { useT } from '../../i18n/LanguageContext'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 import { Message } from '../../i18n/Message'
-import { AUTHOR_APP_URL, BECOME_STUDENT_URL, DOCS_URL } from '../portalLinks'
+import { AUTHOR_APP_URL } from '../portalLinks'
 
 /**
  * The portal's neutral page: any address that is not a portal page — the
@@ -15,10 +16,11 @@ import { AUTHOR_APP_URL, BECOME_STUDENT_URL, DOCS_URL } from '../portalLinks'
  * The site's footer comes from PortalLayout, which frames every portal route.
  */
 export function InvalidPortalLink() {
+  const language = useLanguage()
   const t = useT()
   const headerLinks = [
-    { label: t('portal.invalidLink.pricing'), href: SITE_PRICING_URL },
-    { label: t('portal.invalidLink.docs'), href: DOCS_URL },
+    { label: t('portal.invalidLink.pricing'), href: siteUrl(language, 'pricing') },
+    { label: t('portal.invalidLink.docs'), href: docsUrl(language) },
   ]
   return (
     <div className="flex-1 flex flex-col">
@@ -30,7 +32,7 @@ export function InvalidPortalLink() {
         </h1>
         <p className="text-ink-light mt-4">{t('portal.invalidLink.lead')}</p>
         <p className="mt-3">
-          <a href={BECOME_STUDENT_URL} className={SITE_TEXT_LINK_CLASS}>
+          <a href={siteUrl(language, 'become-student')} className={SITE_TEXT_LINK_CLASS}>
             {t('portal.invalidLink.becomeStudent')}
           </a>
         </p>

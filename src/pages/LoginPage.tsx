@@ -7,16 +7,11 @@ import { ContactAdmin } from '../components/ui/ContactAdmin'
 import { SiteHeader } from '../components/site/SiteHeader'
 import { SiteFooter } from '../components/site/SiteFooter'
 import {
-  BECOME_AUTHOR_URL,
-  DOCS_AUTHORS_URL,
-  SITE_PRICING_URL,
+  docsUrl,
+  siteUrl,
   SITE_TEXT_LINK_CLASS,
 } from '../components/site/siteLinks'
-
-const HEADER_LINKS = [
-  { label: 'Ціни', href: SITE_PRICING_URL },
-  { label: 'Документація', href: DOCS_AUTHORS_URL },
-]
+import { useLanguage } from '../i18n/LanguageContext'
 
 const LOGIN_ERRORS = {
   rejected:
@@ -42,6 +37,12 @@ export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const from: unknown = (location.state as { from?: unknown } | null)?.from
+  const language = useLanguage()
+
+  const headerLinks = [
+    { label: 'Ціни', href: siteUrl(language, 'pricing') },
+    { label: 'Документація', href: docsUrl(language, 'authors/') },
+  ]
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -75,7 +76,7 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen bg-canvas flex flex-col">
-      <SiteHeader links={HEADER_LINKS} />
+      <SiteHeader links={headerLinks} />
 
       <main className="flex-1 w-full max-w-[28rem] mx-auto px-4 py-10 sm:py-16">
         <h1 className="font-display text-3xl text-ink">Вхід для авторів курсів</h1>
@@ -137,7 +138,7 @@ export function LoginPage() {
             Доступ до програми автора платформа відкриває за зверненням.
           </p>
           <p>
-            <a href={BECOME_AUTHOR_URL} className={SITE_TEXT_LINK_CLASS}>
+            <a href={siteUrl(language, 'become-author')} className={SITE_TEXT_LINK_CLASS}>
               Як стати автором
             </a>
           </p>

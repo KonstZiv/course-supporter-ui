@@ -14,7 +14,7 @@ import {
 import { formatPackageName, formatPriceEur } from '../../utils/units'
 import { useLanguage, useT } from '../../i18n/LanguageContext'
 import { ConsentDialog } from './ConsentDialog'
-import { SITE_REFUNDS_URL, SITE_TERMS_URL } from '../site/siteLinks'
+import { siteUrl } from '../site/siteLinks'
 import { NewTabLink } from './NewTabLink'
 
 /** Where the holder's purchase goes: the author's client or the portal's. */
@@ -218,8 +218,8 @@ export function PackagesPurchase({
         <p>{t('shared.packages.pricesNote')}</p>
         <p>{t('shared.packages.sellerNote')}</p>
         <p className="flex flex-wrap gap-x-4 gap-y-1">
-          <NewTabLink href={SITE_TERMS_URL}>{t('shared.site.legal.terms')}</NewTabLink>
-          <NewTabLink href={SITE_REFUNDS_URL}>{t('shared.site.legal.refunds')}</NewTabLink>
+          <NewTabLink href={siteUrl(language, 'terms')}>{t('shared.site.legal.terms')}</NewTabLink>
+          <NewTabLink href={siteUrl(language, 'refunds')}>{t('shared.site.legal.refunds')}</NewTabLink>
         </p>
       </div>
 
