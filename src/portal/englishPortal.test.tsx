@@ -164,7 +164,7 @@ beforeEach(() => {
     next_expiry: { units: 300, expires_on: '2027-04-01' },
   })
   api.billingPackages.mockResolvedValue({
-    packages: [{ id: 'units-500', units: 500, prices_minor: { EUR: 900 } }],
+    packages: [{ id: 'units-500', units: 500, validity_months: 6, prices_minor: { EUR: 900 } }],
     purchase: { open: true, reason: null },
   })
   api.billingStatement.mockResolvedValue({

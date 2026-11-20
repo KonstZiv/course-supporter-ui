@@ -89,6 +89,7 @@ const me = (over: Partial<PortalMe> = {}): PortalMe => ({
   recovery_email: null,
   recovery_email_confirmed: false,
   preferred_language: null,
+  interface_language: null,
   ...over,
 })
 

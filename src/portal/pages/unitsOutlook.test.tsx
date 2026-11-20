@@ -40,7 +40,7 @@ const BALANCE: PortalBillingBalance = {
   next_expiry: null,
 }
 const PACKAGES: PortalBillingPackages = {
-  packages: [{ id: 'p1', units: 500, prices_minor: { EUR: 999 } }],
+  packages: [{ id: 'p1', units: 500, validity_months: 6, prices_minor: { EUR: 999 } }],
   purchase: { open: true, reason: null },
 }
 

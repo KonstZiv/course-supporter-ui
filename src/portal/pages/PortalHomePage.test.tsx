@@ -63,6 +63,7 @@ describe('PortalHomePage (course list)', () => {
       recovery_email: null,
       recovery_email_confirmed: false,
       preferred_language: null,
+      interface_language: null,
     })
   })
 
