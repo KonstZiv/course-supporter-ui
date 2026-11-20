@@ -100,31 +100,31 @@ function renderBody(
 
   const cleanCourse = context?.course ? cleanText(context.course) : ''
   if (cleanCourse) {
-    contextLines.push(`${translate(language, 'panel.contactAdmin.letter.context.course')}: ${truncateText(cleanCourse, ctxLimit)}`)
+    contextLines.push(translate(language, 'panel.contactAdmin.letter.context.course', { value: truncateText(cleanCourse, ctxLimit) }))
   }
 
   const cleanSection = context?.section ? cleanText(context.section) : ''
   if (cleanSection) {
-    contextLines.push(`${translate(language, 'panel.contactAdmin.letter.context.section')}: ${truncateText(cleanSection, ctxLimit)}`)
+    contextLines.push(translate(language, 'panel.contactAdmin.letter.context.section', { value: truncateText(cleanSection, ctxLimit) }))
   }
 
   const cleanMaterial = context?.material ? cleanText(context.material) : ''
   if (cleanMaterial) {
-    contextLines.push(`${translate(language, 'panel.contactAdmin.letter.context.material')}: ${truncateText(cleanMaterial, ctxLimit)}`)
+    contextLines.push(translate(language, 'panel.contactAdmin.letter.context.material', { value: truncateText(cleanMaterial, ctxLimit) }))
   }
 
   const cleanTest = context?.test ? cleanText(context.test) : ''
   if (cleanTest) {
-    contextLines.push(`${translate(language, 'panel.contactAdmin.letter.context.test')}: ${truncateText(cleanTest, ctxLimit)}`)
+    contextLines.push(translate(language, 'panel.contactAdmin.letter.context.test', { value: truncateText(cleanTest, ctxLimit) }))
   }
 
   const cleanPage = rawPage ? cleanText(rawPage) : ''
   if (cleanPage) {
-    contextLines.push(`${translate(language, 'panel.contactAdmin.letter.context.page')}: ${truncateText(cleanPage, ctxLimit)}`)
+    contextLines.push(translate(language, 'panel.contactAdmin.letter.context.page', { value: truncateText(cleanPage, ctxLimit) }))
   }
 
   if (now) {
-    contextLines.push(`${translate(language, 'panel.contactAdmin.letter.context.when')}: ${formatWhen(now)}`)
+    contextLines.push(translate(language, 'panel.contactAdmin.letter.context.when', { value: formatWhen(now) }))
   }
 
   const lines = [
