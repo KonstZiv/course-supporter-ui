@@ -10,17 +10,10 @@
 // a submission sent in that moment is the server's to refuse (402), and the
 // form then shows the same panel.
 
+import type { Language } from '../i18n/languages'
+import { translate } from '../i18n/translate'
 import type { PortalReviewEstimate, PortalUnitsShortfall } from './types'
-import {
-  ceilingEnough,
-  ceilingShort,
-  COUNTING,
-  FREE_REVIEW,
-  PAID_BY_AUTHOR,
-  PRICE_UNAVAILABLE,
-  pricedEnough,
-  pricedShort,
-} from './unitsTexts'
+import { ceilingEnough, ceilingShort, pricedEnough, pricedShort } from './unitsTexts'
 
 /** Where the estimate of the current file (or of none) stands. */
 export type EstimateOutcome =
@@ -52,22 +45,38 @@ export type CostView =
 
 const NOTHING: CostView = { kind: 'nothing' }
 
-function fromEstimate(e: PortalReviewEstimate, afterWait: boolean): CostView {
+function fromEstimate(
+  language: Language,
+  e: PortalReviewEstimate,
+  afterWait: boolean,
+): CostView {
   const price = e.price_units ?? 0
   const available = e.available_units ?? 0
   const missing = e.missing_units ?? 0
   if (e.price_units === 0 && e.enough) {
-    return { kind: 'card', text: FREE_REVIEW, nowEnough: afterWait }
+    return {
+      kind: 'card',
+      text: translate(language, 'portal.units.freeReview'),
+      nowEnough: afterWait,
+    }
   }
   if (e.basis === 'ceiling') {
     return e.enough
-      ? { kind: 'card', text: ceilingEnough(price, available), nowEnough: afterWait }
+      ? { kind: 'card', text: ceilingEnough(language, price, available), nowEnough: afterWait }
       : // The threshold is the task's typical price, not the ceiling shown.
-        { kind: 'panel', text: ceilingShort(price, available, missing), threshold: available + missing }
+        {
+          kind: 'panel',
+          text: ceilingShort(language, price, available, missing),
+          threshold: available + missing,
+        }
   }
   return e.enough
-    ? { kind: 'card', text: pricedEnough(price, available), nowEnough: afterWait }
-    : { kind: 'panel', text: pricedShort(price, available, missing), threshold: available + missing }
+    ? { kind: 'card', text: pricedEnough(language, price, available), nowEnough: afterWait }
+    : {
+        kind: 'panel',
+        text: pricedShort(language, price, available, missing),
+        threshold: available + missing,
+      }
 }
 
 /**
@@ -75,25 +84,32 @@ function fromEstimate(e: PortalReviewEstimate, afterWait: boolean): CostView {
  * (``last``; null — none yet).
  */
 export function costView(
+  language: Language,
   outcome: EstimateOutcome,
   last: PortalReviewEstimate | null,
 ): CostView {
   const known = outcome.status === 'ready' ? outcome.estimate : last
   if (known?.paid_by === 'author') {
-    return { kind: 'line', text: PAID_BY_AUTHOR, gated: false }
+    return { kind: 'line', text: translate(language, 'portal.units.paidByAuthor'), gated: false }
   }
   if (known && !known.charging_enabled) return NOTHING
   switch (outcome.status) {
     case 'pending':
-      return known ? { kind: 'line', text: COUNTING, gated: true } : NOTHING
+      return known
+        ? { kind: 'line', text: translate(language, 'portal.units.counting'), gated: true }
+        : NOTHING
     case 'failed':
-      return { kind: 'line', text: PRICE_UNAVAILABLE, gated: false }
+      return {
+        kind: 'line',
+        text: translate(language, 'portal.units.priceUnavailable'),
+        gated: false,
+      }
     case 'refused':
       return { kind: 'refusal', text: outcome.message }
     case 'silent':
       return NOTHING
     case 'ready':
-      return fromEstimate(outcome.estimate, outcome.afterWait)
+      return fromEstimate(language, outcome.estimate, outcome.afterWait)
   }
 }
 

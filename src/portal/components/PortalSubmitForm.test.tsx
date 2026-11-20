@@ -437,7 +437,7 @@ describe('submitErrorMessage — no server string ever reaches the student', () 
     'status %i — no body shape leaks the string',
     (status) => {
       for (const body of bodies) {
-        const phrase = submitErrorMessage(new PortalApiError(status, SERVER, body))
+        const phrase = submitErrorMessage('uk', new PortalApiError(status, SERVER, body))
         expect(phrase).not.toContain(SERVER)
         expect(phrase).not.toContain('File extension')
         expect(phrase.length).toBeGreaterThan(0)
@@ -446,16 +446,16 @@ describe('submitErrorMessage — no server string ever reaches the student', () 
   )
 
   it('a non-API failure keeps its own specific phrase', () => {
-    expect(submitErrorMessage(new TypeError('Failed to fetch'))).toMatch(
+    expect(submitErrorMessage('uk', new TypeError('Failed to fetch'))).toMatch(
       /Перевірте зʼєднання/,
     )
-    expect(submitErrorMessage(new TypeError('Failed to fetch'))).not.toContain(
+    expect(submitErrorMessage('uk', new TypeError('Failed to fetch'))).not.toContain(
       'Failed to fetch',
     )
   })
 
   it('the three curated statuses answer with their own sentence', () => {
-    const say = (s: number) => submitErrorMessage(new PortalApiError(s, 'x', null))
+    const say = (s: number) => submitErrorMessage('uk', new PortalApiError(s, 'x', null))
     expect(say(401)).toMatch(/Сесія закінчилась/)
     expect(say(404)).toMatch(/Завдання не знайдено/)
     expect(say(409)).toMatch(/ще не готове до подачі/)

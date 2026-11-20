@@ -2,22 +2,8 @@ import { useEffect, useState } from 'react'
 import { Mail, CheckCircle2, Clock, AlertCircle, Loader2 } from 'lucide-react'
 import { portalApi, PortalApiError } from '../api/portalClient'
 import type { PortalMe } from '../types'
-import {
-  SECTION_TITLE,
-  SECTION_DESCRIPTION,
-  SECTION_EMAIL_LABEL,
-  SECTION_STATE_NONE,
-  SECTION_STATE_PENDING,
-  SECTION_STATE_CONFIRMED,
-  SECTION_ADD,
-  SECTION_CHANGE,
-  SECTION_SAVE,
-  SECTION_CANCEL,
-  SECTION_RESEND,
-  SECTION_RESENT,
-  SECTION_LOAD_ERROR,
-  flowError,
-} from '../recoveryTexts'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
+import { flowError } from '../recoveryTexts'
 
 // Minimal mirror of the backend email shape (RP6: "@" + non-empty local +
 // non-empty domain, max 320) — no strict RFC.
@@ -36,6 +22,8 @@ function isEmailShaped(value: string): boolean {
 // (which resets confirmed → false and mails a confirm link); "resend" re-POSTs
 // the same address (the backend burns the old token and mails a fresh link).
 export function RecoveryEmailSection() {
+  const language = useLanguage()
+  const t = useT()
   const [me, setMe] = useState<PortalMe | null>(null)
   const [loadError, setLoadError] = useState(false)
 
@@ -73,7 +61,7 @@ export function RecoveryEmailSection() {
     e.preventDefault()
     const email = emailInput.trim()
     if (!isEmailShaped(email)) {
-      setFormError(flowError('invalidEmail'))
+      setFormError(flowError(language, 'invalidEmail'))
       return
     }
     setSaving(true)
@@ -92,9 +80,9 @@ export function RecoveryEmailSection() {
       setEditing(false)
     } catch (err) {
       if (err instanceof PortalApiError && err.status === 422) {
-        setFormError(flowError('invalidEmail'))
+        setFormError(flowError(language, 'invalidEmail'))
       } else {
-        setFormError(flowError('network'))
+        setFormError(flowError(language, 'network'))
       }
     } finally {
       setSaving(false)
@@ -114,7 +102,7 @@ export function RecoveryEmailSection() {
       // 401 is handled inside the client (clear + redirect); anything else
       // surfaces a network error while the pending state + affordances stay.
       if (!(err instanceof PortalApiError && err.status === 401)) {
-        setResendError(flowError('network'))
+        setResendError(flowError(language, 'network'))
       }
     } finally {
       setResending(false)
@@ -126,7 +114,7 @@ export function RecoveryEmailSection() {
       <div className="card p-6 max-w-md">
         <div className="flex items-center gap-2 mb-1">
           <Mail size={18} className="text-navy" />
-          <h2 className="font-display text-lg text-ink">{SECTION_TITLE}</h2>
+          <h2 className="font-display text-lg text-ink">{t('portal.recovery.section.title')}</h2>
         </div>
         {children}
       </div>
@@ -134,14 +122,14 @@ export function RecoveryEmailSection() {
   )
 
   if (loadError) {
-    return card(<p className="text-sm text-coral">{SECTION_LOAD_ERROR}</p>)
+    return card(<p className="text-sm text-coral">{t('portal.recovery.section.loadError')}</p>)
   }
 
   if (me === null) {
     return card(
       <div className="flex items-center gap-2 text-ink-muted text-sm">
         <Loader2 size={16} className="animate-spin" />
-        Завантаження…
+        {t('portal.common.loading')}
       </div>,
     )
   }
@@ -157,7 +145,7 @@ export function RecoveryEmailSection() {
             htmlFor="recovery-email"
             className="block text-sm font-medium text-ink mb-1.5"
           >
-            {SECTION_EMAIL_LABEL}
+            {t('portal.recovery.section.emailLabel')}
           </label>
           <input
             id="recovery-email"
@@ -180,14 +168,14 @@ export function RecoveryEmailSection() {
             disabled={saving || !emailInput.trim()}
             className="btn-primary btn-sm"
           >
-            {saving ? <Loader2 size={16} className="animate-spin" /> : SECTION_SAVE}
+            {saving ? <Loader2 size={16} className="animate-spin" /> : t('portal.recovery.section.save')}
           </button>
           <button
             type="button"
             onClick={() => setEditing(false)}
             className="btn-ghost btn-sm"
           >
-            {SECTION_CANCEL}
+            {t('portal.recovery.section.cancel')}
           </button>
         </div>
       </form>,
@@ -198,10 +186,10 @@ export function RecoveryEmailSection() {
   if (recoveryEmail === null) {
     return card(
       <>
-        <p className="text-sm text-ink-muted mb-4">{SECTION_DESCRIPTION}</p>
-        <p className="text-sm text-ink-muted mb-4">{SECTION_STATE_NONE}</p>
+        <p className="text-sm text-ink-muted mb-4">{t('portal.recovery.section.description')}</p>
+        <p className="text-sm text-ink-muted mb-4">{t('portal.recovery.section.stateNone')}</p>
         <button onClick={() => openForm('')} className="btn-primary btn-sm">
-          {SECTION_ADD}
+          {t('portal.recovery.section.add')}
         </button>
       </>,
     )
@@ -213,18 +201,18 @@ export function RecoveryEmailSection() {
       {confirmed ? (
         <p className="flex items-center gap-1.5 text-sm text-forest mb-4">
           <CheckCircle2 size={16} />
-          {SECTION_STATE_CONFIRMED}
+          {t('portal.recovery.section.stateConfirmed')}
         </p>
       ) : (
         <p className="flex items-start gap-1.5 text-sm text-amber-dark mb-4">
           <Clock size={16} className="shrink-0 mt-0.5" />
-          {SECTION_STATE_PENDING}
+          {t('portal.recovery.section.statePending')}
         </p>
       )}
       {resent && (
         <p className="flex items-center gap-1.5 text-sm text-forest mb-4">
           <CheckCircle2 size={16} />
-          {SECTION_RESENT}
+          {t('portal.recovery.section.resent')}
         </p>
       )}
       {resendError && (
@@ -238,7 +226,7 @@ export function RecoveryEmailSection() {
           onClick={() => openForm(recoveryEmail)}
           className="btn-ghost btn-sm"
         >
-          {SECTION_CHANGE}
+          {t('portal.recovery.section.change')}
         </button>
         {!confirmed && (
           <button
@@ -249,7 +237,7 @@ export function RecoveryEmailSection() {
             {resending ? (
               <Loader2 size={16} className="animate-spin" />
             ) : (
-              SECTION_RESEND
+              t('portal.recovery.section.resend')
             )}
           </button>
         )}

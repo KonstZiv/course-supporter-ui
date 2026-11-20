@@ -1,4 +1,8 @@
-export const SUPPORT_ADDRESS = 'support@pythoncourse.me'
+import { SUPPORT_ADDRESS } from './supportAddress'
+
+// The author's letter to support. Author app only: the portal takes the
+// address alone, from `supportAddress`.
+export { SUPPORT_ADDRESS }
 export const WRITE_TO_US_PHRASE = 'напишіть нам'
 export const LETTER_SUBJECT = 'Course Supporter: звернення з програми автора'
 

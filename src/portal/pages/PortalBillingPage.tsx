@@ -13,11 +13,12 @@ import { PortalHeader } from '../components/PortalHeader'
 import { PortalFailure } from '../components/SupportMailText'
 import { PortalCheckoutNotice } from '../components/billing/PortalCheckoutNotice'
 import { PortalPackagesSection } from '../components/billing/PortalPackagesSection'
-import { LOAD_FAILED, UNITS_SUBTITLE } from '../billingTexts'
+import { billingText } from '../billingTexts'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 import { useStudentOutlook } from '../hooks/useStudentOutlook'
 import { UnitsReminders } from '../components/billing/UnitsReminders'
 import { SITE_TEXT_LINK_CLASS } from '../../components/site/siteLinks'
-import { BUY_UNITS, reviewsLeftLine } from '../unitsTexts'
+import { reviewsLeftLine } from '../unitsTexts'
 import type { PortalBillingOutlook } from '../types'
 
 // The address parameter that carries the checkout the student came back from
@@ -39,7 +40,7 @@ function isSessionEnd(err: unknown): boolean {
   return err instanceof PortalApiError && err.status === 401
 }
 
-// Where "Купити юніти" of a reminder takes the student on this page.
+// Where the "buy units" of a reminder takes the student on this page.
 const PACKAGES_ID = 'units-packages'
 
 function scrollToPackages() {
@@ -49,20 +50,24 @@ function scrollToPackages() {
 }
 
 /**
- * Under "Доступно": how many reviews the units cover, and the reminders —
+ * Under the available units: how many reviews the units cover, and the reminders —
  * only for a student who pays for their reviews, and only while charging is
  * on (operator 2026-11-16, A: while it is off, nothing about units running
  * short).
  */
 function OutlookLines({ outlook }: { outlook: PortalBillingOutlook | null }) {
+  const language = useLanguage()
+  const t = useT()
   if (outlook?.paid_by !== 'self' || !outlook.charging_enabled) return null
   return (
     <UnitsReminders
       outlook={outlook}
-      lead={outlook.reviews_left === null ? null : reviewsLeftLine(outlook.reviews_left)}
+      lead={
+        outlook.reviews_left === null ? null : reviewsLeftLine(language, outlook.reviews_left)
+      }
       buy={
         <button type="button" className={SITE_TEXT_LINK_CLASS} onClick={scrollToPackages}>
-          {BUY_UNITS}
+          {t('portal.units.buy')}
         </button>
       }
     />
@@ -85,6 +90,8 @@ function Loading() {
 export function PortalBillingPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
+  const language = useLanguage()
+  const t = useT()
   const checkout = params.get(CHECKOUT_PARAM)
   const checkoutRef =
     checkout && !NOTHING_TO_ASK.includes(checkout) ? checkout : null
@@ -181,8 +188,8 @@ export function PortalBillingPage() {
 
       <main className="max-w-4xl mx-auto px-6 py-8 space-y-8">
         <div>
-          <h1 className="page-title">Юніти</h1>
-          <p className="page-subtitle">{UNITS_SUBTITLE}</p>
+          <h1 className="page-title">{t('portal.nav.units')}</h1>
+          <p className="page-subtitle">{t('portal.billing.subtitle')}</p>
         </div>
 
         {checkoutRef && (
@@ -196,7 +203,7 @@ export function PortalBillingPage() {
 
         {loadFailed && (
           <div className="rounded-2xl bg-canvas-dark p-5 space-y-2">
-            <PortalFailure text={LOAD_FAILED} />
+            <PortalFailure text={billingText(language, 'portal.billing.loadFailed')} />
           </div>
         )}
 
@@ -228,7 +235,9 @@ export function PortalBillingPage() {
             loadingMore={loadingMore}
             moreFailed={moreFailed}
             onMore={() => void loadMore()}
-            moreFailedNote={<PortalFailure text={LOAD_FAILED} />}
+            moreFailedNote={
+              <PortalFailure text={billingText(language, 'portal.billing.loadFailed')} />
+            }
           />
         ) : (
           !loadFailed && <Loading />

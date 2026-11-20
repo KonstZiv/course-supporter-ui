@@ -30,7 +30,7 @@ function CourseTasks({ course }: { course: BillingSpendingCourse }) {
           {course.title ?? UNTITLED_COURSE}
         </span>
         <span className="text-ink-light text-sm">
-          Витрачено: {formatUnits(billed)}
+          Витрачено: {formatUnits('uk', billed)}
         </span>
       </button>
       {open && (
@@ -55,9 +55,9 @@ function CourseTasks({ course }: { course: BillingSpendingCourse }) {
                   <th scope="row" className="px-3 py-2 text-start font-normal break-words">
                     {task.title ?? 'Завдання без назви'}
                   </th>
-                  <td className={CELL}>{formatNumber(task.reviews)}</td>
-                  <td className={CELL}>{formatNumber(task.billed_units)}</td>
-                  <td className={CELL}>{formatNumber(task.covered_units)}</td>
+                  <td className={CELL}>{formatNumber('uk', task.reviews)}</td>
+                  <td className={CELL}>{formatNumber('uk', task.billed_units)}</td>
+                  <td className={CELL}>{formatNumber('uk', task.covered_units)}</td>
                 </tr>
               ))}
             </tbody>

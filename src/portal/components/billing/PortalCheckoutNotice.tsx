@@ -1,6 +1,7 @@
 import { PaymentResult } from '../../../components/billing/PaymentResult'
 import { PORTAL_CHECKOUTS } from '../../billingPorts'
-import { PAYMENT_NOT_ARRIVED } from '../../billingTexts'
+import { useLanguage } from '../../../i18n/LanguageContext'
+import { billingText } from '../../billingTexts'
 import { SupportMailText } from '../SupportMailText'
 import { ReturnToWork } from './ReturnToWork'
 
@@ -18,13 +19,14 @@ interface PortalCheckoutNoticeProps {
  * back to the work once the units are credited.
  */
 export function PortalCheckoutNotice(props: PortalCheckoutNoticeProps) {
+  const language = useLanguage()
   return (
     <PaymentResult
       {...props}
       source={PORTAL_CHECKOUTS}
       stoppedNote={
         <p>
-          <SupportMailText text={PAYMENT_NOT_ARRIVED} />
+          <SupportMailText text={billingText(language, 'portal.billing.paymentNotArrived')} />
         </p>
       }
       creditedAction={<ReturnToWork />}

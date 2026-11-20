@@ -5,23 +5,32 @@
 // the student (portal) each have their own text; both are four lines, the
 // first the window's title, the second the checkbox's.
 
+import { DEFAULT_LANGUAGE, type Language } from '../i18n/languages'
+import { translate } from '../i18n/translate'
+
 export type ConsentLines = readonly [string, string, string, string]
 
-/** The author's consent, in the author program. */
-export const CONSENT_LINES = [
-  'Перед купівлею юнітів підтвердьте:',
-  'Я прочитав(ла) й приймаю умови користування та правила повернення оплати.',
-  'Коротко: юніт — не гроші й не платіжний засіб, його не можна обміняти на гроші, продати чи передати; пакет діє шість місяців; за невикористані юніти чинного пакета ви можете отримати повернення оплати.',
-  'Якщо умови зміняться, ми попросимо вас підтвердити їх знову.',
-] as const satisfies ConsentLines
+/** Whose consent: the author's, in the author program, or the student's, in the portal. */
+export type ConsentHolder = 'author' | 'student'
 
-/** The student's consent, in the portal. */
-export const STUDENT_CONSENT_LINES = [
-  'Перед першою купівлею підтвердьте:',
-  'Я прочитав(ла) й приймаю умови користування та правила повернення оплати.',
-  'Коротко: юніт — не гроші й не платіжний засіб, його не можна обміняти на гроші, продати чи передати; пакет діє шість місяців; за невикористані юніти чинного пакета ви можете отримати повернення оплати.',
-  'Якщо умови зміняться, ми попросимо вас підтвердити їх знову.',
-] as const satisfies ConsentLines
+/** The holder's four lines in a language, exactly as the catalog has them. */
+export function consentLines(language: Language, holder: ConsentHolder): ConsentLines {
+  return [
+    translate(
+      language,
+      holder === 'author' ? 'shared.consent.author.title' : 'shared.consent.student.title',
+    ),
+    translate(language, 'shared.consent.checkbox'),
+    translate(language, 'shared.consent.summary'),
+    translate(language, 'shared.consent.change'),
+  ]
+}
+
+/** The author's consent, in the author program. */
+export const CONSENT_LINES = consentLines(DEFAULT_LANGUAGE, 'author')
+
+/** The student's consent, in the portal, in the default language. */
+export const STUDENT_CONSENT_LINES = consentLines(DEFAULT_LANGUAGE, 'student')
 
 /** The lines joined by "\n", without a trailing newline: what is fingerprinted. */
 export function consentText(lines: ConsentLines = CONSENT_LINES): string {
@@ -30,10 +39,6 @@ export function consentText(lines: ConsentLines = CONSENT_LINES): string {
 
 /** The author's text, as fingerprinted. */
 export const CONSENT_TEXT = consentText(CONSENT_LINES)
-
-/** The words of the checkbox line that link to the site's pages. */
-export const TERMS_LINK_WORDS = 'умови користування'
-export const REFUNDS_LINK_WORDS = 'правила повернення оплати'
 
 /**
  * SHA-256 of the consent text of `lines` in UTF-8, lowercase hex; without an

@@ -4,17 +4,8 @@ import { BookOpen, ArrowRight, AlertCircle, CheckCircle2, Loader2 } from 'lucide
 import { portalApi, PortalApiError } from '../api/portalClient'
 import { isUuid } from '../uuid'
 import { InvalidPortalLink } from '../components/InvalidPortalLink'
-import {
-  RESET_TITLE,
-  RESET_DESCRIPTION,
-  RESET_PASSWORD_LABEL,
-  RESET_SUBMIT,
-  RESET_SUCCESS,
-  RESET_GO_TO_LOGIN,
-  RESET_REQUEST_NEW_LINK,
-  PASSWORD_MIN_LENGTH,
-  flowError,
-} from '../recoveryTexts'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
+import { PASSWORD_MIN_LENGTH, flowError } from '../recoveryTexts'
 
 // Public reset-password landing (R3). The token rides in the query string of
 // the email link ({PORTAL_BASE_URL}/{tenant}/reset-password?token=…). A missing
@@ -25,6 +16,8 @@ import {
 // minimum) so a weak-password 422 is essentially unreachable, but still handled.
 export function PortalResetPasswordPage() {
   const { tenantId } = useParams()
+  const language = useLanguage()
+  const t = useT()
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token')
 
@@ -45,9 +38,9 @@ export function PortalResetPasswordPage() {
           <div className="w-10 h-10 rounded-xl bg-navy flex items-center justify-center">
             <BookOpen size={20} className="text-amber-light" />
           </div>
-          <span className="font-display text-2xl text-ink">Навчальний портал</span>
+          <span className="font-display text-2xl text-ink">{t('portal.header.name')}</span>
         </div>
-        <h2 className="font-display text-2xl text-ink mb-2">{RESET_TITLE}</h2>
+        <h2 className="font-display text-2xl text-ink mb-2">{t('portal.recovery.reset.title')}</h2>
         {children}
       </div>
     </div>
@@ -58,10 +51,10 @@ export function PortalResetPasswordPage() {
       <>
         <div className="flex items-start gap-2 p-3 rounded-xl bg-coral-pale text-coral text-sm mb-6">
           <AlertCircle size={16} className="shrink-0 mt-0.5" />
-          {flowError('missingToken')}
+          {flowError(language, 'missingToken')}
         </div>
         <Link to={`/${tenantId}/forgot-password`} className="btn-ghost btn-sm">
-          {RESET_REQUEST_NEW_LINK}
+          {t('portal.recovery.reset.requestNewLink')}
         </Link>
       </>,
     )
@@ -72,10 +65,10 @@ export function PortalResetPasswordPage() {
       <>
         <div className="flex items-start gap-2 p-3 rounded-xl bg-forest-pale text-forest text-sm mb-6">
           <CheckCircle2 size={16} className="shrink-0 mt-0.5" />
-          {RESET_SUCCESS}
+          {t('portal.recovery.reset.success')}
         </div>
         <Link to={`/${tenantId}/login`} className="btn-primary btn-sm">
-          {RESET_GO_TO_LOGIN}
+          {t('portal.recovery.reset.goToLogin')}
         </Link>
       </>,
     )
@@ -86,10 +79,10 @@ export function PortalResetPasswordPage() {
       <>
         <div className="flex items-start gap-2 p-3 rounded-xl bg-coral-pale text-coral text-sm mb-6">
           <AlertCircle size={16} className="shrink-0 mt-0.5" />
-          {flowError('invalidToken')}
+          {flowError(language, 'invalidToken')}
         </div>
         <Link to={`/${tenantId}/forgot-password`} className="btn-ghost btn-sm">
-          {RESET_REQUEST_NEW_LINK}
+          {t('portal.recovery.reset.requestNewLink')}
         </Link>
       </>,
     )
@@ -98,7 +91,7 @@ export function PortalResetPasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (password.length < PASSWORD_MIN_LENGTH) {
-      setError(flowError('weakPassword'))
+      setError(flowError(language, 'weakPassword'))
       return
     }
 
@@ -111,9 +104,9 @@ export function PortalResetPasswordPage() {
       if (err instanceof PortalApiError && err.status === 400) {
         setTokenRejected(true)
       } else if (err instanceof PortalApiError && err.status === 422) {
-        setError(flowError('weakPassword'))
+        setError(flowError(language, 'weakPassword'))
       } else {
-        setError(flowError('network'))
+        setError(flowError(language, 'network'))
       }
     } finally {
       setLoading(false)
@@ -122,14 +115,14 @@ export function PortalResetPasswordPage() {
 
   return shell(
     <>
-      <p className="text-ink-muted mb-8">{RESET_DESCRIPTION}</p>
+      <p className="text-ink-muted mb-8">{t('portal.recovery.reset.description')}</p>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label
             htmlFor="portal-reset-password"
             className="block text-sm font-medium text-ink mb-1.5"
           >
-            {RESET_PASSWORD_LABEL}
+            {t('portal.recovery.reset.passwordLabel')}
           </label>
           <input
             id="portal-reset-password"
@@ -157,7 +150,7 @@ export function PortalResetPasswordPage() {
             <Loader2 size={18} className="animate-spin" />
           ) : (
             <>
-              {RESET_SUBMIT}
+              {t('portal.recovery.reset.submit')}
               <ArrowRight size={18} />
             </>
           )}

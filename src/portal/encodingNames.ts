@@ -13,36 +13,39 @@
 // does not. Silence there would be worse: the student would read that the
 // encoding was "recognised" and never learn as what.
 
-const ENCODING_NAMES: Record<string, string> = {
+import type { Language } from '../i18n/languages'
+import { translate, type MessageKey } from '../i18n/translate'
+
+const ENCODING_NAMES: Record<string, MessageKey> = {
   // The one that actually happens on this platform: files saved by Windows
   // editors in a Cyrillic locale, which is most of what Ukrainian- and
   // Russian-language courses receive.
-  cp1251: 'Windows, кирилиця',
-  windows_1251: 'Windows, кирилиця',
-  'windows-1251': 'Windows, кирилиця',
+  cp1251: 'portal.encoding.windowsCyrillic',
+  windows_1251: 'portal.encoding.windowsCyrillic',
+  'windows-1251': 'portal.encoding.windowsCyrillic',
   // Same bytes, different name in the library's table — the server merges
   // encodings that produce identical text, and which name wins depends on the
   // file. Naming both keeps one text from having two answers.
-  kz1048: 'Windows, кирилиця',
-  cp1252: 'Windows, західноєвропейська',
-  'windows-1252': 'Windows, західноєвропейська',
-  cp1250: 'Windows, центральноєвропейська',
-  'windows-1250': 'Windows, центральноєвропейська',
-  cp866: 'DOS, кирилиця',
-  ibm866: 'DOS, кирилиця',
-  'koi8-r': 'KOI8, кирилиця',
-  'koi8-u': 'KOI8, українська',
-  koi8_r: 'KOI8, кирилиця',
-  koi8_u: 'KOI8, українська',
-  'iso-8859-5': 'ISO, кирилиця',
-  'iso-8859-1': 'ISO, західноєвропейська',
-  'iso-8859-2': 'ISO, центральноєвропейська',
-  mac_cyrillic: 'Mac, кирилиця',
-  maccyrillic: 'Mac, кирилиця',
-  'utf-16': 'UTF-16',
-  'utf-16le': 'UTF-16',
-  'utf-16be': 'UTF-16',
-  'utf-8-sig': 'UTF-8 з міткою порядку байтів',
+  kz1048: 'portal.encoding.windowsCyrillic',
+  cp1252: 'portal.encoding.windowsWestern',
+  'windows-1252': 'portal.encoding.windowsWestern',
+  cp1250: 'portal.encoding.windowsCentral',
+  'windows-1250': 'portal.encoding.windowsCentral',
+  cp866: 'portal.encoding.dosCyrillic',
+  ibm866: 'portal.encoding.dosCyrillic',
+  'koi8-r': 'portal.encoding.koi8Cyrillic',
+  'koi8-u': 'portal.encoding.koi8Ukrainian',
+  koi8_r: 'portal.encoding.koi8Cyrillic',
+  koi8_u: 'portal.encoding.koi8Ukrainian',
+  'iso-8859-5': 'portal.encoding.isoCyrillic',
+  'iso-8859-1': 'portal.encoding.isoWestern',
+  'iso-8859-2': 'portal.encoding.isoCentral',
+  mac_cyrillic: 'portal.encoding.macCyrillic',
+  maccyrillic: 'portal.encoding.macCyrillic',
+  'utf-16': 'portal.encoding.utf16',
+  'utf-16le': 'portal.encoding.utf16',
+  'utf-16be': 'portal.encoding.utf16',
+  'utf-8-sig': 'portal.encoding.utf8Bom',
 }
 
 /**
@@ -52,8 +55,11 @@ const ENCODING_NAMES: Record<string, string> = {
  * the detector called it, and casing is the one difference that carries no
  * meaning.
  */
-export function encodingDisplayName(encoding: string): string {
-  return ENCODING_NAMES[encoding.toLowerCase()] ?? `(${encoding})`
+export function encodingDisplayName(language: Language, encoding: string): string {
+  const name = ENCODING_NAMES[encoding.toLowerCase()]
+  return name
+    ? translate(language, name)
+    : translate(language, 'portal.encoding.raw', { name: encoding })
 }
 
 /**

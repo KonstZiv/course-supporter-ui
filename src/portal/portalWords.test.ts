@@ -1,24 +1,26 @@
 import { describe, expect, it } from 'vitest'
+import { translate } from '../i18n/translate'
 import {
   availableLine,
   ceilingEnough,
   ceilingShort,
   costOverReserve,
-  COUNTING,
   expiringReminder,
-  FILE_WAITS_HERE,
-  FREE_REVIEW,
   lowReminder,
-  NEXT_MAY_FAIL,
-  PAID_BY_AUTHOR,
-  PRICE_UNAVAILABLE,
   pricedEnough,
   pricedShort,
   reviewsLeftLine,
-  TEST_NEEDS_PACKAGE,
-  UNITS_NOW_ENOUGH,
-  BUY_UNITS,
 } from './unitsTexts'
+
+const PAID_BY_AUTHOR = translate('uk', 'portal.units.paidByAuthor')
+const COUNTING = translate('uk', 'portal.units.counting')
+const PRICE_UNAVAILABLE = translate('uk', 'portal.units.priceUnavailable')
+const FREE_REVIEW = translate('uk', 'portal.units.freeReview')
+const UNITS_NOW_ENOUGH = translate('uk', 'portal.units.nowEnough')
+const BUY_UNITS = translate('uk', 'portal.units.buy')
+const FILE_WAITS_HERE = translate('uk', 'portal.units.fileWaitsHere')
+const TEST_NEEDS_PACKAGE = translate('uk', 'portal.units.testNeedsPackage')
+const NEXT_MAY_FAIL = translate('uk', 'portal.units.nextMayFail')
 
 // The portal's product files, not its tests: a test may name a word to say it
 // must not appear.
@@ -50,16 +52,16 @@ const SENTENCES = [
   FILE_WAITS_HERE,
   TEST_NEEDS_PACKAGE,
   NEXT_MAY_FAIL,
-  ceilingEnough(40, 50),
-  ceilingShort(40, 3, 2),
-  pricedEnough(5, 20),
-  pricedShort(12, 5, 7),
-  reviewsLeftLine(8),
-  availableLine(120, 8),
-  availableLine(120, null),
-  lowReminder(2),
-  expiringReminder(500, '2026-12-01'),
-  costOverReserve(5, 2),
+  ceilingEnough('uk', 40, 50),
+  ceilingShort('uk', 40, 3, 2),
+  pricedEnough('uk', 5, 20),
+  pricedShort('uk', 12, 5, 7),
+  reviewsLeftLine('uk', 8),
+  availableLine('uk', 120, 8),
+  availableLine('uk', 120, null),
+  lowReminder('uk', 2),
+  expiringReminder('uk', 500, '2026-12-01'),
+  costOverReserve('uk', 5, 2),
 ]
 
 describe('the words of stage 2b keep the language rules', () => {

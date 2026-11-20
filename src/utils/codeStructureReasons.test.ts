@@ -142,7 +142,7 @@ describe('notReadCountLabel', () => {
     // Two bundles, one rule. If either is edited alone this fails, which is
     // the only guard the boundary between them allows.
     for (const n of [1, 2, 4, 5, 11, 14, 21, 22, 101, 201]) {
-      expect(notReadCountLabel(n)).toBe(notOpenedCountLabel(n))
+      expect(notReadCountLabel(n)).toBe(notOpenedCountLabel('uk', n))
     }
   })
 })

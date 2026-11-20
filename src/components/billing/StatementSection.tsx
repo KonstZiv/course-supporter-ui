@@ -1,5 +1,5 @@
 import type { BillingStatementItem } from '../../types/api'
-import { LOAD_FAILED } from '../../utils/billingWords'
+import { LOAD_FAILED } from '../../utils/authorBillingTexts'
 import { FailureWithLetter } from './FailureWithLetter'
 import { StatementList } from './StatementList'
 

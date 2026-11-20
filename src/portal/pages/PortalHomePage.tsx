@@ -9,7 +9,8 @@ import type { PortalCourseListItem } from '../types'
 import { useAvailableUnits, useStudentOutlook } from '../hooks/useStudentOutlook'
 import { UnitsReminders } from '../components/billing/UnitsReminders'
 import { SITE_TEXT_LINK_CLASS } from '../../components/site/siteLinks'
-import { availableLine, BUY_UNITS } from '../unitsTexts'
+import { availableLine } from '../unitsTexts'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 
 /**
  * Under the greeting, for a student who pays for their reviews: what is
@@ -20,21 +21,25 @@ import { availableLine, BUY_UNITS } from '../unitsTexts'
 function UnitsOutlook({ tenantId }: { tenantId: string | undefined }) {
   const { outlook } = useStudentOutlook()
   const available = useAvailableUnits()
+  const language = useLanguage()
+  const t = useT()
   if (outlook?.paid_by !== 'self' || !outlook.charging_enabled) return null
   const units = `/${tenantId}/billing`
   return (
     <div className="mt-4">
       <UnitsReminders
         outlook={outlook}
-        lead={available === null ? null : availableLine(available, outlook.reviews_left)}
+        lead={
+          available === null ? null : availableLine(language, available, outlook.reviews_left)
+        }
         buy={
           <Link to={units} className={SITE_TEXT_LINK_CLASS}>
-            {BUY_UNITS}
+            {t('portal.units.buy')}
           </Link>
         }
         units={
           <Link to={units} className={SITE_TEXT_LINK_CLASS}>
-            Юніти
+            {t('portal.nav.units')}
           </Link>
         }
       />
@@ -50,9 +55,10 @@ export function PortalHomePage() {
   const { tenantId } = useParams()
   const displayName = usePortalSession((s) => s.displayName)
   const navigate = useNavigate()
+  const t = useT()
 
   const [courses, setCourses] = useState<PortalCourseListItem[] | null>(null)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     portalApi
@@ -62,38 +68,38 @@ export function PortalHomePage() {
         // 401 is handled inside the client (clear + redirect); anything else
         // is a soft error on this page.
         if (!(err instanceof PortalApiError && err.status === 401)) {
-          setError('Не вдалося завантажити курси.')
+          setError(true)
         }
       })
   }, [])
 
-  const name = displayName ?? 'Студент'
+  const name = displayName ?? t('portal.home.defaultName')
 
   return (
     <div className="flex-1">
       <PortalHeader current="courses" />
 
       <main className="max-w-4xl mx-auto px-6 py-12">
-        <h1 className="page-title">Вітаємо, {name}!</h1>
+        <h1 className="page-title">{t('portal.home.greeting', { name })}</h1>
         <UnitsOutlook tenantId={tenantId} />
-        <p className="page-subtitle">Ваші курси</p>
+        <p className="page-subtitle">{t('portal.home.subtitle')}</p>
 
         {error && (
           <div className="mt-6 p-3 rounded-xl bg-coral-pale text-coral text-sm max-w-md">
-            {error}
+            {t('portal.home.loadFailed')}
           </div>
         )}
 
         {courses === null && !error && (
           <div className="mt-10 flex items-center gap-2 text-ink-muted">
             <Loader2 size={18} className="animate-spin" />
-            Завантаження…
+            {t('portal.common.loading')}
           </div>
         )}
 
         {courses !== null && courses.length === 0 && (
           <div className="mt-10 card p-8 text-ink-muted">
-            Вас поки не зараховано на жоден курс.
+            {t('portal.home.noCourses')}
           </div>
         )}
 

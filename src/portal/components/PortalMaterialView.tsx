@@ -5,6 +5,7 @@ import { MarkdownContent } from './MarkdownContent'
 import { SlidesCarousel } from './SlidesCarousel'
 import { YoutubeClickToPlay } from './YoutubeClickToPlay'
 import { youtubeEmbedUrl } from './youtube'
+import { useT } from '../../i18n/LanguageContext'
 
 // Renders a loaded media descriptor originals-only (Phase 6 / T4b, c2).
 //
@@ -21,6 +22,7 @@ import { youtubeEmbedUrl } from './youtube'
 // (docx and any future extension) → an honest no-preview notice.
 
 function OpenLink({ url, primary }: { url: string; primary?: boolean }) {
+  const t = useT()
   return (
     <a
       href={url}
@@ -28,18 +30,15 @@ function OpenLink({ url, primary }: { url: string; primary?: boolean }) {
       rel="noopener noreferrer"
       className={`${primary ? 'btn-primary' : 'btn-secondary btn-sm'} mt-3 inline-flex`}
     >
-      Відкрити / Завантажити
+      {t('portal.material.open')}
       <ExternalLink size={primary ? 16 : 14} />
     </a>
   )
 }
 
 function Unrenderable() {
-  return (
-    <p className="text-ink-muted py-8 text-center">
-      Неможливо відобразити цей матеріал.
-    </p>
-  )
+  const t = useT()
+  return <p className="text-ink-muted py-8 text-center">{t('portal.material.unrenderable')}</p>
 }
 
 // Format signal (ratify Р1): the extension in the signed key's path (the path
@@ -57,6 +56,7 @@ export const extOf = (url: string): string =>
 // B2 rule) and renders it through the shared MarkdownContent (GFM + mermaid). A
 // guaranteed "Відкрити / Завантажити" affordance backs it (corrective 2).
 function MarkdownMaterial({ url }: { url: string }) {
+  const t = useT()
   const [state, setState] = useState<
     | { status: 'loading' }
     | { status: 'ready'; text: string }
@@ -81,15 +81,13 @@ function MarkdownMaterial({ url }: { url: string }) {
 
   if (state.status === 'loading') {
     return (
-      <p className="text-ink-muted py-8 text-center">Завантаження конспекту…</p>
+      <p className="text-ink-muted py-8 text-center">{t('portal.material.notesLoading')}</p>
     )
   }
   if (state.status === 'error') {
     return (
       <>
-        <p className="text-ink-muted py-8 text-center">
-          Не вдалося завантажити конспект.
-        </p>
+        <p className="text-ink-muted py-8 text-center">{t('portal.material.notesFailed')}</p>
         <OpenLink url={url} primary />
       </>
     )
@@ -109,11 +107,12 @@ export function PortalMaterialView({
   media: PortalMediaResponse
   item: PortalMaterialItem
 }) {
+  const t = useT()
   if (media.kind === 'slides') {
     const slides = media.slide_urls ?? []
     if (slides.length === 0) {
       return (
-        <p className="text-ink-muted py-8 text-center">Слайди ще готуються.</p>
+        <p className="text-ink-muted py-8 text-center">{t('portal.material.slidesPending')}</p>
       )
     }
     return <SlidesCarousel slides={slides} />
@@ -151,7 +150,7 @@ export function PortalMaterialView({
       return (
         <div className="py-4">
           <a href={url} className="btn-primary inline-flex" download>
-            Завантажити
+            {t('portal.material.download')}
             <Download size={16} />
           </a>
         </div>
@@ -217,10 +216,7 @@ export function PortalMaterialView({
     // docx and any future/unknown extension → no inline preview, honest notice.
     return (
       <div className="py-8 text-center">
-        <p className="text-ink-muted">
-          Попередній перегляд для цього формату недоступний. Завантажте файл, щоб
-          переглянути його на своєму пристрої.
-        </p>
+        <p className="text-ink-muted">{t('portal.material.noPreview')}</p>
         <OpenLink url={url} primary />
       </div>
     )

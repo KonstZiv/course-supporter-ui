@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { PortalApp } from './App'
+import { LanguageProvider } from '../i18n/LanguageProvider'
 import '../fonts'
 import '../index.css'
 
@@ -10,8 +11,10 @@ import '../index.css'
 // index.css (Tailwind layers); the author app is untouched.
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
-      <PortalApp />
-    </BrowserRouter>
+    <LanguageProvider>
+      <BrowserRouter>
+        <PortalApp />
+      </BrowserRouter>
+    </LanguageProvider>
   </StrictMode>,
 )

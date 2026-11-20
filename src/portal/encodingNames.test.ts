@@ -23,24 +23,24 @@ describe('shouldReportEncoding', () => {
 
 describe('encodingDisplayName', () => {
   it('names the encoding this platform actually meets', () => {
-    expect(encodingDisplayName('cp1251')).toBe('Windows, кирилиця')
+    expect(encodingDisplayName('uk', 'cp1251')).toBe('Windows, кирилиця')
   })
 
   it('gives one text one answer under either library name', () => {
     // The server merges encodings that decode identically; which name comes
     // back depends on the file, and the student must not see two answers for
     // the same thing.
-    expect(encodingDisplayName('kz1048')).toBe(encodingDisplayName('cp1251'))
-    expect(encodingDisplayName('windows-1251')).toBe(encodingDisplayName('cp1251'))
+    expect(encodingDisplayName('uk', 'kz1048')).toBe(encodingDisplayName('uk', 'cp1251'))
+    expect(encodingDisplayName('uk', 'windows-1251')).toBe(encodingDisplayName('uk', 'cp1251'))
   })
 
   it('is case-insensitive — casing carries no meaning here', () => {
-    expect(encodingDisplayName('CP1251')).toBe('Windows, кирилиця')
+    expect(encodingDisplayName('uk', 'CP1251')).toBe('Windows, кирилиця')
   })
 
   it('falls back to the raw token in parentheses, never to nothing', () => {
     // "recognised as ___" with a blank is worse than an unfamiliar name: the
     // student learns the file was rescued and not what as.
-    expect(encodingDisplayName('shift_jis')).toBe('(shift_jis)')
+    expect(encodingDisplayName('uk', 'shift_jis')).toBe('(shift_jis)')
   })
 })

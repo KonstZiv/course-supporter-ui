@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import {
-  ACTION_FAILURE_TEXT,
-  actionFailure,
-  NETWORK_FAILED,
-  PACKAGE_NOT_FOUND,
-  statementLineText,
-} from './billingWords'
+import { translate } from '../i18n/translate'
+import { ACTION_FAILURE_TEXT } from './authorBillingTexts'
+import { actionFailure, statementLineText } from './billingWords'
+
+const NETWORK_FAILED = translate('uk', 'shared.billing.networkFailed')
+const PACKAGE_NOT_FOUND = translate('uk', 'shared.billing.packageNotFound')
 
 describe('actionFailure', () => {
   it('picks the failure by the reason code, then by whether the server answered', () => {
@@ -25,7 +24,7 @@ describe('actionFailure', () => {
 describe('statementLineText', () => {
   it('a review charge reads as the review of a work', () => {
     expect(
-      statementLineText({ kind: 'charge', action: { kind: 'review', id: 'a' } }),
+      statementLineText('uk', { kind: 'charge', action: { kind: 'review', id: 'a' } }),
     ).toBe('Перевірка роботи')
   })
 })

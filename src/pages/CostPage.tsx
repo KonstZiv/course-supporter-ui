@@ -42,11 +42,11 @@ function CourseTable({ spending }: { spending: BillingSpendingResponse }) {
               <th scope="row" className="px-3 py-2 text-start font-normal">
                 {course.title ?? UNTITLED_COURSE}
               </th>
-              <td className={CELL}>{formatNumber(course.processing_units)}</td>
-              <td className={CELL}>{formatNumber(course.preparation_units)}</td>
-              <td className={CELL}>{formatNumber(course.reviews_units)}</td>
-              <td className={CELL}>{formatNumber(course.billed_units)}</td>
-              <td className={CELL}>{formatNumber(course.covered_units)}</td>
+              <td className={CELL}>{formatNumber('uk', course.processing_units)}</td>
+              <td className={CELL}>{formatNumber('uk', course.preparation_units)}</td>
+              <td className={CELL}>{formatNumber('uk', course.reviews_units)}</td>
+              <td className={CELL}>{formatNumber('uk', course.billed_units)}</td>
+              <td className={CELL}>{formatNumber('uk', course.covered_units)}</td>
             </tr>
           ))}
           {unlinked && (
@@ -57,8 +57,8 @@ function CourseTable({ spending }: { spending: BillingSpendingResponse }) {
               <td className={CELL}>—</td>
               <td className={CELL}>—</td>
               <td className={CELL}>—</td>
-              <td className={CELL}>{formatNumber(unlinked.billed_units)}</td>
-              <td className={CELL}>{formatNumber(unlinked.covered_units)}</td>
+              <td className={CELL}>{formatNumber('uk', unlinked.billed_units)}</td>
+              <td className={CELL}>{formatNumber('uk', unlinked.covered_units)}</td>
             </tr>
           )}
         </tbody>
@@ -82,10 +82,10 @@ function MonthSpending({
     <div className="space-y-4">
       <div className="space-y-1 text-ink">
         <p className="text-lg font-semibold">
-          Витрачено за {monthLabel(month)}: {formatUnits(billed)}.
+          Витрачено за {monthLabel(month)}: {formatUnits('uk', billed)}.
         </p>
         {covered > 0 && (
-          <p>Покрито платформою або за домовленістю: {formatUnits(covered)}.</p>
+          <p>Покрито платформою або за домовленістю: {formatUnits('uk', covered)}.</p>
         )}
       </div>
       <CourseTable spending={spending} />

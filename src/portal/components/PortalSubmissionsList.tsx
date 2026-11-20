@@ -9,6 +9,8 @@ import type {
 import { isReviewed, presentationLabel, stateTone } from '../presentationPhrases'
 import { notOpenedCountLabel } from '../rejectionReasons'
 import { PortalReviewDetail } from './PortalReviewDetail'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
+import { localeOf, type Language } from '../../i18n/languages'
 
 // Compact per-attempt chip. Reads the server's own answer about THIS attempt
 // (mentor-rebuild task 03) — the portal no longer groups lifecycle statuses of
@@ -22,12 +24,14 @@ function AttemptChip({
   score: number | null
   verdict: PortalVerdict | null
 }) {
+  const language = useLanguage()
+  const t = useT()
   const base = 'text-xs px-2 py-0.5 rounded-full whitespace-nowrap'
   const { state } = presentation
   if (!isReviewed(state)) {
     return (
       <span className={`${base} ${stateTone(state)}`}>
-        {presentationLabel(presentation)}
+        {presentationLabel(language, presentation)}
       </span>
     )
   }
@@ -36,17 +40,19 @@ function AttemptChip({
     const tone = passed ? 'bg-forest-pale text-forest' : 'bg-coral-pale text-coral'
     return (
       <span className={`${base} ${tone}`}>
-        {score}/100 · {passed ? 'зараховано' : 'не зараховано'}
+        {score}/100 · {passed ? t('portal.verdict.passed') : t('portal.verdict.notPassed')}
       </span>
     )
   }
-  return <span className={`${base} bg-forest-pale text-forest`}>Перевірено</span>
+  return <span className={`${base} bg-forest-pale text-forest`}>
+      {t('portal.state.label.reviewed')}
+    </span>
 }
 
-function formatDate(iso: string): string {
+function formatDate(language: Language, iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleString('uk-UA', { dateStyle: 'short', timeStyle: 'short' })
+  return d.toLocaleString(localeOf(language), { dateStyle: 'short', timeStyle: 'short' })
 }
 
 // "My attempts" for one task (Phase 6 / T4b, c3b; Q1 — a section in the task
@@ -68,14 +74,16 @@ export function PortalSubmissionsList({
   onLoaded?: (ids: string[]) => void
 }) {
   const [items, setItems] = useState<PortalSubmissionListItem[] | null>(null)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(false)
+  const language = useLanguage()
+  const t = useT()
   const [refreshNonce, setRefreshNonce] = useState(0)
   const [openId, setOpenId] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
     setItems(null)
-    setError('')
+    setError(false)
     portalApi
       .submissions(taskId)
       .then((rows) => {
@@ -86,7 +94,7 @@ export function PortalSubmissionsList({
       .catch((err) => {
         if (!active) return
         if (err instanceof PortalApiError && err.status === 401) return // centralised
-        setError('Не вдалося завантажити спроби.')
+        setError(true)
       })
     return () => {
       active = false
@@ -99,28 +107,30 @@ export function PortalSubmissionsList({
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-display text-lg text-ink">Мої спроби</h3>
+        <h3 className="font-display text-lg text-ink">{t('portal.attempts.title')}</h3>
         <button
           onClick={() => setRefreshNonce((n) => n + 1)}
-          aria-label="Оновити список спроб"
+          aria-label={t('portal.attempts.refreshLabel')}
           className="btn-ghost btn-sm"
         >
           <RotateCw size={14} />
-          Оновити
+          {t('portal.attempts.refresh')}
         </button>
       </div>
 
       {items === null && !error && (
         <div className="flex items-center gap-2 text-ink-muted text-sm py-3">
           <Loader2 size={16} className="animate-spin" />
-          Завантаження…
+          {t('portal.common.loading')}
         </div>
       )}
       {error && (
-        <div className="p-3 rounded-xl bg-coral-pale text-coral text-sm">{error}</div>
+        <div className="p-3 rounded-xl bg-coral-pale text-coral text-sm">
+          {t('portal.attempts.loadFailed')}
+        </div>
       )}
       {items && items.length === 0 && (
-        <div className="text-sm text-ink-muted">Ще немає спроб.</div>
+        <div className="text-sm text-ink-muted">{t('portal.attempts.empty')}</div>
       )}
       {items && items.length > 0 && (
         <ul className="space-y-2">
@@ -141,11 +151,11 @@ export function PortalSubmissionsList({
                   />
                   {it.not_opened.length > 0 && (
                     <span className="text-xs px-2 py-0.5 rounded-full bg-amber-pale text-amber-dark whitespace-nowrap">
-                      {notOpenedCountLabel(it.not_opened.length)}
+                      {notOpenedCountLabel(language, it.not_opened.length)}
                     </span>
                   )}
                   <span className="text-xs text-ink-muted ml-auto whitespace-nowrap">
-                    {formatDate(it.created_at)}
+                    {formatDate(language, it.created_at)}
                   </span>
                 </button>
                 {it.original_filename && (

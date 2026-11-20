@@ -20,6 +20,7 @@
     "@xyflow/react": "^12.6.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.0.0",
+    "intl-messageformat": "12.1.4",
     "lucide-react": "^0.475.0",
     "mermaid": "11.17.0",
     "react": "^19.0.0",

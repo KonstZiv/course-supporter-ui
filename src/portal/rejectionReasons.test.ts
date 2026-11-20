@@ -7,6 +7,7 @@ import {
   UNKNOWN_REASON,
 } from './rejectionReasons'
 import type { PortalNotOpened } from './types'
+import { translate } from '../i18n/translate'
 
 const rej = (code: string, details: string | null = 'work.zip') => ({ code, details })
 const skipped = (path: string, reason: string): PortalNotOpened => ({
@@ -25,18 +26,18 @@ describe('rejectionPhrase — layer 1, the §4 article for a whole submission', 
     ['suspicious_unicode', /приховані або підмінені символи/],
     ['prompt_injection', /інструкції, адресовані системі перевірки/],
   ])('%s → its ratified phrase', (code, re) => {
-    expect(rejectionPhrase(rej(code))).toMatch(re)
+    expect(rejectionPhrase('uk', rej(code))).toMatch(re)
   })
 
   it('names what happened AND what to do, in that order', () => {
-    expect(rejectionPhrase(rej('empty_document'))).toBe(
+    expect(rejectionPhrase('uk', rej('empty_document'))).toBe(
       'У поданому файлі немає тексту для перевірки. ' +
         'Надішліть текстову версію роботи (не скан і не порожній архів).',
     )
   })
 
   it('no_changes → the ratified article for a project without changes', () => {
-    expect(rejectionPhrase(rej('no_changes'))).toBe(
+    expect(rejectionPhrase('uk', rej('no_changes'))).toBe(
       'Надісланий архів не містить ваших змін: у ньому немає жодного нового ' +
         'чи зміненого файла з кодом або текстом порівняно зі стартовим проєктом. ' +
         'Внесіть свої зміни в проєкт і надішліть роботу знову.',
@@ -44,7 +45,7 @@ describe('rejectionPhrase — layer 1, the §4 article for a whole submission', 
   })
 
   it('no_readable_changes → the ratified article for a project with no readable changes', () => {
-    expect(rejectionPhrase(rej('no_readable_changes'))).toBe(
+    expect(rejectionPhrase('uk', rej('no_readable_changes'))).toBe(
       'Серед ваших нових і змінених файлів немає жодного, який перевірка ' +
         'змогла прочитати: файлів із кодом чи текстом немає або їх не ' +
         'вдалося відкрити (перелік і причини — нижче). ' +
@@ -56,7 +57,7 @@ describe('rejectionPhrase — layer 1, the §4 article for a whole submission', 
   it.each(['archive_violation', 'archive_bomb', 'symlink_violation'])(
     '%s → the one structural answer (which guard tripped is not the student’s concern)',
     (code) => {
-      expect(rejectionPhrase(rej(code))).toMatch(/не пройшов перевірку структури/)
+      expect(rejectionPhrase('uk', rej(code))).toMatch(/не пройшов перевірку структури/)
     },
   )
 })
@@ -65,7 +66,7 @@ describe('rejectionPhrase — declines, so the caller can fall to the state laye
   // ``mismatch`` still declines: the phrase for its state says more than any
   // article keyed on the code could, and that wording is ratified.
   it('mismatch → null', () => {
-    expect(rejectionPhrase(rej('mismatch'))).toBeNull()
+    expect(rejectionPhrase('uk', rej('mismatch'))).toBeNull()
   })
 
   // ``stage2_rejected`` no longer declines (mentor-rebuild task 03). Its
@@ -73,17 +74,17 @@ describe('rejectionPhrase — declines, so the caller can fall to the state laye
   // carries it, so the safety refusal keeps the words it was ratified with
   // instead of falling to the generic phrase for "not opened".
   it('stage2_rejected → the ratified safety sentence', () => {
-    expect(rejectionPhrase(rej('stage2_rejected'))).toMatch(
+    expect(rejectionPhrase('uk', rej('stage2_rejected'))).toMatch(
       /не пройшло перевірку безпеки/,
     )
   })
 
   it('a code this interface has never seen → null', () => {
-    expect(rejectionPhrase(rej('some_future_code'))).toBeNull()
+    expect(rejectionPhrase('uk', rej('some_future_code'))).toBeNull()
   })
 
   it('never returns the backend detail, whatever it holds', () => {
-    const phrase = rejectionPhrase({
+    const phrase = rejectionPhrase('uk', {
       code: 'some_future_code',
       details: "File extension '.exe' is not accepted.",
     })
@@ -97,7 +98,7 @@ describe('rejectionPhrase — the two sizes behind over_budget', () => {
   // there. One code, two answers, and the discriminator is the shape of
   // details — a filename can never parse as a pair of numbers.
   it('a pair of numbers → the project sentence, grouped for uk', () => {
-    const phrase = rejectionPhrase(rej('over_budget', '295 000 / 131 072'))
+    const phrase = rejectionPhrase('uk', rej('over_budget', '295 000 / 131 072'))
     expect(phrase).toBe(
       `Проєкт завеликий для перевірки: 295\u00A0000 знаків тексту після ` +
         `очищення проти межі 131\u00A0072. ` +
@@ -110,7 +111,7 @@ describe('rejectionPhrase — the two sizes behind over_budget', () => {
   it('groups thousands itself rather than echoing the server spacing', () => {
     // The server sends plain spaces; the portal re-groups with the
     // non-breaking space uk uses, so the number never wraps mid-way.
-    const phrase = rejectionPhrase(rej('over_budget', '1000000/2000000'))
+    const phrase = rejectionPhrase('uk', rej('over_budget', '1000000/2000000'))
     expect(phrase).toContain('1\u00A0000\u00A0000 знаків')
     expect(phrase).toContain('межі 2\u00A0000\u00A0000.')
   })
@@ -118,7 +119,7 @@ describe('rejectionPhrase — the two sizes behind over_budget', () => {
   it.each([null, '', ' / ', 'GATE-4.md', 'work.zip', '131072'])(
     'details %p → the plain phrase, no invented numbers',
     (details) => {
-      const phrase = rejectionPhrase(rej('over_budget', details))
+      const phrase = rejectionPhrase('uk', rej('over_budget', details))
       expect(phrase).toBe(
         'Робота завелика для перевірки. ' +
           'Лишіть у роботі лише потрібне і подайте знову.',
@@ -134,7 +135,7 @@ describe('rejectionPhrase — the gzip discrimination', () => {
   it.each(['work.py.gz', 'WORK.TGZ', 'archive.tgz'])(
     '%s → "not a project archive, a single compressed file"',
     (name) => {
-      expect(rejectionPhrase(rej('magic_mismatch', name))).toBe(
+      expect(rejectionPhrase('uk', rej('magic_mismatch', name))).toBe(
         'Це не архів проєкту, а стиснений одиночний файл. ' +
           'Запакуйте роботу як .zip або .tar.gz.',
       )
@@ -144,14 +145,14 @@ describe('rejectionPhrase — the gzip discrimination', () => {
   it.each(['work.zip', 'solution.py', 'report.docx'])(
     '%s → the ordinary extension/content phrase',
     (name) => {
-      expect(rejectionPhrase(rej('magic_mismatch', name))).toMatch(
+      expect(rejectionPhrase('uk', rej('magic_mismatch', name))).toMatch(
         /не відповідає його розширенню/,
       )
     },
   )
 
   it('a null detail cannot crash the suffix test', () => {
-    expect(rejectionPhrase(rej('magic_mismatch', null))).toMatch(
+    expect(rejectionPhrase('uk', rej('magic_mismatch', null))).toMatch(
       /не відповідає його розширенню/,
     )
   })
@@ -163,7 +164,7 @@ describe('notOpenedPhrase — one file inside an archive', () => {
     ['nested_archive', 'Архів усередині архіву.'],
     ['over_budget', 'Завеликий для перевірки.'],
   ])('%s → its own line', (reason, phrase) => {
-    expect(notOpenedPhrase(skipped('a.txt', reason))).toBe(phrase)
+    expect(notOpenedPhrase('uk', skipped('a.txt', reason))).toBe(phrase)
   })
 
   // Step Г2 §2.4: the block heading says "not read" once; no line repeats it.
@@ -181,14 +182,14 @@ describe('notOpenedPhrase — one file inside an archive', () => {
     ['docs/report.docx', 'forbidden_type'],
     ['a.py', 'reason_from_the_future'],
   ])('%s / %s does not repeat the heading', (path, reason) => {
-    expect(notOpenedPhrase(skipped(path, reason))).not.toMatch(/не прочитано/i)
+    expect(notOpenedPhrase('uk', skipped(path, reason))).not.toMatch(/не прочитано/i)
   })
 
   it('a document carries the action — it CAN be submitted on its own', () => {
-    expect(notOpenedPhrase(skipped('docs/report.docx', 'forbidden_type'))).toBe(
+    expect(notOpenedPhrase('uk', skipped('docs/report.docx', 'forbidden_type'))).toBe(
       'Документи всередині архіву не читаються. Надішліть його окремим файлом.',
     )
-    expect(notOpenedPhrase(skipped('paper.PDF', 'forbidden_type'))).toMatch(
+    expect(notOpenedPhrase('uk', skipped('paper.PDF', 'forbidden_type'))).toMatch(
       /окремим файлом/,
     )
   })
@@ -196,39 +197,39 @@ describe('notOpenedPhrase — one file inside an archive', () => {
   it.each(['Makefile', 'src/Makefile', 'LICENSE'])(
     '%s → "no extension" (the NAME is checked, not the path)',
     (path) => {
-      expect(notOpenedPhrase(skipped(path, 'forbidden_type'))).toBe(
+      expect(notOpenedPhrase('uk', skipped(path, 'forbidden_type'))).toBe(
         'Файл без розширення.',
       )
     },
   )
 
   it('a dotfile has an extension — it is simply not an accepted one', () => {
-    expect(notOpenedPhrase(skipped('.gitignore', 'forbidden_type'))).toBe(
+    expect(notOpenedPhrase('uk', skipped('.gitignore', 'forbidden_type'))).toBe(
       'Формат не підтримується.',
     )
   })
 
   it('an ordinary unaccepted format gets no action — there is none to give', () => {
-    expect(notOpenedPhrase(skipped('shot.png', 'forbidden_type'))).toBe(
+    expect(notOpenedPhrase('uk', skipped('shot.png', 'forbidden_type'))).toBe(
       'Формат не підтримується.',
     )
   })
 
   it('magic_mismatch reuses the whole-file article, which reads either way', () => {
-    expect(notOpenedPhrase(skipped('a.py', 'magic_mismatch'))).toMatch(
+    expect(notOpenedPhrase('uk', skipped('a.py', 'magic_mismatch'))).toMatch(
       /не відповідає його розширенню/,
     )
   })
 
   it('may_contain_secrets → the ratified line, action included', () => {
-    expect(notOpenedPhrase(skipped('.env', 'may_contain_secrets'))).toBe(
+    expect(notOpenedPhrase('uk', skipped('.env', 'may_contain_secrets'))).toBe(
       'Файл не відкривали: такі файли зазвичай містять секрети — ключі чи паролі. ' +
         'Не додавайте їх до роботи; якщо потрібен приклад, покладіть файл .env.example без справжніх значень.',
     )
   })
 
   it('is TOTAL — an unknown reason still yields a line, never undefined', () => {
-    expect(notOpenedPhrase(skipped('a.py', 'reason_from_the_future'))).toBe(
+    expect(notOpenedPhrase('uk', skipped('a.py', 'reason_from_the_future'))).toBe(
       'Причину не вказано.',
     )
   })
@@ -244,14 +245,14 @@ describe('formatFileSize', () => {
     [5 * 1024 * 1024, '5,0 МБ'],
     [42 * 1024 * 1024, '42 МБ'],
   ])('%i → %s', (bytes, expected) => {
-    expect(formatFileSize(bytes)).toBe(expected)
+    expect(formatFileSize('uk', bytes)).toBe(expected)
   })
 })
 
 describe('UNKNOWN_REASON', () => {
   it('is the ratified last resort, both halves', () => {
-    expect(UNKNOWN_REASON.what).toBe('Під час обробки подачі сталася помилка.')
-    expect(UNKNOWN_REASON.action).toBe('Спробуйте подати ще раз.')
+    expect(translate('uk', UNKNOWN_REASON.what)).toBe('Під час обробки подачі сталася помилка.')
+    expect(UNKNOWN_REASON.action && translate('uk', UNKNOWN_REASON.action)).toBe('Спробуйте подати ще раз.')
   })
 })
 
@@ -270,6 +271,6 @@ describe('notOpenedCountLabel', () => {
     [101, '101 файл не прочитано'],
     [111, '111 файлів не прочитано'],
   ])('%i → %s', (n, expected) => {
-    expect(notOpenedCountLabel(n)).toBe(expected)
+    expect(notOpenedCountLabel('uk', n)).toBe(expected)
   })
 })
