@@ -1,6 +1,7 @@
 import { useOutlookStore } from '../../stores/billingOutlook'
 import { heldReviewsWords } from '../../utils/authorBillingTexts'
 import { BuyUnitsAction } from './BuyUnitsAction'
+import { useLanguage } from '../../i18n/LanguageContext'
 
 /**
  * Under the header on every page of the author app: students' reviews the
@@ -8,8 +9,9 @@ import { BuyUnitsAction } from './BuyUnitsAction'
  * broken, the reviews start once the units cover them. Not closable.
  */
 export function HeldReviewsBanner() {
+  const language = useLanguage()
   const outlook = useOutlookStore((s) => s.outlook)
-  const words = outlook ? heldReviewsWords(outlook.held_reviews) : null
+  const words = outlook ? heldReviewsWords(language, outlook.held_reviews) : null
   if (!words) return null
   return (
     <div

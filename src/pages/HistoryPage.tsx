@@ -4,6 +4,7 @@ import { jobsApi } from '../api/jobs'
 import type { MaterialHistoryResponse } from '../types/api'
 import { EmptyState } from '../components/ui/EmptyState'
 import { MaterialHistoryRowExpandable } from '../components/history/MaterialHistoryRowExpandable'
+import { useT } from '../i18n/LanguageContext'
 
 // The page's own page size — the call decides the amount, the client bakes none
 // (step Г c3). Expansion (c6) asks the same door for a different amount.
@@ -14,6 +15,7 @@ export function HistoryPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [offset, setOffset] = useState(0)
+  const t = useT()
 
   const load = useCallback(async (off: number) => {
     setLoading(true)
@@ -21,11 +23,11 @@ export function HistoryPage() {
     try {
       setResp(await jobsApi.history(PAGE_SIZE, off))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Помилка завантаження')
+      setError(e instanceof Error ? e.message : t('panel.history.loadError'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     void load(offset)
@@ -55,9 +57,9 @@ export function HistoryPage() {
   return (
     <div className="max-w-[1600px] mx-auto px-6 py-8">
       <div className="mb-8">
-        <h1 className="page-title">Історія матеріалів</h1>
+        <h1 className="page-title">{t('panel.history.title')}</h1>
         <p className="page-subtitle">
-          Що відбувалося з вашими матеріалами — від найновішого
+          {t('panel.history.subtitle')}
         </p>
       </div>
 
@@ -72,14 +74,14 @@ export function HistoryPage() {
             {error}
           </div>
           <button className="btn-ghost btn-sm" onClick={() => void load(offset)}>
-            Повторити
+            {t('panel.history.retry')}
           </button>
         </div>
       ) : total === 0 ? (
         <EmptyState
           icon={History}
-          title="Історія порожня"
-          description="Тут відображатиметься історія ваших матеріалів."
+          title={t('panel.history.emptyTitle')}
+          description={t('panel.history.emptyDescription')}
         />
       ) : (
         <>
@@ -113,13 +115,13 @@ export function HistoryPage() {
               </colgroup>
               <thead className="bg-canvas text-ink-muted text-xs uppercase">
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium">Матеріал</th>
-                  <th className="text-left px-4 py-3 font-medium">Стан</th>
+                  <th className="text-left px-4 py-3 font-medium">{t('panel.history.table.material')}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t('panel.history.table.state')}</th>
                   <th className="text-left px-4 py-3 font-medium">
-                    Остання робота
+                    {t('panel.history.table.lastJob')}
                   </th>
-                  <th className="text-center px-4 py-3 font-medium">Робіт</th>
-                  <th className="text-left px-4 py-3 font-medium">Активність</th>
+                  <th className="text-center px-4 py-3 font-medium">{t('panel.history.table.jobs')}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t('panel.history.table.activity')}</th>
                 </tr>
               </thead>
               {/* Keyed by offset so a page change remounts every row — the
@@ -145,15 +147,15 @@ export function HistoryPage() {
           <div className="md:hidden">
             <EmptyState
               icon={History}
-              title="Історія матеріалів потребує ширшого екрана"
-              description="Записи на місці — тут просто замало місця, щоб їх показати. Відкрийте цю сторінку на комп'ютері або розгорніть вікно ширше."
+              title={t('panel.history.narrowTitle')}
+              description={t('panel.history.narrowDescription')}
             />
           </div>
 
           <div className="flex items-center justify-between mt-4 text-sm text-ink-muted">
             {/* Count straight from the response — never a client-computed number
                 (Р4: the number the author eye-checks must reconcile). */}
-            <span>Матеріалів: {total}</span>
+            <span>{t('panel.history.totalMaterials', { total })}</span>
             {/* Count stays at every width (Р3); Назад/Далі would page an unseen
                 list below the threshold, so they hide there. */}
             <div className="hidden md:flex gap-2">
@@ -162,14 +164,14 @@ export function HistoryPage() {
                 disabled={!canPrev}
                 onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
               >
-                Назад
+                {t('panel.history.pagination.prev')}
               </button>
               <button
                 className="btn-ghost btn-sm"
                 disabled={!canNext}
                 onClick={() => setOffset((o) => o + PAGE_SIZE)}
               >
-                Далі
+                {t('panel.history.pagination.next')}
               </button>
             </div>
           </div>

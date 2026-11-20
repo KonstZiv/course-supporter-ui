@@ -1,4 +1,5 @@
 import { clsx } from 'clsx'
+import { useT } from '../../i18n/LanguageContext'
 
 // Tri-state credential status for the tenant-admin roster. NOT the shared
 // StatusBadge (that one is typed to ProcessingPhase). Never "видалено" —
@@ -7,15 +8,16 @@ import { clsx } from 'clsx'
 //   true  → active
 //   false → access revoked
 export function StudentStatusBadge({ isActive }: { isActive: boolean | null }) {
+  const t = useT()
   const { label, cls } =
     isActive === null
       ? {
-          label: 'Немає доступу до порталу',
+          label: t('panel.students.status.noAccess'),
           cls: 'bg-canvas-dark text-ink-muted',
         }
       : isActive
-        ? { label: 'Активний', cls: 'bg-forest-pale text-forest' }
-        : { label: 'Відкликано', cls: 'bg-coral-pale text-coral' }
+        ? { label: t('panel.students.status.active'), cls: 'bg-forest-pale text-forest' }
+        : { label: t('panel.students.status.revoked'), cls: 'bg-coral-pale text-coral' }
 
   return (
     <span

@@ -84,7 +84,7 @@ export function structureReasonPhrase(reason: string, detail?: string | null): s
   if (reason === 'oversize') {
     const sizes = parseOversizeDetail(detail)
     if (sizes !== null) {
-      return `Файл завеликий: ${formatBytes(sizes.size)} при межі ${formatBytes(sizes.cap)}.`
+      return `Файл завеликий: ${formatBytes('uk', sizes.size)} при межі ${formatBytes('uk', sizes.cap)}.`
     }
   }
   return REASON_PHRASES[reason] ?? 'Причину не вказано.'

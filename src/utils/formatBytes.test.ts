@@ -11,11 +11,11 @@ describe('formatBytes', () => {
     [4 * 1024 * 1024, '4,0 МБ'],
     [6_291_456, '6,0 МБ'],
   ])('%i → %s', (bytes, expected) => {
-    expect(formatBytes(bytes)).toBe(expected)
+    expect(formatBytes('uk', bytes)).toBe(expected)
   })
 
   it('uses the decimal comma Ukrainian writes', () => {
-    expect(formatBytes(1536)).toBe('1,5 КБ')
-    expect(formatBytes(1536)).not.toContain('.')
+    expect(formatBytes('uk', 1536)).toBe('1,5 КБ')
+    expect(formatBytes('uk', 1536)).not.toContain('.')
   })
 })

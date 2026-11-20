@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
-import { BUY_UNITS } from '../../utils/authorBillingTexts'
+import { buyUnitsText } from '../../utils/authorBillingTexts'
+import { useLanguage } from '../../i18n/LanguageContext'
 
 /** The id of the packages' place on "Юніти": a reminder there scrolls to it. */
 export const PACKAGES_ANCHOR_ID = 'billing-packages'
@@ -12,6 +13,8 @@ const BILLING_PATH = '/billing'
  */
 export function BuyUnitsAction() {
   const { pathname } = useLocation()
+  const language = useLanguage()
+
   if (pathname === BILLING_PATH) {
     return (
       <button
@@ -23,13 +26,13 @@ export function BuyUnitsAction() {
             ?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
         }
       >
-        {BUY_UNITS}
+        {buyUnitsText(language)}
       </button>
     )
   }
   return (
     <Link to={BILLING_PATH} className="btn-primary btn-sm">
-      {BUY_UNITS}
+      {buyUnitsText(language)}
     </Link>
   )
 }

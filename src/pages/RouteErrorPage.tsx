@@ -4,9 +4,7 @@ import { AlertTriangle } from 'lucide-react'
 import { ContactAdmin } from '../components/ui/ContactAdmin'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useCourseStore } from '../stores/course'
-
-export const ROUTE_ERROR_MESSAGE =
-  'Сторінку не вдалося показати. Оновіть її; якщо повториться, напишіть нам.'
+import { useT } from '../i18n/LanguageContext'
 
 // Shown by the data router (src/router.tsx) when a page fails to render, in
 // place of its default English "Unexpected Application Error!" (task 07c).
@@ -14,18 +12,21 @@ export const ROUTE_ERROR_MESSAGE =
 // error goes to the console, where the router's own screen would have shown it.
 export function RouteErrorPage() {
   const error = useRouteError()
+  const t = useT()
+
   useEffect(() => {
     console.error('Page failed to render', error)
   }, [error])
 
   const courseTitle = useCourseStore.getState().tree?.title ?? null
+  const routeErrorMessage = t('panel.routeError.description')
 
   return (
     <div className="min-h-screen bg-canvas flex items-center justify-center">
       <EmptyState
         icon={AlertTriangle}
-        title="Щось пішло не так"
-        description={ROUTE_ERROR_MESSAGE}
+        title={t('panel.routeError.title')}
+        description={routeErrorMessage}
         action={
           <div className="flex flex-col items-center gap-3">
             <button
@@ -33,10 +34,10 @@ export function RouteErrorPage() {
               className="btn btn-primary"
               onClick={() => window.location.reload()}
             >
-              Оновити сторінку
+              {t('panel.routeError.reloadButton')}
             </button>
             <ContactAdmin
-              message={ROUTE_ERROR_MESSAGE}
+              message={routeErrorMessage}
               context={{ course: courseTitle }}
               fallback="after-click"
             />

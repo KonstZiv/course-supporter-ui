@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { translate } from '../i18n/translate'
-import { ACTION_FAILURE_TEXT } from './authorBillingTexts'
+import { actionFailureText } from './authorBillingTexts'
 import { actionFailure, statementLineText } from './billingWords'
 
 const NETWORK_FAILED = translate('uk', 'shared.billing.networkFailed')
@@ -16,8 +16,8 @@ describe('actionFailure', () => {
   })
 
   it('has the author words for each', () => {
-    expect(ACTION_FAILURE_TEXT.package_not_found).toBe(PACKAGE_NOT_FOUND)
-    expect(ACTION_FAILURE_TEXT.unreachable).toBe(NETWORK_FAILED)
+    expect(actionFailureText('uk').package_not_found).toBe(PACKAGE_NOT_FOUND)
+    expect(actionFailureText('uk').unreachable).toBe(NETWORK_FAILED)
   })
 })
 

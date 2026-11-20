@@ -2,26 +2,10 @@ import { clsx } from 'clsx'
 import type { ProcessingPhase, JobState, AuthorJobType, TestState } from '../types/api'
 import { TEXTS } from '../components/testEditor/editorTexts'
 import type { Tone } from '../components/testEditor/Chip'
+import type { Language } from '../i18n/languages'
+import { localeOf } from '../i18n/languages'
+import { translate, type MessageKey } from '../i18n/translate'
 
-// Single source of the author-facing vocabulary — one map per axis (TASK-B §2,
-// step Г Г4). Every surface that shows an axis reads its word (and, for the
-// phase axis, its colour) from here; no surface hard-codes a status word or
-// re-derives the colour ladder inline.
-//
-// Three axes, deliberately separate (PROBE-B / ARC.md §1 Р8, §7 Г4):
-//   * ProcessingPhase — the STATE axis of a MATERIAL (five values).
-//   * JobState        — the work-STATE of a Job ROW (six values); never carries
-//                       ``awaiting_author`` (that is material-only).
-//   * AuthorJobType   — the KIND of a Job ROW (four author-facing values): not
-//                       "in what state" but "what kind of work" (§7 Г4).
-
-// Semantic colour identity of a phase, shared across every phase surface (badge
-// + section pill + root pill). Each surface owns its visual density; the tone +
-// pulse identity lives here once. ``queued`` and ``processing`` share the
-// ``busy`` tone (amber) and differ ONLY by the pulse — "amber = busy, pulse =
-// active" (PROBE-B q6). ``muted`` is the neutral tone: the forward-compat
-// fallback for an unknown phase, and a test's canvas pill, which has no phase
-// to show.
 export type PhaseTone = 'busy' | 'awaiting' | 'ready' | 'error' | 'muted'
 
 export interface PhaseVocabEntry {
@@ -30,30 +14,46 @@ export interface PhaseVocabEntry {
   pulse: boolean
 }
 
-// Material phase axis — five values, five Ukrainian words (TASK-B §2).
-export const PHASE_VOCAB: Record<ProcessingPhase, PhaseVocabEntry> = {
-  queued: { label: 'У черзі', tone: 'busy', pulse: false },
-  processing: { label: 'Обробляється', tone: 'busy', pulse: true },
-  awaiting_author: { label: 'Очікує підтвердження', tone: 'awaiting', pulse: false },
-  ready: { label: 'Готово', tone: 'ready', pulse: false },
-  error: { label: 'Помилка', tone: 'error', pulse: false },
+const PHASE_LABEL_KEYS: Record<ProcessingPhase, MessageKey> = {
+  queued: 'panel.state.phase.queued',
+  processing: 'panel.state.phase.processing',
+  awaiting_author: 'panel.state.phase.awaitingAuthor',
+  ready: 'panel.state.phase.ready',
+  error: 'panel.state.phase.error',
 }
 
-// A phase the FE does not know yet renders as a muted neutral chip — never a raw
-// token, never a crash (mirrors the pre-B tolerance for an unknown phase).
-const UNKNOWN_PHASE: PhaseVocabEntry = { label: '—', tone: 'muted', pulse: false }
+const PHASE_METADATA: Record<ProcessingPhase, { tone: PhaseTone; pulse: boolean }> = {
+  queued: { tone: 'busy', pulse: false },
+  processing: { tone: 'busy', pulse: true },
+  awaiting_author: { tone: 'awaiting', pulse: false },
+  ready: { tone: 'ready', pulse: false },
+  error: { tone: 'error', pulse: false },
+}
+
+export const UNKNOWN_PHASE: PhaseVocabEntry = { label: '—', tone: 'muted', pulse: false }
+
+export const PHASE_VOCAB: Record<ProcessingPhase, PhaseVocabEntry> = {
+  queued: { label: translate('uk', 'panel.state.phase.queued'), tone: 'busy', pulse: false },
+  processing: { label: translate('uk', 'panel.state.phase.processing'), tone: 'busy', pulse: true },
+  awaiting_author: { label: translate('uk', 'panel.state.phase.awaitingAuthor'), tone: 'awaiting', pulse: false },
+  ready: { label: translate('uk', 'panel.state.phase.ready'), tone: 'ready', pulse: false },
+  error: { label: translate('uk', 'panel.state.phase.error'), tone: 'error', pulse: false },
+}
 
 /** Total lookup: a known phase → its entry, anything else → the muted fallback. */
-export function phaseVocab(phase: ProcessingPhase): PhaseVocabEntry {
-  return PHASE_VOCAB[phase] ?? UNKNOWN_PHASE
+export function phaseVocab(language: Language, phase: ProcessingPhase): PhaseVocabEntry {
+  const meta = PHASE_METADATA[phase]
+  const key = PHASE_LABEL_KEYS[phase]
+  if (!meta || !key) return UNKNOWN_PHASE
+  if (language === 'uk') {
+    return PHASE_VOCAB[phase]
+  }
+  return {
+    label: translate(language, key),
+    tone: meta.tone,
+    pulse: meta.pulse,
+  }
 }
-
-// A test written in the system is never processed, so its phase is always
-// ``ready`` — on a canvas pill that reads as "done". Whether students see it
-// is its publication's to say: the tree carries it as ``test_state`` (task Б2).
-// A tree without it — an older backend, or a test whose state could not be
-// read — keeps the neutral pill that says what the document is (task 07c).
-const TEST_PILL: PhaseVocabEntry = { label: 'тест', tone: 'muted', pulse: false }
 
 export interface TestStateVocabEntry {
   label: string
@@ -66,12 +66,6 @@ export interface TestStateVocabEntry {
   pillTone: PhaseTone
 }
 
-// A test's publication state in the words and tones of the test editor's
-// toolbar (``components/testEditor/editorTexts.ts``, ``EditorToolbar.tsx``) —
-// taken from there, never retyped, so the tree and the editor cannot drift.
-// The editor shows ``changed`` as «Опубліковано» with «Є неопубліковані зміни»
-// beside it; one pill has room for one word, and the second is the one that
-// tells ``changed`` from ``published``.
 export const TEST_STATE_VOCAB: Record<TestState, TestStateVocabEntry> = {
   draft: { label: TEXTS.notPublished, chipTone: 'neutral', pillTone: 'muted' },
   published: {
@@ -93,9 +87,6 @@ export function testStateVocab(state: TestState | null | undefined): TestStateVo
   return (state && TEST_STATE_VOCAB[state]) || null
 }
 
-// The node panel shows a test's state as the editor's toolbar does: ``changed``
-// is two chips there — «Опубліковано» and «Є неопубліковані зміни» beside it —
-// so it is two in the panel too. The canvas pill has room for one (above).
 const TEST_STATE_CHIPS: Record<TestState, TestStateVocabEntry[]> = {
   draft: [TEST_STATE_VOCAB.draft],
   published: [TEST_STATE_VOCAB.published],
@@ -108,47 +99,62 @@ export function testStateChips(state: TestState | null | undefined): TestStateVo
 }
 
 /** A canvas pill's word and tone: a test's publication state, any other material's phase. */
-export function pillVocab(document: {
-  source_type: string
-  processing_phase: ProcessingPhase
-  test_state?: TestState | null
-}): PhaseVocabEntry {
-  if (document.source_type !== 'test_object') return phaseVocab(document.processing_phase)
+export function pillVocab(
+  language: Language,
+  document: {
+    source_type: string
+    processing_phase: ProcessingPhase
+    test_state?: TestState | null
+  },
+): PhaseVocabEntry {
+  if (document.source_type !== 'test_object') return phaseVocab(language, document.processing_phase)
   const state = testStateVocab(document.test_state)
   return state === null
-    ? TEST_PILL
+    ? { label: translate(language, 'panel.state.test'), tone: 'muted', pulse: false }
     : { label: state.label, tone: state.pillTone, pulse: false }
 }
 
-// Work-state axis — six values, words only. Read by every work-state surface
-// (strip rows, history, the run-state card); each carries colour/motion on the
-// WORD, never a filled chip (§2 job table carries no colour column).
+const JOB_STATE_KEYS: Record<JobState, MessageKey> = {
+  queued: 'panel.state.job.queued',
+  processing: 'panel.state.job.processing',
+  ready: 'panel.state.job.ready',
+  error: 'panel.state.job.error',
+  cancelled: 'panel.state.job.cancelled',
+  obsolete: 'panel.state.job.obsolete',
+}
+
+export function jobStateLabel(language: Language, state: JobState): string {
+  const key = JOB_STATE_KEYS[state]
+  return key ? translate(language, key) : state
+}
+
 export const JOB_STATE_LABEL: Record<JobState, string> = {
-  queued: 'У черзі',
-  processing: 'Обробляється',
-  ready: 'Готово',
-  error: 'Помилка',
-  cancelled: 'Скасовано',
-  obsolete: 'Застаріло',
+  queued: jobStateLabel('uk', 'queued'),
+  processing: jobStateLabel('uk', 'processing'),
+  ready: jobStateLabel('uk', 'ready'),
+  error: jobStateLabel('uk', 'error'),
+  cancelled: jobStateLabel('uk', 'cancelled'),
+  obsolete: jobStateLabel('uk', 'obsolete'),
 }
 
-// Work-kind axis — the four author-facing job kinds (AuthorJobType), one word
-// each (§7 Г4). Not "in what state" but "what kind of work". History needs it:
-// a deleted material is told apart only by its date and the KIND of work over it
-// (Р7), so a missing kind word makes two deleted materials indistinguishable.
-// Total over AuthorJobType — homework/cleanup never reach the author doors and
-// are not in the union.
+const JOB_KIND_KEYS: Record<AuthorJobType, MessageKey> = {
+  document_processing: 'panel.state.kind.documentProcessing',
+  document_preparation: 'panel.state.kind.documentPreparation',
+  base_normalize: 'panel.state.kind.baseNormalize',
+  node_summary_regeneration: 'panel.state.kind.nodeSummaryRegeneration',
+}
+
+export function jobKindLabel(language: Language, kind: AuthorJobType): string {
+  const key = JOB_KIND_KEYS[kind]
+  return key ? translate(language, key) : kind
+}
+
 export const JOB_KIND_LABEL: Record<AuthorJobType, string> = {
-  document_processing: 'Обробка матеріалу',
-  document_preparation: 'Підготовка матеріалу',
-  base_normalize: 'Підготовка проєкту',
-  node_summary_regeneration: 'Оновлення підсумку теми',
+  document_processing: jobKindLabel('uk', 'document_processing'),
+  document_preparation: jobKindLabel('uk', 'document_preparation'),
+  base_normalize: jobKindLabel('uk', 'base_normalize'),
+  node_summary_regeneration: jobKindLabel('uk', 'node_summary_regeneration'),
 }
-
-// ── Phase colour resolvers (tone → surface classes) ──
-//
-// The tone→class ladder lives here once per surface density, so the badge and
-// both canvas pills stop each carrying their own copy (§2).
 
 const PHASE_BADGE_TONE: Record<PhaseTone, string> = {
   busy: 'bg-amber-pale text-amber-dark',
@@ -176,19 +182,6 @@ export function phasePillClass(entry: PhaseVocabEntry): string {
   return clsx(PHASE_PILL_TONE[entry.tone], entry.pulse && 'animate-pulse-soft')
 }
 
-// ── Work-state axis treatment (В1 / TASK-V §3) ──
-//
-// The two-axis formula: colour belongs to the material, the WORD to the work, so
-// the work-state word never gets a filled chip. Four buckets on the word:
-//   * ``processing`` — motion (the pulse that means "something is happening NOW");
-//   * ``queued``     — a calm word: no motion, no muting (the work is still ahead);
-//   * finished (``ready`` / ``cancelled`` / ``obsolete``) — muted;
-//   * ``error``      — the alarm colour AS TEXT.
-// Motion is reserved for "happening now", not "still alive" (ratified 2026-08-07):
-// the phase axis already splits queue from processing by the pulse, so pulsing the
-// queue here would move the strip while the material chip stayed calm about the
-// same moment — two truths about one moment (Р2). Lives beside the phase resolvers
-// so the second axis stays in the one vocabulary module (§3 / §5), not inline.
 const JOB_STATE_WORD_TONE: Record<JobState, string> = {
   queued: 'text-ink',
   processing: 'text-ink animate-pulse-soft',
@@ -204,13 +197,9 @@ export function jobStateWordClass(state: JobState): string {
 }
 
 /**
- * A canvas pill's hint: «{name} — {state}». The state word — a test's editor
- * word or a material's phase word — stands capitalised on its own chip; after
- * the dash it continues the sentence, so it is lower-cased here, for every
- * pill. The words themselves (``editorTexts``, ``PHASE_VOCAB``) stay as they
- * are («Змінні — не опубліковано», «lecture.md — готово»).
+ * A canvas pill's hint: «{name} — {state}».
  */
-export function pillHint(name: string, entry: PhaseVocabEntry): string {
-  const state = entry.label.charAt(0).toLocaleLowerCase('uk') + entry.label.slice(1)
+export function pillHint(language: Language, name: string, entry: PhaseVocabEntry): string {
+  const state = entry.label.charAt(0).toLocaleLowerCase(localeOf(language)) + entry.label.slice(1)
   return `${name} — ${state}`
 }

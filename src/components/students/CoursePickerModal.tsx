@@ -5,6 +5,7 @@ import { EmptyState } from '../ui/EmptyState'
 import { nodesApi } from '../../api/nodes'
 import { studentsApi } from '../../api/students'
 import { studentErrorMessage } from './studentErrors'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 import type { NodeResponse } from '../../types/api'
 
 interface Props {
@@ -29,6 +30,9 @@ export function CoursePickerModal({
   const [bindError, setBindError] = useState<string | null>(null)
   const [bindingId, setBindingId] = useState<string | null>(null)
 
+  const language = useLanguage()
+  const t = useT()
+
   useEffect(() => {
     if (!open) return
     setRoots(null)
@@ -49,7 +53,7 @@ export function CoursePickerModal({
       onBound()
       onClose()
     } catch (err) {
-      setBindError(studentErrorMessage('bind', err))
+      setBindError(studentErrorMessage(language, 'bind', err))
       setBindingId(null)
     }
   }
@@ -57,7 +61,7 @@ export function CoursePickerModal({
   const available = roots?.filter((r) => !enrolledIds.has(r.id)) ?? null
 
   return (
-    <Modal open={open} onClose={onClose} title="Додати курс">
+    <Modal open={open} onClose={onClose} title={t('panel.students.coursePicker.title')}>
       {bindError && (
         <div className="flex items-start gap-2 p-3 mb-3 rounded-xl bg-coral-pale text-coral text-sm">
           <AlertCircle size={16} className="shrink-0 mt-0.5" />
@@ -68,7 +72,7 @@ export function CoursePickerModal({
       {loadError ? (
         <div className="flex items-center gap-2 py-6 text-coral text-sm">
           <AlertCircle size={16} />
-          Не вдалося завантажити курси.
+          {t('panel.students.coursePicker.loadError')}
         </div>
       ) : available === null ? (
         <div className="flex justify-center py-8">
@@ -77,8 +81,8 @@ export function CoursePickerModal({
       ) : available.length === 0 ? (
         <EmptyState
           icon={BookOpen}
-          title="Немає доступних курсів"
-          description="Студент уже зарахований на всі курси, або курсів ще немає."
+          title={t('panel.students.coursePicker.emptyTitle')}
+          description={t('panel.students.coursePicker.emptyDescription')}
         />
       ) : (
         <ul className="space-y-1">

@@ -2,6 +2,7 @@ import type { JobListItemResponse } from '../../types/api'
 import { formatDuration } from '../../utils/formatDuration'
 import { workProgressBar } from '../../utils/workProgress'
 import { ProgressMeter } from '../activity/ProgressMeter'
+import { useLanguage } from '../../i18n/LanguageContext'
 
 // Д1 — the material card's progress detail, taken from the shared work-list
 // store (no own poll, no own request): the live job of THIS material
@@ -17,11 +18,12 @@ export function MaterialProgressDetail({
   job: JobListItemResponse | undefined
   now: number
 }) {
+  const language = useLanguage()
   if (!job) return null
   const bar = workProgressBar(job)
   if (bar) return <ProgressMeter {...bar} />
   if (job.job_state === 'processing') {
-    const duration = formatDuration(job.started_at, now)
+    const duration = formatDuration(language, job.started_at, now)
     if (duration) return <p className="text-xs text-ink-muted mt-1">{duration}</p>
   }
   return null

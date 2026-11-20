@@ -9,11 +9,12 @@
 import { IntlMessageFormat, type FormatXMLElementFn, type PrimitiveType } from 'intl-messageformat'
 import enPortal from './catalogs/en/portal.json'
 import enShared from './catalogs/en/shared.json'
+import ukPanel from './catalogs/uk/panel.json'
 import ukPortal from './catalogs/uk/portal.json'
 import ukShared from './catalogs/uk/shared.json'
 import { DEFAULT_LANGUAGE, localeOf, type Language } from './languages'
 
-const UK = { ...ukShared, ...ukPortal }
+const UK = { ...ukShared, ...ukPortal, ...ukPanel }
 
 export type MessageKey = keyof typeof UK
 export type Catalog = Readonly<Record<MessageKey, string>>
@@ -24,7 +25,7 @@ export type MessageValues = Record<string, PrimitiveType>
 /** A message with markup also takes a function per tag: `<b>…</b>`. */
 export type RichValues<T> = Record<string, PrimitiveType | T | FormatXMLElementFn<T>>
 
-const EN: Catalog = { ...enShared, ...enPortal }
+const EN: Partial<Catalog> = { ...enShared, ...enPortal }
 
 const CATALOGS: Partial<Record<Language, Partial<Catalog>>> = { uk: UK, en: EN }
 

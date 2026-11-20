@@ -7,6 +7,7 @@ import type {
 } from '../../types/api'
 import { MaterialHistoryRow } from './MaterialHistoryRow'
 import { ActivityStripRow } from '../activity/ActivityStripRow'
+import { useT } from '../../i18n/LanguageContext'
 
 // The door caps a page at 200 (server GET /jobs, limit le=200). The expansion
 // asks for exactly the promised count up to this cap; beyond it, an honest
@@ -29,6 +30,7 @@ export function MaterialHistoryRowExpandable({
   const [jobs, setJobs] = useState<JobListItemResponse[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
+  const t = useT()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -69,14 +71,14 @@ export function MaterialHistoryRowExpandable({
           <td colSpan={5} className="px-4 py-3">
             {loading ? (
               <div className="flex items-center gap-2 text-sm text-ink-muted py-1">
-                <Loader2 size={14} className="animate-spin" /> Завантаження…
+                <Loader2 size={14} className="animate-spin" /> {t('panel.history.row.loading')}
               </div>
             ) : error ? (
               <button
                 className="flex items-center gap-2 text-sm text-coral"
                 onClick={() => void load()}
               >
-                <AlertCircle size={14} /> Помилка завантаження — повторити
+                <AlertCircle size={14} /> {t('panel.history.row.loadError')}
               </button>
             ) : (
               <>
@@ -93,7 +95,10 @@ export function MaterialHistoryRowExpandable({
                 </ul>
                 {overflow && (
                   <p className="text-xs text-ink-muted mt-1">
-                    Показано перші {DOOR_LIMIT_CEILING} з {item.jobs_count}.
+                    {t('panel.history.row.shownLimit', {
+                      count: DOOR_LIMIT_CEILING,
+                      total: item.jobs_count,
+                    })}
                   </p>
                 )}
               </>

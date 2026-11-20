@@ -18,8 +18,8 @@ import { CheckoutNotice } from '../components/billing/CheckoutNotice'
 import { PackagesSection } from '../components/billing/PackagesSection'
 import { StatementSection } from '../components/billing/StatementSection'
 import { ContactAdmin } from '../components/ui/ContactAdmin'
-import { LOAD_FAILED } from '../utils/authorBillingTexts'
 import { useOutlookStore } from '../stores/billingOutlook'
+import { useT } from '../i18n/LanguageContext'
 
 // The address parameter that carries the checkout the author came back from
 // (App's `billing/checkouts/:checkoutRef` route moves its number here).
@@ -49,6 +49,7 @@ function Loading() {
 export function BillingPage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
+  const t = useT()
   const checkout = params.get(CHECKOUT_PARAM)
   const checkoutRef = checkout && !OLD_FORM.includes(checkout) ? checkout : null
 
@@ -138,10 +139,9 @@ export function BillingPage() {
   return (
     <div className="max-w-[1200px] mx-auto px-6 py-8 space-y-8">
       <div>
-        <h1 className="page-title">Юніти</h1>
+        <h1 className="page-title">{t('panel.billing.title')}</h1>
         <p className="page-subtitle">
-          Юніти оплачують обробку матеріалів ваших курсів. Юніт — не гроші й не
-          платіжний засіб, а обсяг послуги платформи.
+          {t('panel.billing.subtitle')}
         </p>
       </div>
 
@@ -157,9 +157,9 @@ export function BillingPage() {
       {loadFailed && (
         <div className="rounded-2xl bg-canvas-dark p-5 space-y-2">
           <p role="alert" className="text-ink">
-            {LOAD_FAILED}
+            {t('panel.billing.loadFailed')}
           </p>
-          <ContactAdmin message={LOAD_FAILED} fallback="after-click" />
+          <ContactAdmin message={t('panel.billing.loadFailed')} fallback="after-click" />
         </div>
       )}
 

@@ -5,6 +5,7 @@ import {
   shiftMonth,
   type Month,
 } from '../../utils/spendingPeriod'
+import { useT } from '../../i18n/LanguageContext'
 
 /** "‹ листопад 2026 ›": the month of the spending; none after the current one. */
 export function MonthPicker({
@@ -18,12 +19,14 @@ export function MonthPicker({
   onChange: (month: Month) => void
 }) {
   const next = shiftMonth(month, 1)
+  const t = useT()
+
   return (
     <div className="inline-flex items-center gap-2">
       <button
         type="button"
         className="btn-ghost btn-sm"
-        aria-label="Попередній місяць"
+        aria-label={t('panel.cost.monthPicker.previous')}
         onClick={() => onChange(shiftMonth(month, -1))}
       >
         <ChevronLeft size={16} />
@@ -34,7 +37,7 @@ export function MonthPicker({
       <button
         type="button"
         className="btn-ghost btn-sm disabled:opacity-40 disabled:cursor-not-allowed"
-        aria-label="Наступний місяць"
+        aria-label={t('panel.cost.monthPicker.next')}
         disabled={isAfter(next, current)}
         onClick={() => onChange(next)}
       >

@@ -1,10 +1,10 @@
 import { estimateProcessing } from '../api/billing'
+import type { Language } from '../i18n/languages'
 import type { MaterialEstimateKind, SourceType } from '../types/api'
 import {
-  PRICE_FAILED,
-  PRICE_UNPRICED,
-  PRICE_UNPRICED_BATCH,
   isMaterialEstimateKind,
+  priceFailedText,
+  priceUnpricedText,
   priceViewOf,
   type EstimateOutcome,
 } from './priceEstimate'
@@ -26,6 +26,7 @@ export function estimateKindOf(sourceType: SourceType): MaterialEstimateKind | n
  * null when charging is off (nothing to show — run as before).
  */
 export async function kindOnlyPriceLine(
+  language: Language,
   nodeId: string,
   kind: MaterialEstimateKind,
   count = 1,
@@ -38,9 +39,9 @@ export async function kindOnlyPriceLine(
     outcome = { status: 'failed' }
   }
   const view = priceViewOf(outcome)
-  if (view.kind === 'failed') return PRICE_FAILED
+  if (view.kind === 'failed') return priceFailedText(language)
   if (view.kind === 'unpriced') {
-    return count > 1 ? PRICE_UNPRICED_BATCH : PRICE_UNPRICED
+    return priceUnpricedText(language, count > 1)
   }
   return null
 }

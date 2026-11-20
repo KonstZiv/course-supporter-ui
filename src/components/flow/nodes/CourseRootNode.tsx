@@ -6,11 +6,13 @@ import type { FlowNodeData } from '../../../utils/treeToFlow'
 import { SummaryBadge } from '../SummaryBadge'
 import { pillHint, pillVocab, phasePillClass } from '../../../utils/stateVocabulary'
 import { documentLabel } from '../../../utils/documentLabel'
+import { useLanguage } from '../../../i18n/LanguageContext'
 
 export const CourseRootNode = memo(function CourseRootNode({
   data,
   selected,
 }: NodeProps & { data: FlowNodeData }) {
+  const language = useLanguage()
   return (
     <div
       className={`
@@ -65,7 +67,7 @@ export const CourseRootNode = memo(function CourseRootNode({
       {data.authored_documents.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-3">
           {data.authored_documents.slice(0, 4).map((m) => {
-            const v = pillVocab(m)
+            const v = pillVocab(language, m)
             return (
               <span
                 key={m.id}
@@ -73,7 +75,7 @@ export const CourseRootNode = memo(function CourseRootNode({
                   'text-[11px] px-2 py-0.5 rounded-full font-medium',
                   phasePillClass(v),
                 )}
-                title={pillHint(documentLabel(m), v)}
+                title={pillHint(language, documentLabel(m), v)}
               >
                 {documentLabel(m).slice(0, 18)}
               </span>

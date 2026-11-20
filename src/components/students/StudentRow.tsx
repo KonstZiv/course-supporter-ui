@@ -13,6 +13,8 @@ import { StudentStatusBadge } from './StudentStatusBadge'
 import { CoursePickerModal } from './CoursePickerModal'
 import { ResetPasswordModal } from './ResetPasswordModal'
 import { Modal } from '../ui/Modal'
+import { Message } from '../../i18n/Message'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 import type { StudentEnrollmentItem, StudentRosterItem } from '../../types/api'
 
 interface Props {
@@ -37,6 +39,9 @@ export function StudentRow({ student, titleOf, onChanged }: Props) {
   const [resetOpen, setResetOpen] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [unbindingId, setUnbindingId] = useState<string | null>(null)
+
+  const language = useLanguage()
+  const t = useT()
 
   const displayName =
     student.display_name || student.login || student.external_id
@@ -67,7 +72,7 @@ export function StudentRow({ student, titleOf, onChanged }: Props) {
       await fn()
       onChanged()
     } catch (err) {
-      setActionError(studentErrorMessage(action, err))
+      setActionError(studentErrorMessage(language, action, err))
     } finally {
       setActionBusy(false)
     }
@@ -88,7 +93,7 @@ export function StudentRow({ student, titleOf, onChanged }: Props) {
       await loadEnrollments()
       onChanged()
     } catch (err) {
-      setActionError(studentErrorMessage('unbind', err))
+      setActionError(studentErrorMessage(language, 'unbind', err))
     } finally {
       setUnbindingId(null)
     }
@@ -126,7 +131,7 @@ export function StudentRow({ student, titleOf, onChanged }: Props) {
                 disabled={actionBusy}
                 onClick={() => setConfirmRevoke(true)}
               >
-                Відкликати
+                {t('panel.students.action.revoke')}
               </button>
             )}
             {student.is_active === false && (
@@ -135,7 +140,7 @@ export function StudentRow({ student, titleOf, onChanged }: Props) {
                 disabled={actionBusy}
                 onClick={restore}
               >
-                Відновити
+                {t('panel.students.action.restore')}
               </button>
             )}
             {/* DD-6-J: reset is available whenever a credential exists (active
@@ -146,7 +151,7 @@ export function StudentRow({ student, titleOf, onChanged }: Props) {
                 disabled={actionBusy}
                 onClick={() => setResetOpen(true)}
               >
-                Скинути пароль
+                {t('panel.students.action.resetPassword')}
               </button>
             )}
           </div>
@@ -164,29 +169,29 @@ export function StudentRow({ student, titleOf, onChanged }: Props) {
             )}
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium uppercase text-ink-muted">
-                Курси
+                {t('panel.students.action.courses')}
               </span>
               <button
                 className="btn-ghost btn-sm"
                 onClick={() => setPickerOpen(true)}
               >
-                <Plus size={14} /> Додати курс
+                <Plus size={14} /> {t('panel.students.action.addCourse')}
               </button>
             </div>
 
             {enrLoading ? (
               <div className="flex items-center gap-2 text-sm text-ink-muted py-2">
-                <Loader2 size={14} className="animate-spin" /> Завантаження…
+                <Loader2 size={14} className="animate-spin" /> {t('panel.students.action.loading')}
               </div>
             ) : enrError ? (
               <button
                 className="text-sm text-coral underline"
                 onClick={() => void loadEnrollments()}
               >
-                Помилка завантаження — повторити
+                {t('panel.students.action.loadError')}
               </button>
             ) : (enrollments ?? []).length === 0 ? (
-              <p className="text-sm text-ink-muted py-1">Немає зарахувань.</p>
+              <p className="text-sm text-ink-muted py-1">{t('panel.students.action.noEnrollments')}</p>
             ) : (
               <ul className="space-y-1">
                 {(enrollments ?? []).map((e) => {
@@ -199,7 +204,9 @@ export function StudentRow({ student, titleOf, onChanged }: Props) {
                       <span className="text-sm text-ink">
                         {title ?? (
                           <span className="text-ink-muted italic">
-                            видалений курс ({e.course_node_id.slice(0, 8)}…)
+                            {t('panel.students.action.deletedCourse', {
+                              id: e.course_node_id.slice(0, 8),
+                            })}
                           </span>
                         )}
                       </span>
@@ -207,7 +214,7 @@ export function StudentRow({ student, titleOf, onChanged }: Props) {
                         className="p-1 rounded-md hover:bg-coral-pale hover:text-coral text-ink-muted disabled:opacity-50"
                         disabled={unbindingId !== null}
                         onClick={() => void unbind(e.course_node_id)}
-                        title="Відрахувати з курсу"
+                        title={t('panel.students.action.unbindCourse')}
                       >
                         {unbindingId === e.course_node_id ? (
                           <Loader2 size={14} className="animate-spin" />
@@ -227,21 +234,26 @@ export function StudentRow({ student, titleOf, onChanged }: Props) {
       <Modal
         open={confirmRevoke}
         onClose={() => setConfirmRevoke(false)}
-        title="Відкликати доступ"
+        title={t('panel.students.revokeModal.title')}
       >
         <p className="text-sm text-ink-light mb-5">
-          Відкликати доступ до порталу для <b>{displayName}</b>? Студент та вся
-          його історія збережуться — доступ можна відновити пізніше.
+          <Message
+            id="panel.students.revokeModal.question"
+            values={{
+              name: displayName,
+              b: (chunks) => <b>{chunks}</b>,
+            }}
+          />
         </p>
         <div className="flex justify-end gap-2">
           <button
             className="btn-ghost"
             onClick={() => setConfirmRevoke(false)}
           >
-            Скасувати
+            {t('panel.students.revokeModal.cancel')}
           </button>
           <button className="btn-danger" onClick={revoke}>
-            Відкликати
+            {t('panel.students.revokeModal.confirm')}
           </button>
         </div>
       </Modal>

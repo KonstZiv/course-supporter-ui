@@ -1,9 +1,10 @@
 import { AlertTriangle, Info, X } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { JobListItemResponse, NodeSummaryRunError } from '../../types/api'
-import { JOB_STATE_LABEL, jobStateWordClass } from '../../utils/stateVocabulary'
+import { jobStateLabel, jobStateWordClass } from '../../utils/stateVocabulary'
 import { workProgressBar } from '../../utils/workProgress'
 import { ProgressMeter } from '../activity/ProgressMeter'
+import { useLanguage } from '../../i18n/LanguageContext'
 
 // The card reads a work-list row (Д1/В2 fold), whose stage_progress is the
 // untyped run-state JSONB. Narrow only the two pieces this card needs — the run
@@ -34,6 +35,7 @@ interface Props {
  * DD-3.2.2-B): ``reason`` verbatim, ``error_class`` never interpreted.
  */
 export function RunStatePanel({ job, nodeTitle, onDismiss }: Props) {
+  const language = useLanguage()
   const sp = job.stage_progress
   const state = job.job_state
   const runLabel = nodeTitle?.trim() || vertexIdOf(sp)?.slice(0, 8) || '—'
@@ -63,7 +65,7 @@ export function RunStatePanel({ job, nodeTitle, onDismiss }: Props) {
               live run, muting for a finished one, alarm colour as text for an
               error. Colour belongs to the material phase, never to this word. */}
           <span className={clsx('text-xs font-medium', jobStateWordClass(state))}>
-            {JOB_STATE_LABEL[state]}
+            {jobStateLabel(language, state)}
           </span>
         </div>
         {isDone && (
