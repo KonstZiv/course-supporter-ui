@@ -152,6 +152,34 @@ describe('the sign-in', () => {
     expect(api.me.mock.calls.length).toBeLessThanOrEqual(1)
   })
 
+  // Правка після розбору: a choice made on the sign-in page wins, and the
+  // account's language is kept in the browser.
+  it('English chosen on the sign-in page, Ukrainian in the account: English, and it goes there', async () => {
+    vi.mocked(portalLogin).mockResolvedValue({
+      access_token: 'jwt-token',
+      token_type: 'bearer',
+      student_id: 's',
+      display_name: 'Olena',
+      interface_language: 'ukr',
+    })
+    renderAt(`/${T}/login`)
+    pressEnglish()
+    fireEvent.change(screen.getByLabelText('Login'), { target: { value: 'olena' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret' } })
+    fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
+    await screen.findByText('Demo course')
+    expect(screen.getByRole('link', { name: 'My courses' })).toBeInTheDocument()
+    expect(api.setInterfaceLanguage).toHaveBeenCalledWith('en')
+  })
+
+  it('English in the account, nothing in the browser: English, kept in the browser, and the sign-in page after signing out is English', async () => {
+    await signInWith('eng')
+    expect(localStorage.getItem(STORAGE_KEYS.portalLanguage)).toBe('en')
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
+    expect(document.documentElement.lang).toBe('en')
+  })
+
   it('nothing kept in the account: the browser choice goes there', async () => {
     localStorage.setItem(STORAGE_KEYS.portalLanguage, 'en')
     await signInWith(null)

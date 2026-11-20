@@ -186,15 +186,60 @@ describe('the sign-in', () => {
     signIn()
     applySignInLanguage('jwt', 'deu')
     expect(language()).toBe('en')
+    expect(stored()).toBe('en')
     await flush()
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
-  it('a choice made on the sign-in page gives way to the one kept in the account', () => {
-    stubFetch({})
+  // Правка після розбору: a choice made with the switcher on this visit is a
+  // fresh choice — it wins over the account and goes there.
+  it('a choice made on the sign-in page wins over the account and goes there', async () => {
+    const fetchMock = stubFetch({ [PUT_PATH]: { status: 200, body: { interface_language: 'eng' } } })
     chooseLanguage('en')
     signIn()
     applySignInLanguage('jwt', 'ukr')
+    expect(language()).toBe('en')
+    expect(stored()).toBe('en')
+    await flush()
+    expect(putBodies(fetchMock)).toEqual([{ language: 'en' }])
+  })
+
+  it('a fresh choice the account already keeps: nothing is sent', async () => {
+    const fetchMock = stubFetch({})
+    chooseLanguage('en')
+    signIn()
+    applySignInLanguage('jwt', 'eng')
+    expect(language()).toBe('en')
+    await flush()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('a choice only stored from an earlier visit gives way to the account, which the browser then keeps', async () => {
+    const fetchMock = stubFetch({})
+    localStorage.setItem(STORAGE_KEYS.portalLanguage, 'en')
+    signIn()
+    applySignInLanguage('jwt', 'ukr')
+    expect(language()).toBe('uk')
+    expect(stored()).toBe('uk')
+    await flush()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('the account language is kept in the browser too', () => {
+    stubFetch({})
+    signIn()
+    applySignInLanguage('jwt', 'eng')
+    expect(language()).toBe('en')
+    expect(stored()).toBe('en')
+  })
+
+  it('signing out ends the fresh choice: the next sign-in answers to the account', () => {
+    stubFetch({ [PUT_PATH]: { status: 200, body: { interface_language: 'eng' } } })
+    signIn()
+    chooseLanguage('en')
+    usePortalSession.getState().clear()
+    signIn('jwt-2')
+    applySignInLanguage('jwt-2', 'ukr')
     expect(language()).toBe('uk')
   })
 })
@@ -207,6 +252,7 @@ describe('a session the portal opened with', () => {
     syncServerLanguage('jwt')
     await flush()
     expect(language()).toBe('en')
+    expect(stored()).toBe('en')
     expect(callsTo(fetchMock, ME_PATH)).toHaveLength(1)
     expect(callsTo(fetchMock, PUT_PATH)).toHaveLength(0)
   })

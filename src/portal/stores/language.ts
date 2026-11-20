@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { STORAGE_KEYS } from '../../privacy/surface'
-import { languageFromCode, type Language } from '../../i18n/languages'
+import { languageFromCode, languageFromIso3, type Language } from '../../i18n/languages'
 import { resolveLanguage } from '../languageChoice'
 import { portalApi } from '../api/portalClient'
 import { usePortalSession } from './session'
@@ -9,9 +9,11 @@ import { usePortalSession } from './session'
 // changed through `chooseLanguage` (`useSetLanguage` in components). The order
 // of the sources is `resolveLanguage`'s. A choice is kept in this browser
 // always, and — once the student is signed in — on the server, in the
-// student's account (`interface_language`). The server may not have that
-// field yet: then the choice simply stays in the browser, and nothing on the
-// page says otherwise.
+// student's account (`interface_language`). A language taken from the
+// account is kept in the browser too, so the sign-in page after signing out
+// speaks the student's language. The server may not have that field yet: then
+// the choice simply stays in the browser, and nothing on the page says
+// otherwise.
 
 const LANGUAGE_KEY = STORAGE_KEYS.portalLanguage
 
@@ -37,7 +39,12 @@ function browserLanguages(): readonly string[] {
 
 interface PortalLanguageState {
   language: Language
-  /** Chosen with the switcher while signed in: the server's choice does not override it. */
+  /**
+   * Chosen with the switcher during this visit of the page — before sign-in
+   * or after it — and not since signing out: a fresh choice, which the
+   * account's language does not override. A choice only stored in the
+   * browser from an earlier visit is not one.
+   */
   picked: boolean
   /** The session whose server choice is already known — read, or given by the sign-in. */
   syncedToken: string | null
@@ -59,10 +66,9 @@ function saveOnServer(language: Language): void {
 
 /** The switcher's choice: shown at once, kept in the browser, and on the server when signed in. */
 export function chooseLanguage(language: Language): void {
-  const signedIn = usePortalSession.getState().token !== null
-  usePortalLanguage.setState({ language, picked: signedIn })
+  usePortalLanguage.setState({ language, picked: true })
   writeStored(language)
-  if (signedIn) saveOnServer(language)
+  if (usePortalSession.getState().token !== null) saveOnServer(language)
 }
 
 /** The function components change the language with. */
@@ -71,14 +77,21 @@ export function useSetLanguage(): (language: Language) => void {
 }
 
 /**
- * What the server keeps for the student who just signed in (the sign-in
- * answer's `interface_language`; absent on an older server — then null). A
- * language the portal speaks is shown at once. With nothing kept there, the
- * choice made in this browser goes to the server; a browser's own language
- * or the default one does not.
+ * The student just signed in; `server` is what their account keeps (the
+ * sign-in answer's `interface_language`; absent on an older server — then
+ * null). A fresh choice made with the switcher on this visit wins and goes to
+ * the account, whatever is kept there. Else a language the portal speaks is
+ * shown at once (and kept in the browser); with nothing kept there, the
+ * choice stored in this browser goes to the account — a browser's own
+ * language or the default one does not.
  */
 export function applySignInLanguage(token: string, server: string | null | undefined): void {
-  usePortalLanguage.setState({ picked: false })
+  const { picked, language } = usePortalLanguage.getState()
+  if (picked) {
+    usePortalLanguage.setState({ syncedToken: token })
+    if (languageFromIso3(server) !== language) saveOnServer(language)
+    return
+  }
   applyServerLanguage(token, server ?? null)
   if (server == null) {
     const choice = languageFromCode(readStored())
@@ -87,12 +100,12 @@ export function applySignInLanguage(token: string, server: string | null | undef
 }
 
 function applyServerLanguage(token: string, server: string | null): void {
-  const { picked } = usePortalLanguage.getState()
+  usePortalLanguage.setState({ syncedToken: token })
+  if (usePortalLanguage.getState().picked) return
+  const fromServer = languageFromIso3(server)
+  if (fromServer !== null) writeStored(fromServer)
   usePortalLanguage.setState({
-    syncedToken: token,
-    ...(picked
-      ? {}
-      : { language: resolveLanguage({ server, stored: readStored(), browser: browserLanguages() }) }),
+    language: resolveLanguage({ server, stored: readStored(), browser: browserLanguages() }),
   })
 }
 
@@ -130,3 +143,12 @@ export function takeLanguageFromAddress(): void {
   writeStored(language)
   usePortalLanguage.setState({ language })
 }
+
+// Signing out ends the visit's fresh choice: the next sign-in, perhaps of
+// another student, answers to that student's account. The language shown and
+// the one stored in the browser stay as they are.
+usePortalSession.subscribe((session, previous) => {
+  if (previous.token !== null && session.token === null) {
+    usePortalLanguage.setState({ picked: false, syncedToken: null })
+  }
+})
