@@ -4,190 +4,205 @@
  * refusals and of unfinished places are ``utils/testRefusals.ts``.
  */
 
-export const TEXTS = {
-  newTest: 'Новий тест',
-  back: 'До курсу',
+import type { Language } from '../../i18n/languages'
+import { translate } from '../../i18n/translate'
 
-  published: 'Опубліковано',
-  publishedHint: 'Студенти бачать цю версію тесту',
-  notPublished: 'Не опубліковано',
-  unpublishedChanges: 'Є неопубліковані зміни',
-  unpublishedChangesHint:
-    'Чернетка відрізняється від версії, яку бачать студенти',
+export function editorTexts(language: Language) {
+  return {
+    newTest: translate(language, 'panel.testEditor.newTest'),
+    back: translate(language, 'panel.testEditor.back'),
 
-  notChecked: 'Не перевірено моделлю',
-  checking: 'Перевірка йде…',
-  checked: 'Перевірено моделлю',
-  checkFailed: 'Перевірка не вдалася',
+    published: translate(language, 'panel.testEditor.published'),
+    publishedHint: translate(language, 'panel.testEditor.publishedHint'),
+    notPublished: translate(language, 'panel.testEditor.notPublished'),
+    unpublishedChanges: translate(language, 'panel.testEditor.unpublishedChanges'),
+    unpublishedChangesHint: translate(
+      language,
+      'panel.testEditor.unpublishedChangesHint',
+    ),
 
-  unsaved: 'Є незбережені зміни',
-  saving: 'Зберігаю…',
-  allSaved: 'Усі зміни збережено',
+    notChecked: translate(language, 'panel.testEditor.notChecked'),
+    checking: translate(language, 'panel.testEditor.checking'),
+    checked: translate(language, 'panel.testEditor.checked'),
+    checkFailed: translate(language, 'panel.testEditor.checkFailed'),
 
-  save: 'Зберегти чернетку',
-  nothingToSave: 'Немає змін',
-  check: 'Перевірити моделлю',
-  ordering: 'Замовляю перевірку…',
-  publish: 'Опублікувати',
-  publishing: 'Публікую…',
+    unsaved: translate(language, 'panel.testEditor.unsaved'),
+    saving: translate(language, 'panel.testEditor.saving'),
+    allSaved: translate(language, 'panel.testEditor.allSaved'),
 
-  saveTestFirst: 'Спершу збережіть тест.',
-  saveChangesFirst: 'Спершу збережіть зміни.',
-  finishFirst:
-    'Щоб перевірити чи опублікувати тест, завершіть позначені місця.',
-  alreadyChecked: 'Чернетку вже перевірено.',
-  nothingToPublish: 'Змін після публікації немає.',
+    save: translate(language, 'panel.testEditor.save'),
+    nothingToSave: translate(language, 'panel.testEditor.nothingToSave'),
+    check: translate(language, 'panel.testEditor.check'),
+    ordering: translate(language, 'panel.testEditor.ordering'),
+    publish: translate(language, 'panel.testEditor.publish'),
+    publishing: translate(language, 'panel.testEditor.publishing'),
 
-  editView: 'Правка',
-  studentView: 'Як бачить студент',
+    saveTestFirst: translate(language, 'panel.testEditor.saveTestFirst'),
+    saveChangesFirst: translate(language, 'panel.testEditor.saveChangesFirst'),
+    finishFirst: translate(language, 'panel.testEditor.finishFirst'),
+    alreadyChecked: translate(language, 'panel.testEditor.alreadyChecked'),
+    nothingToPublish: translate(language, 'panel.testEditor.nothingToPublish'),
 
-  exportYaml: 'Вивантажити YAML',
-  replaceYaml: 'Замінити з YAML…',
-  hide: 'Приховати тест',
+    editView: translate(language, 'panel.testEditor.editView'),
+    studentView: translate(language, 'panel.testEditor.studentView'),
 
-  title: 'Назва тесту',
-  titleHint:
-    'Під цією назвою студенти побачать тест у курсі. Нова назва діє одразу ' +
-    'після збереження, без публікації.',
-  passThreshold: 'Поріг заліку, %',
-  passThresholdHint:
-    "Необов'язково. Якщо задати, студент побачить «зараховано» чи «не " +
-    'зараховано»; без порогу — лише бал.',
+    exportYaml: translate(language, 'panel.testEditor.exportYaml'),
+    replaceYaml: translate(language, 'panel.testEditor.replaceYaml'),
+    hide: translate(language, 'panel.testEditor.hide'),
 
-  questionText: 'Текст питання',
-  options: 'Варіанти відповіді',
-  correct: 'правильна',
-  addOption: 'Додати варіант',
-  addOwnExplanation: 'Додати власне пояснення',
-  ownExplanation: 'Власне пояснення',
-  removeOwnExplanation: 'Прибрати власне пояснення',
-  ownExplanationHint:
-    'Студент побачить його замість пояснення моделі — навіть коли модель ' +
-    'сумнівається.',
+    title: translate(language, 'panel.testEditor.title'),
+    titleHint: translate(language, 'panel.testEditor.titleHint'),
+    passThreshold: translate(language, 'panel.testEditor.passThreshold'),
+    passThresholdHint: translate(language, 'panel.testEditor.passThresholdHint'),
 
-  tooManyOptions: 'У питанні може бути не більше 26 варіантів.',
-  tooManyQuestions: 'У тесті може бути не більше 200 питань.',
+    questionText: translate(language, 'panel.testEditor.questionText'),
+    options: translate(language, 'panel.testEditor.options'),
+    correct: translate(language, 'panel.testEditor.correct'),
+    addOption: translate(language, 'panel.testEditor.addOption'),
+    addOwnExplanation: translate(language, 'panel.testEditor.addOwnExplanation'),
+    ownExplanation: translate(language, 'panel.testEditor.ownExplanation'),
+    removeOwnExplanation: translate(
+      language,
+      'panel.testEditor.removeOwnExplanation',
+    ),
+    ownExplanationHint: translate(
+      language,
+      'panel.testEditor.ownExplanationHint',
+    ),
 
-  noQuestions: 'Питань ще немає',
-  noQuestionsHint:
-    'Додайте перше питання: текст, варіанти відповіді й позначку правильних.',
-  addQuestion: 'Додати питання',
-  noOptions: 'Варіантів ще немає. Додайте щонайменше два й позначте правильний.',
+    tooManyOptions: translate(language, 'panel.testEditor.tooManyOptions'),
+    tooManyQuestions: translate(language, 'panel.testEditor.tooManyQuestions'),
 
-  modelExplanation: 'Пояснення моделі',
-  takeModelText: 'Взяти текст моделі за основу',
-  doubt: 'Сумнів моделі',
-  doubtText:
-    'Модель сумнівається в позначках правильних відповідей до цього питання. ' +
-    'Перевірте їх: якщо змінити позначки й перевірити знову, модель оцінить їх ' +
-    'наново. Якщо позначки правильні, напишіть власне пояснення — студент ' +
-    'побачить саме його, бо пояснення моделі до питання із сумнівом студентові ' +
-    'не показується.',
-  changedSinceCheck:
-    'Ви змінили питання, варіанти чи позначки — після збереження тест треба ' +
-    'буде перевірити знову.',
+    noQuestions: translate(language, 'panel.testEditor.noQuestions'),
+    noQuestionsHint: translate(language, 'panel.testEditor.noQuestionsHint'),
+    addQuestion: translate(language, 'panel.testEditor.addQuestion'),
+    noOptions: translate(language, 'panel.testEditor.noOptions'),
 
-  studentViewIntro:
-    'Так студенти побачать тест після публікації: без позначок правильних ' +
-    'варіантів і без пояснень.',
-  studentViewEmpty: 'У тесті ще немає питань.',
+    modelExplanation: translate(language, 'panel.testEditor.modelExplanation'),
+    takeModelText: translate(language, 'panel.testEditor.takeModelText'),
+    doubt: translate(language, 'panel.testEditor.doubt'),
+    doubtText: translate(language, 'panel.testEditor.doubtText'),
+    changedSinceCheck: translate(
+      language,
+      'panel.testEditor.changedSinceCheck',
+    ),
 
-  // §21.2 — windows.
-  leaveTitle: 'Піти без збереження?',
-  leaveText: 'Зміни в тесті не збережено — їх буде втрачено.',
-  stay: 'Лишитися',
-  leave: 'Піти без збереження',
+    studentViewIntro: translate(language, 'panel.testEditor.studentViewIntro'),
+    studentViewEmpty: translate(language, 'panel.testEditor.studentViewEmpty'),
 
-  publishTitle: 'Опублікувати тест?',
-  cancel: 'Скасувати',
-  firstPublication: 'Тест побачать студенти курсу.',
-  newVersion:
-    'Студенти побачать нову версію тесту. Спроби, які вже зроблено, лишаться ' +
-    'з тими оцінками, які отримали.',
-  publishChecked: 'Пояснення моделі вже готові.',
-  publishUnchecked:
-    'Чернетку не перевірено моделлю: ви ще не бачили її пояснень і сумнівів. ' +
-    "Пояснення з'являться за кілька хвилин після публікації; хто пройде тест " +
-    'раніше, отримає оцінку без них.',
-  publishChecking:
-    "Перевірка ще триває. Пояснення з'являться за кілька хвилин; хто пройде " +
-    'тест раніше, отримає оцінку без них.',
-  publishCheckFailed:
-    'Перевірка моделлю не вдалася. Публікація замовить пояснення ще раз; хто ' +
-    'пройде тест до того, отримає оцінку без них.',
+    leaveTitle: translate(language, 'panel.testEditor.leaveTitle'),
+    leaveText: translate(language, 'panel.testEditor.leaveText'),
+    stay: translate(language, 'panel.testEditor.stay'),
+    leave: translate(language, 'panel.testEditor.leave'),
 
-  replaceOwnTitle: 'Замінити власне пояснення?',
-  replace: 'Замінити',
+    publishTitle: translate(language, 'panel.testEditor.publishTitle'),
+    cancel: translate(language, 'panel.testEditor.cancel'),
+    firstPublication: translate(language, 'panel.testEditor.firstPublication'),
+    newVersion: translate(language, 'panel.testEditor.newVersion'),
+    publishChecked: translate(language, 'panel.testEditor.publishChecked'),
+    publishUnchecked: translate(language, 'panel.testEditor.publishUnchecked'),
+    publishChecking: translate(language, 'panel.testEditor.publishChecking'),
+    publishCheckFailed: translate(
+      language,
+      'panel.testEditor.publishCheckFailed',
+    ),
 
-  replaceYamlTitle: 'Замінити чернетку файлом?',
-  replaceYamlUnsaved: 'Незбережені зміни теж буде втрачено.',
+    replaceOwnTitle: translate(language, 'panel.testEditor.replaceOwnTitle'),
+    replace: translate(language, 'panel.testEditor.replace'),
 
-  hideTitle: 'Приховати тест?',
-  hideConfirm: 'Приховати',
+    replaceYamlTitle: translate(language, 'panel.testEditor.replaceYamlTitle'),
+    replaceYamlUnsaved: translate(
+      language,
+      'panel.testEditor.replaceYamlUnsaved',
+    ),
 
-  // §21.3 — what an action did.
-  created:
-    'Тест створено. Студенти не побачать його, доки ви його не опублікуєте.',
-  saved: 'Чернетку збережено.',
-  checkOrdered:
-    "Перевірку замовлено: пояснення й сумніви моделі з'являться біля питань " +
-    'за хвилину-дві.',
-  checkAlreadyReady: 'Чернетку вже перевірено: пояснення моделі — біля питань.',
-  checkReady: 'Пояснення моделі готові: їх показано біля питань.',
-  checkReadyDoubts: 'Щодо деяких питань модель має сумнів — їх позначено.',
-  checkFailedTryAgain: 'Перевірка не вдалася. Спробуйте перевірити ще раз.',
-  publishedNow: 'Опубліковано: студенти бачать цю версію тесту.',
-  explanationsComing: "Пояснення моделі з'являться за кілька хвилин.",
-  alreadyPublished: 'Ця чернетка вже опублікована — нічого не змінилося.',
-  replacedFromFile: 'Чернетку замінено вмістом файла.',
-} as const
+    hideTitle: translate(language, 'panel.testEditor.hideTitle'),
+    hideConfirm: translate(language, 'panel.testEditor.hideConfirm'),
 
-export function questionHeading(number: number): string {
-  return `Питання ${number}`
+    created: translate(language, 'panel.testEditor.created'),
+    saved: translate(language, 'panel.testEditor.saved'),
+    checkOrdered: translate(language, 'panel.testEditor.checkOrdered'),
+    checkAlreadyReady: translate(
+      language,
+      'panel.testEditor.checkAlreadyReady',
+    ),
+    checkReady: translate(language, 'panel.testEditor.checkReady'),
+    checkReadyDoubts: translate(language, 'panel.testEditor.checkReadyDoubts'),
+    checkFailedTryAgain: translate(
+      language,
+      'panel.testEditor.checkFailedTryAgain',
+    ),
+    publishedNow: translate(language, 'panel.testEditor.publishedNow'),
+    explanationsComing: translate(
+      language,
+      'panel.testEditor.explanationsComing',
+    ),
+    alreadyPublished: translate(
+      language,
+      'panel.testEditor.alreadyPublished',
+    ),
+    replacedFromFile: translate(
+      language,
+      'panel.testEditor.replacedFromFile',
+    ),
+  }
 }
 
-export function moveQuestionLabel(number: number, up: boolean): string {
-  return `Перемістити питання ${number} ${up ? 'вище' : 'нижче'}`
+export const TEXTS = editorTexts('uk')
+
+export function questionHeading(language: Language, number: number): string {
+  return translate(language, 'panel.testEditor.questionHeading', { number })
 }
 
-export function removeQuestionLabel(number: number): string {
-  return `Прибрати питання ${number}`
+export function moveQuestionLabel(
+  language: Language,
+  number: number,
+  up: boolean,
+): string {
+  return translate(language, 'panel.testEditor.moveQuestion', {
+    number,
+    direction: up ? 'up' : 'down',
+  })
 }
 
-export function optionTextLabel(letter: string): string {
-  return `Текст варіанта ${letter}`
+export function removeQuestionLabel(
+  language: Language,
+  number: number,
+): string {
+  return translate(language, 'panel.testEditor.removeQuestion', { number })
 }
 
-export function correctLabel(letter: string): string {
-  return `Варіант ${letter} — правильна відповідь`
+export function optionTextLabel(language: Language, letter: string): string {
+  return translate(language, 'panel.testEditor.optionText', { letter })
 }
 
-export function moveOptionLabel(letter: string, up: boolean): string {
-  return `Перемістити варіант ${letter} ${up ? 'вище' : 'нижче'}`
+export function correctLabel(language: Language, letter: string): string {
+  return translate(language, 'panel.testEditor.correctOption', { letter })
 }
 
-export function removeOptionLabel(letter: string): string {
-  return `Прибрати варіант ${letter}`
+export function moveOptionLabel(
+  language: Language,
+  letter: string,
+  up: boolean,
+): string {
+  return translate(language, 'panel.testEditor.moveOption', {
+    letter,
+    direction: up ? 'up' : 'down',
+  })
 }
 
-export function replaceOwnText(number: number): string {
-  return (
-    `Текст моделі замінить ваше власне пояснення до питання ${number}. Зміну ` +
-    'буде збережено разом із чернеткою.'
-  )
+export function removeOptionLabel(language: Language, letter: string): string {
+  return translate(language, 'panel.testEditor.removeOption', { letter })
 }
 
-export function replaceYamlText(fileName: string): string {
-  return (
-    'Питання, варіанти, позначки, поріг і власні пояснення буде замінено ' +
-    `вмістом файла «${fileName}». Якщо у файлі є назва, тест отримає її. ` +
-    'Опублікована версія не зміниться, доки ви не опублікуєте тест знову.'
-  )
+export function replaceOwnText(language: Language, number: number): string {
+  return translate(language, 'panel.testEditor.replaceOwnText', { number })
 }
 
-export function hideText(title: string): string {
-  return (
-    `Студенти більше не побачать тест «${title}» у курсі. Спроби, які вже ` +
-    'зроблено, збережуться. Скасувати приховування в програмі автора не можна.'
-  )
+export function replaceYamlText(language: Language, fileName: string): string {
+  return translate(language, 'panel.testEditor.replaceYamlText', { fileName })
+}
+
+export function hideText(language: Language, title: string): string {
+  return translate(language, 'panel.testEditor.hideText', { title })
 }

@@ -1,13 +1,14 @@
 import { memo } from 'react'
 import { clsx } from 'clsx'
 import { ArrowDown, ArrowUp, Trash2 } from 'lucide-react'
+import { useLanguage } from '../../i18n/LanguageContext'
 import type { DraftOption } from '../../utils/testDraft'
 import {
   correctLabel,
+  editorTexts,
   moveOptionLabel,
   optionTextLabel,
   removeOptionLabel,
-  TEXTS,
 } from './editorTexts'
 import { FieldError, IconButton, UnfinishedMark } from './fields'
 import { describedBy, TEXTAREA } from './formParts'
@@ -39,6 +40,8 @@ export const OptionRow = memo(function OptionRow({
   onMove: (direction: 'up' | 'down') => void
   onRemove: () => void
 }) {
+  const language = useLanguage()
+  const texts = editorTexts(language)
   const errorId = `${fieldId}-error`
   return (
     <li className="flex items-start gap-2">
@@ -54,10 +57,10 @@ export const OptionRow = memo(function OptionRow({
           type="checkbox"
           checked={option.correct}
           onChange={(event) => onCorrect(event.target.checked)}
-          aria-label={correctLabel(letter)}
+          aria-label={correctLabel(language, letter)}
           className="h-4 w-4 accent-navy rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-navy/30"
         />
-        {TEXTS.correct}
+        {texts.correct}
       </label>
       <div className="min-w-0 flex-1">
         <textarea
@@ -66,7 +69,7 @@ export const OptionRow = memo(function OptionRow({
           className={clsx(TEXTAREA, 'py-2 min-h-[46px]', error && 'border-coral')}
           value={option.text}
           onChange={(event) => onText(event.target.value)}
-          aria-label={optionTextLabel(letter)}
+          aria-label={optionTextLabel(language, letter)}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy(error && errorId)}
         />
@@ -77,21 +80,21 @@ export const OptionRow = memo(function OptionRow({
         <IconButton
           id={`${fieldId}-up`}
           icon={ArrowUp}
-          label={moveOptionLabel(letter, true)}
+          label={moveOptionLabel(language, letter, true)}
           disabled={isFirst}
           onClick={() => onMove('up')}
         />
         <IconButton
           id={`${fieldId}-down`}
           icon={ArrowDown}
-          label={moveOptionLabel(letter, false)}
+          label={moveOptionLabel(language, letter, false)}
           disabled={isLast}
           onClick={() => onMove('down')}
         />
         <IconButton
           id={`${fieldId}-remove`}
           icon={Trash2}
-          label={removeOptionLabel(letter)}
+          label={removeOptionLabel(language, letter)}
           danger
           onClick={onRemove}
         />

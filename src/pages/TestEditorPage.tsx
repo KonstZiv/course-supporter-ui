@@ -15,10 +15,10 @@ import { useCourseStore } from '../stores/course'
 import { ConfirmDialog } from '../components/testEditor/ConfirmDialog'
 import { EditorToolbar } from '../components/testEditor/EditorToolbar'
 import {
+  editorTexts,
   hideText,
   replaceOwnText,
   replaceYamlText,
-  TEXTS,
 } from '../components/testEditor/editorTexts'
 import { cardIds } from '../components/testEditor/formParts'
 import { PublishDialog } from '../components/testEditor/PublishDialog'
@@ -35,6 +35,7 @@ import {
 import { useLeaveGuard } from '../hooks/useLeaveGuard'
 import { useActionPrice, type PriceRequest } from '../hooks/useActionPrice'
 import { estimateKeyExplanation } from '../api/billing'
+import { useLanguage } from '../i18n/LanguageContext'
 import {
   addOption,
   addQuestion,
@@ -54,7 +55,7 @@ import {
 import { testEditorPath } from '../utils/testAddress'
 import { optionLetters } from '../utils/testLetters'
 import {
-  BACK_TO_COURSES,
+  backToCourses,
   fieldProblemWords,
   yamlFileProblemWords,
 } from '../utils/testRefusals'
@@ -65,6 +66,8 @@ import {
  * for a test there is, at ``/test/new?node=…&course=…`` for a new one.
  */
 export function TestEditorPage() {
+  const language = useLanguage()
+  const texts = editorTexts(language)
   const { documentId } = useParams<{ documentId: string }>()
   const [params] = useSearchParams()
   const navigate = useNavigate()
@@ -265,7 +268,8 @@ export function TestEditorPage() {
 
   function chooseFile(file: File) {
     const problem = yamlFileProblem(file)
-    if (problem !== null) editor.showBanner(yamlFileProblemWords(problem))
+    if (problem !== null)
+      editor.showBanner(yamlFileProblemWords(language, problem))
     else setYamlFile(file)
   }
 
@@ -292,7 +296,7 @@ export function TestEditorPage() {
           className="btn-secondary"
           onClick={() => navigate('/')}
         >
-          {BACK_TO_COURSES}
+          {backToCourses(language)}
         </button>
       </div>
     )
@@ -301,23 +305,23 @@ export function TestEditorPage() {
   const unfinished = editor.incomplete.length > 0
   const checkBlocked =
     saved === null
-      ? TEXTS.saveTestFirst
+      ? texts.saveTestFirst
       : editor.unsaved
-        ? TEXTS.saveChangesFirst
+        ? texts.saveChangesFirst
         : unfinished
-          ? TEXTS.finishFirst
+          ? texts.finishFirst
           : saved.check.state === 'ready'
-            ? TEXTS.alreadyChecked
+            ? texts.alreadyChecked
             : null
   const publishBlocked =
     saved === null
-      ? TEXTS.saveTestFirst
+      ? texts.saveTestFirst
       : editor.unsaved
-        ? TEXTS.saveChangesFirst
+        ? texts.saveChangesFirst
         : unfinished
-          ? TEXTS.finishFirst
+          ? texts.finishFirst
           : saved.published !== null && !saved.unpublished_changes
-            ? TEXTS.nothingToPublish
+            ? texts.nothingToPublish
             : null
   const titleProblem = editor.problems.find(
     (problem) =>
@@ -334,7 +338,7 @@ export function TestEditorPage() {
   return (
     <>
       <EditorToolbar
-        title={saved === null ? TEXTS.newTest : (saved.title ?? draft.title)}
+        title={saved === null ? texts.newTest : (saved.title ?? draft.title)}
         backTo={editor.backTo}
         saved={saved}
         unsaved={editor.unsaved}
@@ -383,13 +387,15 @@ export function TestEditorPage() {
             <SettingsCard
               title={draft.title}
               passThreshold={draft.passThreshold}
-              titleError={titleProblem ? fieldProblemWords(titleProblem) : null}
+              titleError={
+                titleProblem ? fieldProblemWords(language, titleProblem) : null
+              }
               passThresholdError={
-                passProblem ? fieldProblemWords(passProblem) : null
+                passProblem ? fieldProblemWords(language, passProblem) : null
               }
               autoFocusTitle={saved === null}
-              fileBlocked={saved === null ? TEXTS.saveTestFirst : null}
-              exportBlocked={editor.unsaved ? TEXTS.saveChangesFirst : null}
+              fileBlocked={saved === null ? texts.saveTestFirst : null}
+              exportBlocked={editor.unsaved ? texts.saveChangesFirst : null}
               busy={editor.busy}
               onTitle={(title) => update((d) => setSettings(d, { title }))}
               onPassThreshold={(passThreshold) =>
@@ -402,7 +408,7 @@ export function TestEditorPage() {
 
             {changedSinceCheck && (
               <p className="rounded-lg bg-amber-pale p-3 text-sm text-amber-dark">
-                {TEXTS.changedSinceCheck}
+                {texts.changedSinceCheck}
               </p>
             )}
 
@@ -410,8 +416,8 @@ export function TestEditorPage() {
               <div className="card">
                 <EmptyState
                   icon={ListChecks}
-                  title={TEXTS.noQuestions}
-                  description={TEXTS.noQuestionsHint}
+                  title={texts.noQuestions}
+                  description={texts.noQuestionsHint}
                   action={
                     <button
                       id={addQuestionId}
@@ -420,7 +426,7 @@ export function TestEditorPage() {
                       onClick={onAddQuestion}
                     >
                       <Plus size={16} />
-                      {TEXTS.addQuestion}
+                      {texts.addQuestion}
                     </button>
                   }
                 />
@@ -461,11 +467,11 @@ export function TestEditorPage() {
                     onClick={onAddQuestion}
                   >
                     <Plus size={16} />
-                    {TEXTS.addQuestion}
+                    {texts.addQuestion}
                   </button>
                   {!canAddQuestion(draft) && (
                     <span className="text-xs text-ink-muted">
-                      {TEXTS.tooManyQuestions}
+                      {texts.tooManyQuestions}
                     </span>
                   )}
                 </div>
@@ -492,9 +498,9 @@ export function TestEditorPage() {
 
       <ConfirmDialog
         open={takeFor !== null}
-        title={TEXTS.replaceOwnTitle}
-        cancelLabel={TEXTS.cancel}
-        confirmLabel={TEXTS.replace}
+        title={texts.replaceOwnTitle}
+        cancelLabel={texts.cancel}
+        confirmLabel={texts.replace}
         onCancel={() => setTakeFor(null)}
         onConfirm={() => {
           const key = takeFor
@@ -504,6 +510,7 @@ export function TestEditorPage() {
       >
         <p>
           {replaceOwnText(
+            language,
             draft.questions.findIndex((q) => q.key === takeFor) + 1,
           )}
         </p>
@@ -511,9 +518,9 @@ export function TestEditorPage() {
 
       <ConfirmDialog
         open={yamlFile !== null}
-        title={TEXTS.replaceYamlTitle}
-        cancelLabel={TEXTS.cancel}
-        confirmLabel={TEXTS.replace}
+        title={texts.replaceYamlTitle}
+        cancelLabel={texts.cancel}
+        confirmLabel={texts.replace}
         onCancel={() => setYamlFile(null)}
         onConfirm={() => {
           const file = yamlFile
@@ -521,33 +528,33 @@ export function TestEditorPage() {
           if (file !== null) void editor.replaceWithYaml(file)
         }}
       >
-        <p>{replaceYamlText(yamlFile?.name ?? '')}</p>
-        {editor.unsaved && <p>{TEXTS.replaceYamlUnsaved}</p>}
+        <p>{replaceYamlText(language, yamlFile?.name ?? '')}</p>
+        {editor.unsaved && <p>{texts.replaceYamlUnsaved}</p>}
       </ConfirmDialog>
 
       <ConfirmDialog
         open={hiding}
-        title={TEXTS.hideTitle}
-        cancelLabel={TEXTS.cancel}
-        confirmLabel={TEXTS.hideConfirm}
+        title={texts.hideTitle}
+        cancelLabel={texts.cancel}
+        confirmLabel={texts.hideConfirm}
         confirmClass="btn-danger"
         busy={editor.busy === 'hide'}
         onCancel={() => setHiding(false)}
         onConfirm={() => void hide()}
       >
-        <p>{hideText(saved?.title ?? draft.title)}</p>
+        <p>{hideText(language, saved?.title ?? draft.title)}</p>
       </ConfirmDialog>
 
       <ConfirmDialog
         open={blocker.state === 'blocked'}
-        title={TEXTS.leaveTitle}
-        cancelLabel={TEXTS.stay}
-        confirmLabel={TEXTS.leave}
+        title={texts.leaveTitle}
+        cancelLabel={texts.stay}
+        confirmLabel={texts.leave}
         confirmClass="btn-danger"
         onCancel={() => blocker.reset?.()}
         onConfirm={() => blocker.proceed?.()}
       >
-        <p>{TEXTS.leaveText}</p>
+        <p>{texts.leaveText}</p>
       </ConfirmDialog>
     </>
   )

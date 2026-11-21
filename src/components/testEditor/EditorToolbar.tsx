@@ -5,16 +5,10 @@ import { ArrowLeft, Loader2 } from 'lucide-react'
 import type { DraftCheckState, WrittenTestResponse } from '../../types/api'
 import type { TestAction } from '../../utils/testRefusals'
 import { Chip, type Tone } from './Chip'
-import { TEXTS } from './editorTexts'
+import { useLanguage } from '../../i18n/LanguageContext'
+import { editorTexts } from './editorTexts'
 import type { ActionPrice } from '../../hooks/useActionPrice'
 import { PriceCard } from '../billing/PriceCard'
-
-const CHECK_CHIP: Record<DraftCheckState, { label: string; tone: Tone }> = {
-  not_checked: { label: TEXTS.notChecked, tone: 'neutral' },
-  in_progress: { label: TEXTS.checking, tone: 'amber' },
-  ready: { label: TEXTS.checked, tone: 'forest' },
-  failed: { label: TEXTS.checkFailed, tone: 'coral' },
-}
 
 /**
  * The editor's panel, kept under the header while the author scrolls: back
@@ -57,6 +51,14 @@ export function EditorToolbar({
   onPublish: () => void
   onView: (view: 'edit' | 'student') => void
 }) {
+  const language = useLanguage()
+  const texts = editorTexts(language)
+  const checkChip: Record<DraftCheckState, { label: string; tone: Tone }> = {
+    not_checked: { label: texts.notChecked, tone: 'neutral' },
+    in_progress: { label: texts.checking, tone: 'amber' },
+    ready: { label: texts.checked, tone: 'forest' },
+    failed: { label: texts.checkFailed, tone: 'coral' },
+  }
   const hintId = useId()
   const checkHintId = `${hintId}-check`
   // One reason for both actions is said once, and both name that line.
@@ -65,7 +67,7 @@ export function EditorToolbar({
       ? checkHintId
       : `${hintId}-publish`
   const saving = busy === 'save'
-  const check = saved === null ? null : CHECK_CHIP[saved.check.state]
+  const check = saved === null ? null : checkChip[saved.check.state]
 
   return (
     <div className="sticky top-16 z-30 bg-white/80 backdrop-blur-md border-b border-canvas-dark/40">
@@ -75,8 +77,8 @@ export function EditorToolbar({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <Link
             to={backTo}
-            aria-label={TEXTS.back}
-            title={TEXTS.back}
+            aria-label={texts.back}
+            title={texts.back}
             className="p-2 rounded-lg hover:bg-canvas-dark transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy/30"
           >
             <ArrowLeft size={18} className="text-ink-muted" />
@@ -86,17 +88,17 @@ export function EditorToolbar({
           </h1>
           <div className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
             {saved === null ? (
-              <Chip tone="neutral">{TEXTS.newTest}</Chip>
+              <Chip tone="neutral">{texts.newTest}</Chip>
             ) : saved.published === null ? (
-              <Chip tone="neutral">{TEXTS.notPublished}</Chip>
+              <Chip tone="neutral">{texts.notPublished}</Chip>
             ) : (
               <>
-                <Chip tone="forest" title={TEXTS.publishedHint}>
-                  {TEXTS.published}
+                <Chip tone="forest" title={texts.publishedHint}>
+                  {texts.published}
                 </Chip>
                 {saved.unpublished_changes && (
-                  <Chip tone="navy" title={TEXTS.unpublishedChangesHint}>
-                    {TEXTS.unpublishedChanges}
+                  <Chip tone="navy" title={texts.unpublishedChangesHint}>
+                    {texts.unpublishedChanges}
                   </Chip>
                 )}
               </>
@@ -112,14 +114,14 @@ export function EditorToolbar({
             {saving ? (
               <Chip tone="amber">
                 <Loader2 size={12} className="animate-spin" />
-                {TEXTS.saving}
+                {texts.saving}
               </Chip>
             ) : unsaved ? (
-              <Chip tone="amber">{TEXTS.unsaved}</Chip>
+              <Chip tone="amber">{texts.unsaved}</Chip>
             ) : (
               saved !== null && (
                 <span className="text-xs text-ink-muted whitespace-nowrap">
-                  {TEXTS.allSaved}
+                  {texts.allSaved}
                 </span>
               )
             )}
@@ -134,7 +136,7 @@ export function EditorToolbar({
             disabled={busy !== null || !unsaved}
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
-            {saving ? TEXTS.saving : unsaved ? TEXTS.save : TEXTS.nothingToSave}
+            {saving ? texts.saving : unsaved ? texts.save : texts.nothingToSave}
           </button>
           <button
             type="button"
@@ -148,7 +150,7 @@ export function EditorToolbar({
             aria-describedby={checkBlocked !== null ? checkHintId : undefined}
           >
             {busy === 'check' && <Loader2 size={14} className="animate-spin" />}
-            {busy === 'check' ? TEXTS.ordering : TEXTS.check}
+            {busy === 'check' ? texts.ordering : texts.check}
           </button>
           <button
             type="button"
@@ -160,7 +162,7 @@ export function EditorToolbar({
             {busy === 'publish' && (
               <Loader2 size={14} className="animate-spin" />
             )}
-            {busy === 'publish' ? TEXTS.publishing : TEXTS.publish}
+            {busy === 'publish' ? texts.publishing : texts.publish}
           </button>
           <div className="ml-auto flex items-center gap-1">
             {(['edit', 'student'] as const).map((mode) => (
@@ -174,7 +176,7 @@ export function EditorToolbar({
                   view === mode && 'bg-navy-pale text-navy hover:bg-navy-pale',
                 )}
               >
-                {mode === 'edit' ? TEXTS.editView : TEXTS.studentView}
+                {mode === 'edit' ? texts.editView : texts.studentView}
               </button>
             ))}
           </div>

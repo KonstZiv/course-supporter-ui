@@ -45,7 +45,17 @@ export const MIGRATED_PANEL_FILES = [
   '/src/components/flow/DocumentStructureBlock.tsx',
   '/src/components/flow/nodes/CourseRootNode.tsx',
   '/src/components/flow/nodes/SectionNode.tsx',
+  '/src/components/testEditor/editorTexts.ts',
+  '/src/utils/testRefusals.ts',
+  '/src/utils/testLetters.ts',
 ]
+
+const ALLOWED: Record<string, Record<string, string>> = {
+  '/src/utils/testLetters.ts': {
+    'абвгдеєжзиіїклмнопрстуфхцчшщюя':
+      'the option letters of a course in Ukrainian — course data mirroring the backend, not interface text',
+  },
+}
 
 const CYRILLIC = /[Ѐ-ӿ]/
 
@@ -53,9 +63,17 @@ describe('the author panel migrated files have no Cyrillic', () => {
   it('no literal in migrated files contains Cyrillic characters', () => {
     const found = MIGRATED_PANEL_FILES.flatMap((file) =>
       literalsOf(file)
-        .filter((text) => CYRILLIC.test(text))
+        .filter((text) => CYRILLIC.test(text) && !(text in (ALLOWED[file] ?? {})))
         .map((text) => `${file}: ${text}`),
     )
     expect(found).toEqual([])
+  })
+
+  it('the allowed list holds nothing stale', () => {
+    for (const [file, allowed] of Object.entries(ALLOWED)) {
+      expect(MIGRATED_PANEL_FILES).toContain(file)
+      const literals = literalsOf(file)
+      for (const text of Object.keys(allowed)) expect(literals).toContain(text)
+    }
   })
 })

@@ -69,7 +69,7 @@ export function authoredRejectionMessage(
   }
   if (code.startsWith('TEST_')) {
     const refusal = testRefusal(err.body)
-    const words = refusal && yamlFileRefusalWords(refusal, fileName)
+    const words = refusal && yamlFileRefusalWords('uk', refusal, fileName)
     if (words) return words
   }
   // A recognised envelope with a code we have no specific text for degrades to

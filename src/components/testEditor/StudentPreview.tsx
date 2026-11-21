@@ -1,5 +1,6 @@
+import { useLanguage } from '../../i18n/LanguageContext'
 import type { TestDraft } from '../../utils/testDraft'
-import { TEXTS } from './editorTexts'
+import { editorTexts } from './editorTexts'
 
 /**
  * The test as a student will see it once published — a copy of the portal
@@ -15,15 +16,17 @@ export function StudentPreview({
   draft: TestDraft
   letters: string[]
 }) {
+  const language = useLanguage()
+  const texts = editorTexts(language)
   return (
     <div className="card p-6">
-      <p className="text-sm text-ink-muted">{TEXTS.studentViewIntro}</p>
+      <p className="text-sm text-ink-muted">{texts.studentViewIntro}</p>
       <h2 className="font-display text-xl text-ink mt-4 break-words">
         {draft.title.trim()}
       </h2>
       {draft.questions.length === 0 ? (
         <p className="text-sm text-ink-muted italic mt-4">
-          {TEXTS.studentViewEmpty}
+          {texts.studentViewEmpty}
         </p>
       ) : (
         <ol className="space-y-4 list-none p-0 mt-4">

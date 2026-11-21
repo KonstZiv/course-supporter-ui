@@ -1,6 +1,7 @@
 import { memo, useMemo } from 'react'
 import { clsx } from 'clsx'
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react'
+import { useLanguage } from '../../i18n/LanguageContext'
 import {
   canAddOption,
   questionPlaces,
@@ -11,10 +12,10 @@ import {
 import { fieldProblemWords, incompleteWords } from '../../utils/testRefusals'
 import { Chip } from './Chip'
 import {
+  editorTexts,
   moveQuestionLabel,
   questionHeading,
   removeQuestionLabel,
-  TEXTS,
 } from './editorTexts'
 import { FieldError, IconButton, UnfinishedMark } from './fields'
 import { cardIds, describedBy, TEXTAREA } from './formParts'
@@ -73,6 +74,8 @@ export const QuestionCard = memo(function QuestionCard({
   mark: ServerMark | null
   actions: CardActions
 }) {
+  const language = useLanguage()
+  const texts = editorTexts(language)
   const key = question.key
   const ids = cardIds(stem, key)
   const places = useMemo(() => questionPlaces(question, number), [question, number])
@@ -101,28 +104,28 @@ export const QuestionCard = memo(function QuestionCard({
     >
       <div className="flex items-center gap-2">
         <h2 id={ids.heading} className="font-display text-lg text-ink">
-          {questionHeading(number)}
+          {questionHeading(language, number)}
         </h2>
-        {modelDoubt && <Chip tone="amber">{TEXTS.doubt}</Chip>}
+        {modelDoubt && <Chip tone="amber">{texts.doubt}</Chip>}
         <div className="ml-auto flex items-center">
           <IconButton
             id={ids.up}
             icon={ArrowUp}
-            label={moveQuestionLabel(number, true)}
+            label={moveQuestionLabel(language, number, true)}
             disabled={isFirst}
             onClick={() => actions.move(key, 'up')}
           />
           <IconButton
             id={ids.down}
             icon={ArrowDown}
-            label={moveQuestionLabel(number, false)}
+            label={moveQuestionLabel(language, number, false)}
             disabled={isLast}
             onClick={() => actions.move(key, 'down')}
           />
           <IconButton
             id={ids.remove}
             icon={Trash2}
-            label={removeQuestionLabel(number)}
+            label={removeQuestionLabel(language, number)}
             danger
             onClick={() => actions.remove(key)}
           />
@@ -135,7 +138,7 @@ export const QuestionCard = memo(function QuestionCard({
           htmlFor={ids.text}
           className="block text-sm font-medium text-ink mb-1.5"
         >
-          {TEXTS.questionText}
+          {texts.questionText}
         </label>
         <textarea
           id={ids.text}
@@ -154,17 +157,22 @@ export const QuestionCard = memo(function QuestionCard({
           )}
         />
         {textProblem && (
-          <FieldError id={textErrorId} words={fieldProblemWords(textProblem)} />
+          <FieldError
+            id={textErrorId}
+            words={fieldProblemWords(language, textProblem)}
+          />
         )}
-        {textPlace && <UnfinishedMark words={incompleteWords(textPlace)} />}
+        {textPlace && (
+          <UnfinishedMark words={incompleteWords(language, textPlace)} />
+        )}
       </div>
 
       <fieldset className="mt-5">
         <legend className="block text-sm font-medium text-ink mb-2">
-          {TEXTS.options}
+          {texts.options}
         </legend>
         {question.options.length === 0 ? (
-          <p className="text-sm text-ink-muted italic">{TEXTS.noOptions}</p>
+          <p className="text-sm text-ink-muted italic">{texts.noOptions}</p>
         ) : (
           <ul className="space-y-2">
             {question.options.map((option, index) => {
@@ -186,12 +194,14 @@ export const QuestionCard = memo(function QuestionCard({
                   isLast={index === question.options.length - 1}
                   error={
                     problem
-                      ? fieldProblemWords(problem)
+                      ? fieldProblemWords(language, problem)
                       : mark?.optionKey === option.key
                         ? mark.words
                         : null
                   }
-                  unfinished={unfinished ? incompleteWords(unfinished) : null}
+                  unfinished={
+                    unfinished ? incompleteWords(language, unfinished) : null
+                  }
                   onText={(text) => actions.setOption(key, option.key, { text })}
                   onCorrect={(correct) =>
                     actions.setOption(key, option.key, { correct })
@@ -206,7 +216,10 @@ export const QuestionCard = memo(function QuestionCard({
           </ul>
         )}
         {listPlaces.map((place) => (
-          <UnfinishedMark key={place.code} words={incompleteWords(place)} />
+          <UnfinishedMark
+            key={place.code}
+            words={incompleteWords(language, place)}
+          />
         ))}
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <button
@@ -217,10 +230,12 @@ export const QuestionCard = memo(function QuestionCard({
             onClick={() => actions.addOption(key)}
           >
             <Plus size={14} />
-            {TEXTS.addOption}
+            {texts.addOption}
           </button>
           {!canAddOption(question) && (
-            <span className="text-xs text-ink-muted">{TEXTS.tooManyOptions}</span>
+            <span className="text-xs text-ink-muted">
+              {texts.tooManyOptions}
+            </span>
           )}
         </div>
       </fieldset>
@@ -244,7 +259,7 @@ export const QuestionCard = memo(function QuestionCard({
             onClick={() => actions.openOwn(key)}
           >
             <Plus size={14} />
-            {TEXTS.addOwnExplanation}
+            {texts.addOwnExplanation}
           </button>
         ) : (
           <div>
@@ -252,7 +267,7 @@ export const QuestionCard = memo(function QuestionCard({
               htmlFor={ids.own}
               className="block text-sm font-medium text-ink mb-1.5"
             >
-              {TEXTS.ownExplanation}
+              {texts.ownExplanation}
             </label>
             <textarea
               id={ids.own}
@@ -267,17 +282,20 @@ export const QuestionCard = memo(function QuestionCard({
               )}
             />
             {ownProblem && (
-              <FieldError id={ownErrorId} words={fieldProblemWords(ownProblem)} />
+              <FieldError
+                id={ownErrorId}
+                words={fieldProblemWords(language, ownProblem)}
+              />
             )}
             <p id={ownHintId} className="text-xs text-ink-muted mt-1">
-              {TEXTS.ownExplanationHint}
+              {texts.ownExplanationHint}
             </p>
             <button
               type="button"
               className="btn-ghost btn-sm mt-1 -ml-2"
               onClick={() => actions.closeOwn(key)}
             >
-              {TEXTS.removeOwnExplanation}
+              {texts.removeOwnExplanation}
             </button>
           </div>
         )}
