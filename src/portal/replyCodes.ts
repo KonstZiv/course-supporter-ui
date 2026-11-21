@@ -35,30 +35,8 @@ const CODE_KEYS: Record<ReplyCode, MessageKey> = {
 export function replyCodePhrase(
   code: string,
   details?: Record<string, unknown> | null,
-): string
-export function replyCodePhrase(
-  language: Language,
-  code: string,
-  details?: Record<string, unknown> | null,
-): string
-export function replyCodePhrase(
-  langOrCode: Language | string,
-  codeOrDetails?: string | Record<string, unknown> | null,
-  maybeDetails?: Record<string, unknown> | null,
+  language: Language = DEFAULT_LANGUAGE,
 ): string {
-  let language: Language = DEFAULT_LANGUAGE
-  let code: string
-  let details: Record<string, unknown> | null | undefined
-
-  if (langOrCode === 'uk' || langOrCode === 'en') {
-    language = langOrCode
-    code = codeOrDetails as string
-    details = maybeDetails
-  } else {
-    code = langOrCode
-    details = codeOrDetails as Record<string, unknown> | null | undefined
-  }
-
   const key = CODE_KEYS[code as ReplyCode]
   if (!key) {
     return translate(language, 'portal.replies.error.generic')
@@ -93,25 +71,10 @@ export function replyCodePhrase(
   return translate(language, key)
 }
 
-export function replyErrorMessage(err: unknown, language?: Language): string
-export function replyErrorMessage(language: Language, err: unknown): string
 export function replyErrorMessage(
-  first: unknown,
-  second?: unknown,
+  err: unknown,
+  language: Language = DEFAULT_LANGUAGE,
 ): string {
-  let language: Language = DEFAULT_LANGUAGE
-  let err: unknown
-
-  if (first === 'uk' || first === 'en') {
-    language = first
-    err = second
-  } else if (second === 'uk' || second === 'en') {
-    language = second
-    err = first
-  } else {
-    err = first
-  }
-
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
     return translate(language, 'portal.replies.error.offline')
   }
@@ -124,7 +87,7 @@ export function replyErrorMessage(
     }
     const refusal = replyRefusal(err)
     if (refusal) {
-      return replyCodePhrase(language, refusal.code, refusal.details)
+      return replyCodePhrase(refusal.code, refusal.details, language)
     }
   }
   return translate(language, 'portal.replies.error.generic')

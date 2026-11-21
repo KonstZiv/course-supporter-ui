@@ -324,7 +324,7 @@ export function RemarkThreads({
       }))
     } catch (err) {
       const refusal = replyRefusal(err)
-      const errorMsg = replyErrorMessage(language, err)
+      const errorMsg = replyErrorMessage(err, language)
 
       setFormState((prev) =>
         prev ? { ...prev, submitting: false, error: errorMsg } : null,
@@ -557,9 +557,11 @@ export function RemarkThreads({
                     >
                       <span>
                         {noteLength(formState.body) > DEFAULT_COMMENT_MAX_CHARS &&
-                          replyCodePhrase(language, 'comment_too_long', {
-                            max: DEFAULT_COMMENT_MAX_CHARS,
-                          })}
+                          replyCodePhrase(
+                            'comment_too_long',
+                            { max: DEFAULT_COMMENT_MAX_CHARS },
+                            language,
+                          )}
                       </span>
                       <span className="tabular-nums ml-auto">
                         {formatCount(noteLength(formState.body))} /{' '}
