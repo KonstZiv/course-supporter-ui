@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { LanguageProvider } from '../../i18n/LanguageProvider'
 import { RemarkThreads } from './RemarkThreads'
 import { portalApi, PortalApiError } from '../api/portalClient'
 import type {
@@ -412,6 +413,51 @@ describe('RemarkThreads — display and nesting', () => {
     expect(
       screen.queryByRole('button', { name: /відповісти/i }),
     ).not.toBeInTheDocument()
+  })
+
+  it('renders English words for replies when language is en', async () => {
+    const threads: RemarkThreadsType = {
+      accepting_replies: true,
+      threads: [
+        {
+          item_id: 'c1',
+          comments: [
+            {
+              id: 'comm-1',
+              submission_id: 'sub-1',
+              item_id: 'c1',
+              parent_id: null,
+              author: 'student',
+              kind: 'question',
+              body: 'My question in English',
+              created_at: '2026-11-17T12:00:00Z',
+              answered_in_submission_id: null,
+            },
+          ],
+        },
+      ],
+    }
+
+    mockedRemarkThreads.mockResolvedValueOnce(threads)
+
+    render(
+      <LanguageProvider language="en">
+        <RemarkThreads submissionId="sub-1" structure={sampleStructure} />
+      </LanguageProvider>,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Replies to remarks')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('New')).toBeInTheDocument()
+    expect(screen.getByText('Still open')).toBeInTheDocument()
+    expect(screen.getByText('You')).toBeInTheDocument()
+    expect(screen.getByText('Question')).toBeInTheDocument()
+    expect(
+      screen.getByText('waiting for an answer in the next review'),
+    ).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Reply' }).length).toBeGreaterThan(0)
   })
 })
 

@@ -17,6 +17,9 @@ import {
   replyCodePhrase,
   replyErrorMessage,
 } from '../replyCodes'
+import { useLanguage, useT, type Translate } from '../../i18n/LanguageContext'
+import { localeOf, type Language } from '../../i18n/languages'
+import type { MessageKey } from '../../i18n/translate'
 
 function formatRemarkSnippet(what: string): string {
   const match = what.match(/^.*?[.!?](?=\s|$)/s)
@@ -28,26 +31,26 @@ function formatRemarkSnippet(what: string): string {
   return trimmed
 }
 
-function formatCommentDate(iso: string): string {
+function formatCommentDate(language: Language, iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleString('uk-UA', { dateStyle: 'short', timeStyle: 'short' })
+  return d.toLocaleString(localeOf(language), { dateStyle: 'short', timeStyle: 'short' })
 }
 
 interface RemarkItemMeta {
   item_id: string
-  sectionLabel: string
+  sectionKey: MessageKey
   what: string
 }
 
 const SECTIONS: Array<{
   key: 'new_remarks' | 'open' | 'broken' | 'fixed'
-  label: string
+  labelKey: MessageKey
 }> = [
-  { key: 'new_remarks', label: 'Нове' },
-  { key: 'open', label: 'Лишилося відкритим' },
-  { key: 'broken', label: 'Зламалося' },
-  { key: 'fixed', label: 'Виправлено' },
+  { key: 'new_remarks', labelKey: 'portal.replies.section.new' },
+  { key: 'open', labelKey: 'portal.replies.section.open' },
+  { key: 'broken', labelKey: 'portal.replies.section.broken' },
+  { key: 'fixed', labelKey: 'portal.replies.section.fixed' },
 ]
 
 interface ThreadNode {
@@ -104,26 +107,29 @@ function depthIndentClass(depth: number): string {
   }
 }
 
-function commentAuthorLabel(author: 'student' | 'mentor'): string {
-  return author === 'student' ? 'Ви' : 'Ментор'
+function commentAuthorLabel(t: Translate, author: 'student' | 'mentor'): string {
+  return author === 'student'
+    ? t('portal.replies.author.student')
+    : t('portal.replies.author.mentor')
 }
 
 function commentKindLabel(
+  t: Translate,
   author: 'student' | 'mentor',
   kind: string,
 ): string {
-  if (author === 'mentor') return 'Відповідь'
+  if (author === 'mentor') return t('portal.replies.kind.answer')
   switch (kind) {
     case 'question':
-      return 'Питання'
+      return t('portal.replies.kind.question')
     case 'objection':
-      return 'Заперечення'
+      return t('portal.replies.kind.objection')
     case 'comment':
-      return 'Коментар'
+      return t('portal.replies.kind.comment')
     case 'answer':
-      return 'Відповідь'
+      return t('portal.replies.kind.answer')
     default:
-      return 'Коментар'
+      return t('portal.replies.kind.comment')
   }
 }
 
@@ -143,6 +149,9 @@ export function RemarkThreads({
   submissionId: string
   structure: ReviewStructureV1 | null
 }) {
+  const language = useLanguage()
+  const t = useT()
+
   const remarkItems = useMemo<RemarkItemMeta[]>(() => {
     if (!structure) return []
     const items: RemarkItemMeta[] = []
@@ -153,7 +162,7 @@ export function RemarkThreads({
           if (r && typeof r.item_id === 'string' && r.item_id.trim() !== '') {
             items.push({
               item_id: r.item_id,
-              sectionLabel: s.label,
+              sectionKey: s.labelKey,
               what: r.what,
             })
           }
@@ -311,12 +320,11 @@ export function RemarkThreads({
       setFormState(null)
       setSuccessNotices((prev) => ({
         ...prev,
-        [itemId]:
-          'Репліку збережено. Відповідь прийде з рецензією на наступну подачу.',
+        [itemId]: t('portal.replies.success'),
       }))
     } catch (err) {
       const refusal = replyRefusal(err)
-      const errorMsg = replyErrorMessage(err)
+      const errorMsg = replyErrorMessage(language, err)
 
       setFormState((prev) =>
         prev ? { ...prev, submitting: false, error: errorMsg } : null,
@@ -338,23 +346,16 @@ export function RemarkThreads({
 
   return (
     <section
-      aria-label="Репліки до зауважень"
+      aria-label={t('portal.replies.title')}
       className="p-4 rounded-xl bg-canvas-dark/40 space-y-4"
     >
       <div>
-        <h3 className="text-sm font-semibold text-ink">Репліки до зауважень</h3>
-        {threadsData.accepting_replies ? (
-          <p className="text-xs text-ink-light mt-1">
-            Із зауваженням можна не погодитися, перепитати чи щось додати.
-            Відповідь прийде з рецензією на вашу наступну подачу — надішліть
-            роботу ще раз, виправлену чи ту саму. На оцінку впливає лише сама
-            робота.
-          </p>
-        ) : (
-          <p className="text-xs text-ink-light mt-1">
-            До цієї рецензії репліки вже не приймаються: є новіша рецензія або завдання змінилося.
-          </p>
-        )}
+        <h3 className="text-sm font-semibold text-ink">{t('portal.replies.title')}</h3>
+        <p className="text-xs text-ink-light mt-1">
+          {threadsData.accepting_replies
+            ? t('portal.replies.lead.accepting')
+            : t('portal.replies.lead.closed')}
+        </p>
       </div>
 
       <div className="space-y-4">
@@ -385,7 +386,7 @@ export function RemarkThreads({
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-canvas-dark text-ink-light">
-                    {item.sectionLabel}
+                    {t(item.sectionKey)}
                   </span>
                 </div>
                 <p className="text-sm font-medium text-ink">
@@ -412,19 +413,19 @@ export function RemarkThreads({
                       >
                         <div className="flex flex-wrap items-center gap-1.5 text-ink-muted">
                           <span className="font-semibold text-ink">
-                            {commentAuthorLabel(comment.author)}
+                            {commentAuthorLabel(t, comment.author)}
                           </span>
                           <span>·</span>
                           <span>
-                            {commentKindLabel(comment.author, comment.kind)}
+                            {commentKindLabel(t, comment.author, comment.kind)}
                           </span>
                           <span>·</span>
-                          <span>{formatCommentDate(comment.created_at)}</span>
+                          <span>{formatCommentDate(language, comment.created_at)}</span>
                           {isWaiting && (
                             <>
                               <span>·</span>
                               <span className="text-amber font-medium">
-                                чекає відповіді в наступній рецензії
+                                {t('portal.replies.status.waiting')}
                               </span>
                             </>
                           )}
@@ -434,7 +435,7 @@ export function RemarkThreads({
                               onClick={() => openForm(item.item_id, comment.id)}
                               className="btn-ghost btn-sm text-[11px] h-6 px-1.5 ml-auto text-ink-light"
                             >
-                              Відповісти
+                              {t('portal.replies.action.reply')}
                             </button>
                           )}
                         </div>
@@ -470,7 +471,7 @@ export function RemarkThreads({
                     onClick={() => openForm(item.item_id, null)}
                     className="btn-secondary btn-sm text-xs"
                   >
-                    Відповісти
+                    {t('portal.replies.action.reply')}
                   </button>
                 </div>
               )}
@@ -485,7 +486,7 @@ export function RemarkThreads({
                       htmlFor={`${formIdPrefix}-${item.item_id}-kind`}
                       className="block text-xs font-medium text-ink-light mb-1"
                     >
-                      Вид репліки
+                      {t('portal.replies.form.kindLabel')}
                     </label>
                     <select
                       id={`${formIdPrefix}-${item.item_id}-kind`}
@@ -502,16 +503,17 @@ export function RemarkThreads({
                       }
                       className="input text-xs py-1 px-2.5 h-8 bg-canvas"
                     >
-                      <option value="question">Питання</option>
-                      <option value="objection">Заперечення</option>
-                      <option value="comment">Коментар</option>
+                      <option value="question">{t('portal.replies.kind.question')}</option>
+                      <option value="objection">{t('portal.replies.kind.objection')}</option>
+                      <option value="comment">{t('portal.replies.kind.comment')}</option>
                     </select>
                   </div>
 
                   {parentComment && (
                     <p className="text-xs font-medium text-ink-light">
-                      Відповідь на коментар Ментора від{' '}
-                      {formatCommentDate(parentComment.created_at)}
+                      {t('portal.replies.replyToMentor', {
+                        date: formatCommentDate(language, parentComment.created_at),
+                      })}
                     </p>
                   )}
 
@@ -520,7 +522,7 @@ export function RemarkThreads({
                       htmlFor={`${formIdPrefix}-${item.item_id}-body`}
                       className="sr-only"
                     >
-                      Текст репліки
+                      {t('portal.replies.form.bodyLabel')}
                     </label>
                     <textarea
                       id={`${formIdPrefix}-${item.item_id}-body`}
@@ -530,7 +532,7 @@ export function RemarkThreads({
                           prev ? { ...prev, body: e.target.value } : null,
                         )
                       }
-                      placeholder="Напишіть, із чим не згодні або що незрозуміло"
+                      placeholder={t('portal.replies.form.placeholder')}
                       rows={3}
                       className="input text-xs"
                       aria-describedby={
@@ -555,7 +557,7 @@ export function RemarkThreads({
                     >
                       <span>
                         {noteLength(formState.body) > DEFAULT_COMMENT_MAX_CHARS &&
-                          replyCodePhrase('comment_too_long', {
+                          replyCodePhrase(language, 'comment_too_long', {
                             max: DEFAULT_COMMENT_MAX_CHARS,
                           })}
                       </span>
@@ -567,8 +569,10 @@ export function RemarkThreads({
                   </div>
 
                   <div className="text-xs text-ink-muted">
-                    Реплік до цього зауваження: {studentRepliesCount} з{' '}
-                    {DEFAULT_COMMENT_LIMIT}.
+                    {t('portal.replies.form.countProgress', {
+                      count: String(studentRepliesCount),
+                      limit: String(DEFAULT_COMMENT_LIMIT),
+                    })}
                   </div>
 
                   {formState.error && (
@@ -595,7 +599,7 @@ export function RemarkThreads({
                       {formState.submitting && (
                         <Loader2 size={12} className="animate-spin" />
                       )}
-                      Надіслати репліку
+                      {t('portal.replies.form.submit')}
                     </button>
                     <button
                       type="button"
@@ -603,7 +607,7 @@ export function RemarkThreads({
                       disabled={formState.submitting}
                       className="btn-ghost btn-sm text-xs"
                     >
-                      Скасувати
+                      {t('portal.replies.form.cancel')}
                     </button>
                   </div>
                 </form>
