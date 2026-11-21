@@ -193,6 +193,7 @@ async function expectNoCyrillic() {
   await waitFor(() => expect(screen.queryByText(/Loading|Calculating/)).not.toBeInTheDocument())
   expect(cyrillicOnPage()).toEqual([])
   expect(document.documentElement.lang).toBe('en')
+  expect(document.title).toBe('Student portal')
 }
 
 describe('the portal in English shows no Cyrillic', () => {
