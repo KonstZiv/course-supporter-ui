@@ -62,6 +62,7 @@ function PhaseChip({ phase }: { phase: ProcessingPhase | null }) {
 // left edge regardless of whether a chip is present.
 function MaterialName({ item }: { item: MaterialHistoryItemResponse }) {
   const t = useT()
+  const language = useLanguage()
   // No ``truncate`` (which carries ``white-space: nowrap``): the name WRAPS like the
   // students-table sample, so a long name never forces the material column past the
   // card and clips the row (Г8 п.6).
@@ -72,9 +73,9 @@ function MaterialName({ item }: { item: MaterialHistoryItemResponse }) {
     // over the one-line rows; the second line is the row's only planned wrap.
     return (
       <span className="flex flex-col leading-tight text-ink-muted">
-        <span>{deletedMaterialLabelShort()}</span>
+        <span>{deletedMaterialLabelShort(language)}</span>
         <span className="text-xs text-ink-muted">
-          {deletedMaterialAuthorLine(item.material_deleted_at ?? '')}
+          {deletedMaterialAuthorLine(language, item.material_deleted_at ?? '')}
         </span>
       </span>
     )
@@ -110,7 +111,7 @@ export function MaterialHistoryRow({
   const last = item.last_job
   const when = relativeTime(language, last.completed_at ?? last.queued_at, now)
   const meta = item.material_source_type
-    ? sourceTypeMeta(item.material_source_type)
+    ? sourceTypeMeta(language, item.material_source_type)
     : null
   const SourceIcon = meta ? (ICON_BY_NAME[meta.icon] ?? FileIcon) : null
 

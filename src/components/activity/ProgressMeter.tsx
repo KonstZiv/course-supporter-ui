@@ -1,4 +1,5 @@
 import { progressCaption, type WorkProgressBar } from '../../utils/workProgress'
+import { useLanguage } from '../../i18n/LanguageContext'
 
 // The shared movement primitive: processing detail (Д2/Д5) AND, since step Е,
 // the upload bar (Е6). A product-language caption — "кадр 240 з 1800" /
@@ -7,11 +8,12 @@ import { progressCaption, type WorkProgressBar } from '../../utils/workProgress'
 // draws it only while the movement is live (Д2 for processing; Е5 for upload —
 // gone once the last byte is sent, replaced by words).
 export function ProgressMeter({ current, total, unit }: WorkProgressBar) {
+  const language = useLanguage()
   const pct = Math.min(100, Math.max(0, Math.round((current / total) * 100)))
   return (
     <div className="mt-1">
       <div className="text-xs text-ink-muted mb-0.5">
-        {progressCaption({ current, total, unit })}
+        {progressCaption(language, { current, total, unit })}
       </div>
       <div
         className="h-1 rounded-full bg-canvas-dark overflow-hidden"

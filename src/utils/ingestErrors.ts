@@ -6,7 +6,7 @@
 //     material card;
 //   * synchronous upload rejections (HTTP 400 detail.category) at the upload
 //     door (wired through apiError in the follow-up UI commit).
-// Texts are product-language (Ukrainian); the course language is deliberately
+// Texts come from the product-language catalog; the course language is deliberately
 // NOT used — this is author-facing chrome, not model content.
 //
 // Fallback rule (DD-SP-D): an unknown or absent category NO LONGER shows the
@@ -15,61 +15,31 @@
 // string. This is the structural guard against the two stores drifting apart
 // (a cross-store test is not technically possible).
 
-const PIPELINE_FAILURE_MESSAGE =
-  'Не вдалося обробити цей матеріал — спробуйте ще раз. ' +
-  'Якщо повториться, напишіть нам, ми розберемося.'
+import type { Language } from '../i18n/languages'
+import { translate, type MessageKey } from '../i18n/translate'
 
-const INGEST_ERROR_MESSAGES: Record<string, string> = {
+const INGEST_ERROR_KEYS: Record<string, MessageKey> = {
   // ── async ingestion classes ──
-  empty_document:
-    'Документ не містить видобувного вмісту — не знайдено жодного ' +
-    'текстового блоку чи файлу коду для обробки.',
-  presentation_empty_segment:
-    'Частина слайдів не містить видобувного тексту (лише зображення) — ' +
-    'презентацію не вдалося сегментувати.',
-  stage2_rejected: 'Матеріал не пройшов перевірку безпеки вмісту.',
-  external_source_unavailable:
-    'Не вдалося відкрити посилання — перевірте його й спробуйте ще раз. ' +
-    'Можливо, джерело видалено або закрито для завантаження.',
-  pipeline_failure: PIPELINE_FAILURE_MESSAGE,
+  empty_document: 'panel.ingestErrors.emptyDocument',
+  presentation_empty_segment: 'panel.ingestErrors.presentationEmptySegment',
+  stage2_rejected: 'panel.ingestErrors.stage2Rejected',
+  external_source_unavailable: 'panel.ingestErrors.externalSourceUnavailable',
+  pipeline_failure: 'panel.ingestErrors.pipelineFailure',
   // ── synchronous upload-rejection classes (author sync door) ──
-  suspicious_unicode:
-    'У тексті знайдено невидимі службові символи. Найчастіше вони ' +
-    'потрапляють при копіюванні з вебсторінки — збережіть файл заново у ' +
-    'звичайному текстовому редакторі й спробуйте ще раз.',
-  charset_violation:
-    'Файл збережено не в кодуванні UTF-8, і його кодування не вдалося ' +
-    'надійно розпізнати. Відкрийте файл у редакторі, збережіть його як ' +
-    'UTF-8 і завантажте знову.',
-  size_limit: 'Файл завеликий. Зменште його або розділіть на частини.',
-  forbidden_type: 'Такий тип файлу поки не підтримується.',
-  // ── DRAFT texts — awaiting operator ratification (step-v SERVER-CHECKPOINT).
-  // Neutral, no accusation: false positives are likely on agentic-Python
-  // course materials that legitimately contain example model instructions, so
-  // this must never read as "we found a manipulation attempt in your file".
-  prompt_injection:
-    'Матеріал не пройшов перевірку безпеки вмісту. Якщо ви впевнені, ' +
-    'що з матеріалом усе гаразд, напишіть нам — ми перевіримо.',
-  magic_mismatch:
-    'Вміст файлу не збігається з його розширенням. Перевірте, що файл не ' +
-    'пошкоджений, і збережіть його у правильному форматі.',
+  suspicious_unicode: 'panel.ingestErrors.suspiciousUnicode',
+  charset_violation: 'panel.ingestErrors.charsetViolation',
+  size_limit: 'panel.ingestErrors.sizeLimit',
+  forbidden_type: 'panel.ingestErrors.forbiddenType',
+  prompt_injection: 'panel.ingestErrors.promptInjection',
+  magic_mismatch: 'panel.ingestErrors.magicMismatch',
   // Archives / symbolic links — no technical detail for the author:
-  archive_violation:
-    'Не вдалося прочитати архів. Можливо, він пошкоджений — ' +
-    'спробуйте створити його заново.',
-  archive_bomb:
-    'Архів завеликий у розпакованому вигляді. Зменште його й спробуйте ще раз.',
-  symlink_violation:
-    'Архів містить символьні посилання, які не підтримуються. Приберіть їх ' +
-    'і спробуйте ще раз.',
-  slide_count_limit:
-    'У презентації забагато слайдів. Розділіть її на частини й завантажте ' +
-    'кожну окремо.',
+  archive_violation: 'panel.ingestErrors.archiveViolation',
+  archive_bomb: 'panel.ingestErrors.archiveBomb',
+  symlink_violation: 'panel.ingestErrors.symlinkViolation',
+  slide_count_limit: 'panel.ingestErrors.slideCountLimit',
   // Not a fault of the material: the author's units did not cover its
   // processing (BIL-E). The material stays; the card offers the purchase.
-  insufficient_units:
-    'Обробку не почато: на неї не вистачило юнітів. Матеріал збережено — ' +
-    'після купівлі юнітів запустіть обробку ще раз.',
+  insufficient_units: 'panel.ingestErrors.insufficientUnits',
 }
 
 /**
@@ -80,10 +50,12 @@ const INGEST_ERROR_MESSAGES: Record<string, string> = {
  * (DD-SP-D fallback rule).
  */
 export function ingestErrorMessage(
+  language: Language,
   errorCategory: string | null | undefined,
 ): string {
-  if (errorCategory && INGEST_ERROR_MESSAGES[errorCategory]) {
-    return INGEST_ERROR_MESSAGES[errorCategory]
-  }
-  return PIPELINE_FAILURE_MESSAGE
+  const key =
+    errorCategory && Object.prototype.hasOwnProperty.call(INGEST_ERROR_KEYS, errorCategory)
+      ? (INGEST_ERROR_KEYS[errorCategory] as MessageKey)
+      : 'panel.ingestErrors.pipelineFailure'
+  return translate(language, key)
 }

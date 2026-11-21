@@ -15,8 +15,10 @@ import { Modal } from '../components/ui/Modal'
 import { EmptyState } from '../components/ui/EmptyState'
 import { LanguageSelect, LanguageBadge } from '../components/ui/LanguageSelect'
 import { OutlookReminders } from '../components/billing/OutlookReminders'
+import { useT } from '../i18n/LanguageContext'
 
 export function DashboardPage() {
+  const t = useT()
   const [courses, setCourses] = useState<NodeResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
@@ -77,16 +79,16 @@ export function DashboardPage() {
       {/* Header */}
       <div className="flex items-end justify-between mb-8">
         <div>
-          <h1 className="page-title">Мої курси</h1>
+          <h1 className="page-title">{t('panel.dashboard.title')}</h1>
           <p className="page-subtitle">
             {courses.length > 0
-              ? `${courses.length} ${courses.length === 1 ? 'курс' : courses.length < 5 ? 'курси' : 'курсів'}`
-              : 'Створіть перший курс'}
+              ? t('panel.dashboard.subtitleCount', { count: courses.length })
+              : t('panel.dashboard.subtitleEmpty')}
           </p>
         </div>
         <button className="btn-primary" onClick={() => setShowCreate(true)}>
           <Plus size={18} />
-          Новий курс
+          {t('panel.dashboard.newCourse')}
         </button>
       </div>
 
@@ -95,13 +97,13 @@ export function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
           <StatCard
             icon={BookOpen}
-            label="Курсів"
+            label={t('panel.dashboard.statsCourses')}
             value={String(courses.length)}
             color="navy"
           />
           <StatCard
             icon={Layers}
-            label="Всього вузлів"
+            label={t('panel.dashboard.statsNodes')}
             value={String(courses.reduce((s, c) => s + (c.children_count ?? 0), 0))}
             color="forest"
           />
@@ -112,12 +114,12 @@ export function DashboardPage() {
       {courses.length === 0 ? (
         <EmptyState
           icon={BookOpen}
-          title="Ще немає курсів"
-          description="Створіть перший курс, додайте навчальні матеріали та згенеруйте структуру"
+          title={t('panel.dashboard.emptyTitle')}
+          description={t('panel.dashboard.emptyDescription')}
           action={
             <button className="btn-primary btn-lg" onClick={() => setShowCreate(true)}>
               <Plus size={18} />
-              Створити перший курс
+              {t('panel.dashboard.createFirstCourse')}
             </button>
           }
         />
@@ -155,11 +157,11 @@ export function DashboardPage() {
                 <div className="flex items-center gap-4 text-xs text-ink-muted">
                   <span className="flex items-center gap-1">
                     <Layers size={12} />
-                    {course.children_count ?? 0} розділів
+                    {t('panel.dashboard.sectionsCount', { count: course.children_count ?? 0 })}
                   </span>
                   <span className="flex items-center gap-1">
                     <Paperclip size={12} />
-                    {course.authored_documents_count ?? 0} документів
+                    {t('panel.dashboard.documentsCount', { count: course.authored_documents_count ?? 0 })}
                   </span>
                   <LanguageBadge code={course.default_language} />
                 </div>
@@ -170,13 +172,13 @@ export function DashboardPage() {
       )}
 
       {/* Create modal */}
-      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Новий курс">
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title={t('panel.dashboard.modalTitle')}>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-ink mb-1.5">Назва курсу</label>
+            <label className="block text-sm font-medium text-ink mb-1.5">{t('panel.dashboard.courseTitleLabel')}</label>
             <input
               className="input"
-              placeholder="Наприклад: Python для початківців"
+              placeholder={t('panel.dashboard.courseTitlePlaceholder')}
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && create()}
@@ -185,29 +187,28 @@ export function DashboardPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-ink mb-1.5">
-              Опис <span className="text-ink-muted">(необов'язково)</span>
+              {t('panel.dashboard.courseDescLabel')} <span className="text-ink-muted">{t('panel.dashboard.optionalLabel')}</span>
             </label>
             <textarea
               className="input min-h-[80px] resize-none"
-              placeholder="Короткий опис курсу..."
+              placeholder={t('panel.dashboard.courseDescPlaceholder')}
               value={newDesc}
               onChange={(e) => setNewDesc(e.target.value)}
               rows={3}
             />
           </div>
           <LanguageSelect
-            label="Мова курсу"
+            label={t('panel.dashboard.courseLanguageLabel')}
             value={newLang || null}
             onChange={(code) => setNewLang(code ?? '')}
             required
           />
           <p className="text-xs text-ink-muted -mt-2">
-            Використовується для всіх матеріалів курсу (STT, генерація
-            метаданих). Обов'язкове поле.
+            {t('panel.dashboard.courseLanguageHint')}
           </p>
           <div className="flex justify-end gap-2 pt-2">
             <button className="btn-secondary" onClick={() => setShowCreate(false)}>
-              Скасувати
+              {t('panel.dashboard.cancel')}
             </button>
             <button
               className="btn-primary"
@@ -215,7 +216,7 @@ export function DashboardPage() {
               disabled={creating || !newTitle.trim() || !newLang}
             >
               {creating ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-              Створити
+              {t('panel.dashboard.create')}
             </button>
           </div>
         </div>

@@ -1,45 +1,57 @@
+import type { Language } from '../i18n/languages'
+import { translate, type MessageKey } from '../i18n/translate'
 import type { FileRoleDecision, FileRoleProposal, FileRoleToken } from '../types/api'
 
-// Role token → Ukrainian label for the confirm screen (decision 2). Display
-// strings ONLY — the ``structure_only`` token, its API value and the stored
-// proposal/decision data are unchanged; only the author-facing wording of the
-// third role was renamed to «Несуттєвий для теми» (A-UI-1).
-export const ROLE_LABELS: Record<FileRoleToken, string> = {
-  full: 'Повний',
-  auxiliary: 'Допоміжний',
-  structure_only: 'Несуттєвий для теми',
+export const ROLE_TOKENS: FileRoleToken[] = ['full', 'auxiliary', 'structure_only']
+
+const ROLE_LABEL_KEYS: Record<FileRoleToken, MessageKey> = {
+  full: 'panel.fileRoles.role.full',
+  auxiliary: 'panel.fileRoles.role.auxiliary',
+  structure_only: 'panel.fileRoles.role.structureOnly',
 }
 
-export const ROLE_TOKENS: FileRoleToken[] = ['full', 'auxiliary', 'structure_only']
+export function roleLabels(language: Language): Record<FileRoleToken, string> {
+  return {
+    full: translate(language, 'panel.fileRoles.role.full'),
+    auxiliary: translate(language, 'panel.fileRoles.role.auxiliary'),
+    structure_only: translate(language, 'panel.fileRoles.role.structureOnly'),
+  }
+}
+
+export function roleLabel(language: Language, token: FileRoleToken): string {
+  const key = ROLE_LABEL_KEYS[token]
+  return key ? translate(language, key) : token
+}
 
 // Proposal-reason token → Ukrainian phrase (Р15). Mirrors the backend reason
 // vocabulary (CodeStructureReason + the proposal-level ``custom_source``); kept
 // in step by a test-lock. An UNKNOWN token falls back to the raw string, so a
 // new backend reason never crashes the screen.
-const REASON_LABELS: Record<string, string> = {
-  custom_source: 'власний код уроку',
-  build_config: 'конфігурація складання проєкту',
-  author_structure_only: 'рішення автора: несуттєвий для теми',
-  lockfile: 'залежності проєкту',
-  vendored_dir: 'стороння бібліотека',
-  generated_artifact: 'згенерований артефакт',
-  oversize: 'завеликий файл',
-  denylist_dir: 'службова тека',
-  denylist_file: 'службовий файл',
-  non_code_type: 'не код',
-  magic_mismatch: 'вміст не відповідає розширенню',
-  nested_archive: 'вкладений архів',
+const REASON_LABEL_KEYS: Record<string, MessageKey> = {
+  custom_source: 'panel.fileRoles.reason.customSource',
+  build_config: 'panel.fileRoles.reason.buildConfig',
+  author_structure_only: 'panel.fileRoles.reason.authorStructureOnly',
+  lockfile: 'panel.fileRoles.reason.lockfile',
+  vendored_dir: 'panel.fileRoles.reason.vendoredDir',
+  generated_artifact: 'panel.fileRoles.reason.generatedArtifact',
+  oversize: 'panel.fileRoles.reason.oversize',
+  denylist_dir: 'panel.fileRoles.reason.denylistDir',
+  denylist_file: 'panel.fileRoles.reason.denylistFile',
+  non_code_type: 'panel.fileRoles.reason.nonCodeType',
+  magic_mismatch: 'panel.fileRoles.reason.magicMismatch',
+  nested_archive: 'panel.fileRoles.reason.nestedArchive',
 }
 
 // The reasons the backend can emit (the map MUST cover these — test-locked).
-export const KNOWN_REASON_TOKENS = Object.keys(REASON_LABELS)
+export const KNOWN_REASON_TOKENS = Object.keys(REASON_LABEL_KEYS)
 
 // A reason string is either a bare token (``custom_source``) or
 // ``<token>: <detail>`` (``build_config: angular.json``). Map on the token;
 // fall back to the raw string for an unknown token.
-export function reasonLabel(reason: string): string {
+export function reasonLabel(language: Language, reason: string): string {
   const token = (reason.split(':')[0] ?? reason).trim()
-  return REASON_LABELS[token] ?? reason
+  const key = REASON_LABEL_KEYS[token]
+  return key ? translate(language, key) : reason
 }
 
 // The initial per-file roles the screen shows (decision 19, the "three cases").

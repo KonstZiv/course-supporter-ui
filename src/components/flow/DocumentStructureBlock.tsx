@@ -3,9 +3,9 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 import { documentsApi } from '../../api/documents'
 import type { DocumentStructureEntry, DocumentStructureResponse } from '../../types/api'
 import {
-  STRUCTURE_BLOCK_ACTION,
   detailIsShowable,
   notReadCountLabel,
+  structureBlockAction,
   structureReasonPhrase,
 } from '../../utils/codeStructureReasons'
 import { formatBytes } from '../../utils/formatBytes'
@@ -57,7 +57,7 @@ function StructureGroup({
               <span className="text-ink-muted">{t('panel.flow.structure.filesCount', { count: e.entries })}</span>
             )}
             {' — '}
-            {structureReasonPhrase(e.reason, e.detail)}
+            {structureReasonPhrase(language, e.reason, e.detail)}
             {e.detail && detailIsShowable(e.reason) && (
               <span className="text-ink-muted"> ({e.detail})</span>
             )}
@@ -73,6 +73,7 @@ function StructureGroup({
 }
 
 export function DocumentStructureBlock({ documentId }: { documentId: string }) {
+  const language = useLanguage()
   const t = useT()
   const [open, setOpen] = useState(false)
   const [data, setData] = useState<DocumentStructureResponse | null>(null)
@@ -111,7 +112,7 @@ export function DocumentStructureBlock({ documentId }: { documentId: string }) {
                    hover:bg-amber-pale/70 transition-colors cursor-pointer"
       >
         {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-        {notReadCountLabel(count)}
+        {notReadCountLabel(language, count)}
       </button>
 
       {open && (
@@ -126,7 +127,7 @@ export function DocumentStructureBlock({ documentId }: { documentId: string }) {
           />
           {/* One action for the block, never per row: a per-line instruction
               under a `.DS_Store` would be invented noise. */}
-          <p className="text-xs text-ink-muted">{STRUCTURE_BLOCK_ACTION}</p>
+          <p className="text-xs text-ink-muted">{structureBlockAction(language)}</p>
         </div>
       )}
     </div>
