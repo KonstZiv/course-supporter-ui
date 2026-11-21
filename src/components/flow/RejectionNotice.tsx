@@ -1,4 +1,5 @@
 import { AlertTriangle, X, MapPin } from 'lucide-react'
+import { useT } from '../../i18n/LanguageContext'
 
 export interface StaleNodeRef {
   id: string
@@ -39,6 +40,7 @@ export function RejectionNotice({
   onRetryForce,
   onDismiss,
 }: Props) {
+  const t = useT()
   const runLabel = nodeTitle?.trim() || '—'
   const count = staleNodes.length
 
@@ -53,19 +55,19 @@ export function RejectionNotice({
       <div className="p-4 border-b border-canvas-dark/30 flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <p className="text-xs text-ink-muted mb-1.5">
-            Згенерувати опис · «{runLabel}»
+            {t('panel.flow.rejectionNotice.title', { name: runLabel })}
           </p>
           <span
             className="inline-flex items-center px-2.5 py-0.5 rounded-full
                        text-xs font-medium bg-amber-pale text-amber-dark"
           >
-            Відхилено
+            {t('panel.flow.rejectionNotice.rejected')}
           </span>
         </div>
         <button
           onClick={onDismiss}
-          aria-label="Закрити"
-          title="Закрити"
+          aria-label={t('panel.flow.rejectionNotice.close')}
+          title={t('panel.flow.rejectionNotice.close')}
           className="p-1.5 rounded-lg hover:bg-canvas-dark transition-colors shrink-0"
         >
           <X size={15} className="text-ink-muted" />
@@ -77,8 +79,7 @@ export function RejectionNotice({
         <div className="flex gap-2 items-start text-xs text-ink">
           <AlertTriangle size={13} className="text-amber shrink-0 mt-0.5" />
           <span>
-            Поза піддеревом є застарілі вузли ({count}). Перейдіть до них, щоб
-            переглянути, або згенеруйте все одно з примусовим прогоном.
+            {t('panel.flow.rejectionNotice.description', { count })}
           </span>
         </div>
 
@@ -90,7 +91,7 @@ export function RejectionNotice({
                   className="w-full flex items-center gap-1.5 text-left text-xs text-navy
                              px-2 py-1 rounded-lg hover:bg-navy-pale transition-colors"
                   onClick={() => onNavigate(node.id)}
-                  title="Перейти до вузла"
+                  title={t('panel.flow.rejectionNotice.goToNode')}
                 >
                   <MapPin size={12} className="shrink-0" />
                   <span className="truncate">{node.title}</span>
@@ -101,7 +102,7 @@ export function RejectionNotice({
         )}
 
         <button className="btn-primary btn-sm w-full" onClick={onRetryForce}>
-          Згенерувати з force
+          {t('panel.flow.rejectionNotice.generateForce')}
         </button>
       </div>
     </div>
