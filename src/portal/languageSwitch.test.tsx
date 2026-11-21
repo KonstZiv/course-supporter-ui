@@ -121,11 +121,20 @@ describe('before sign-in', () => {
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
     expect(screen.getByLabelText('Login')).toHaveValue('olena')
     expect(document.documentElement.lang).toBe('en')
+    expect(document.title).toBe('Student portal')
     expect(
       within(switcher('Language')).getByRole('button', { name: 'English' }),
     ).toHaveAttribute('aria-pressed', 'true')
     expect(localStorage.getItem(STORAGE_KEYS.portalLanguage)).toBe('en')
     expect(api.setInterfaceLanguage).not.toHaveBeenCalled()
+  })
+
+  it('English → Українська: document.title returns to Ukrainian', () => {
+    renderAt(`/${T}/login`)
+    pressEnglish()
+    expect(document.title).toBe('Student portal')
+    fireEvent.click(within(switcher('Language')).getByRole('button', { name: 'Українська' }))
+    expect(document.title).toBe('Навчальний портал')
   })
 })
 
