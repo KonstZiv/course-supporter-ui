@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom'
 import { NewTabLink } from '../../../components/billing/NewTabLink'
 import { usePortalSession } from '../../stores/session'
-import { BUY_UNITS, FILE_WAITS_HERE, UNITS_NOW_ENOUGH } from '../../unitsTexts'
+import { useT } from '../../../i18n/LanguageContext'
 
 /** The site's "cost card": 16 px radius, sun-pale ground, 1 px sun border, ink. */
 const COST_CARD = 'rounded-2xl bg-sun-pale border border-sun p-6 text-sm text-ink space-y-2'
@@ -13,9 +13,10 @@ const COST_CARD = 'rounded-2xl bg-sun-pale border border-sun p-6 text-sm text-in
 export function BuyUnitsLink() {
   const { tenantId } = useParams()
   const sessionTenant = usePortalSession((s) => s.tenantId)
+  const t = useT()
   const tenant = tenantId ?? sessionTenant
   if (!tenant) return null
-  return <NewTabLink href={`/${tenant}/billing`}>{BUY_UNITS}</NewTabLink>
+  return <NewTabLink href={`/${tenant}/billing`}>{t('portal.units.buy')}</NewTabLink>
 }
 
 /**
@@ -23,9 +24,10 @@ export function BuyUnitsLink() {
  * names no price: its card, after the wait, says only that the units came.
  */
 export function CostCard({ text, nowEnough }: { text?: string; nowEnough: boolean }) {
+  const t = useT()
   return (
     <div className={COST_CARD}>
-      {nowEnough && <p className="font-medium">{UNITS_NOW_ENOUGH}</p>}
+      {nowEnough && <p className="font-medium">{t('portal.units.nowEnough')}</p>}
       {text && <p>{text}</p>}
     </div>
   )
@@ -42,13 +44,14 @@ export function UnitsShortPanel({
   text: string
   fileChosen: boolean
 }) {
+  const t = useT()
   return (
-    <div className={COST_CARD} role="group" aria-label="Не вистачає юнітів">
+    <div className={COST_CARD} role="group" aria-label={t('portal.units.shortPanel')}>
       <p>{text}</p>
       <p>
         <BuyUnitsLink />
       </p>
-      {fileChosen && <p className="text-ink-light">{FILE_WAITS_HERE}</p>}
+      {fileChosen && <p className="text-ink-light">{t('portal.units.fileWaitsHere')}</p>}
     </div>
   )
 }

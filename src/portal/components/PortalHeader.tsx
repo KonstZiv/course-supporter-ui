@@ -5,6 +5,8 @@ import { clsx } from 'clsx'
 import { usePortalSession } from '../stores/session'
 import { portalApi } from '../api/portalClient'
 import type { PortalBillingOutlook } from '../types'
+import { useT } from '../../i18n/LanguageContext'
+import { LanguageSwitcher } from './LanguageSwitcher'
 
 /** The portal's sections; the header marks the one a page belongs to. */
 export type PortalSection = 'courses' | 'units'
@@ -38,7 +40,8 @@ const ITEM =
 
 /**
  * The portal's header on every signed-in page: the portal's name, "Мої курси",
- * "Юніти" (unless the author pays for the student's reviews) and "Вийти".
+ * "Юніти" (unless the author pays for the student's reviews), the language
+ * switcher and "Вийти".
  */
 export function PortalHeader({ current }: { current: PortalSection }) {
   const { tenantId } = useParams()
@@ -46,14 +49,15 @@ export function PortalHeader({ current }: { current: PortalSection }) {
   const clear = usePortalSession((s) => s.clear)
   const navigate = useNavigate()
   const paidBy = usePaidBy()
+  const t = useT()
 
   const items: { section: PortalSection; label: string; to: string; icon?: React.ReactNode }[] = [
-    { section: 'courses', label: 'Мої курси', to: `/${tenantId}/home` },
+    { section: 'courses', label: t('portal.nav.courses'), to: `/${tenantId}/home` },
   ]
   if (paidBy !== 'author') {
     items.push({
       section: 'units',
-      label: 'Юніти',
+      label: t('portal.nav.units'),
       to: `/${tenantId}/billing`,
       icon: <Package size={16} aria-hidden />,
     })
@@ -71,9 +75,9 @@ export function PortalHeader({ current }: { current: PortalSection }) {
           <div className="w-9 h-9 rounded-xl bg-navy flex items-center justify-center">
             <BookOpen size={18} className="text-amber-light" aria-hidden />
           </div>
-          <span className="font-display text-xl text-ink">Навчальний портал</span>
+          <span className="font-display text-xl text-ink">{t('portal.header.name')}</span>
         </div>
-        <nav aria-label="Розділи порталу">
+        <nav aria-label={t('portal.nav.label')}>
           <ul className="flex flex-wrap items-center gap-x-5 gap-y-1">
             {items.map(({ section, label, to, icon }) => {
               const isCurrent = section === current
@@ -97,9 +101,10 @@ export function PortalHeader({ current }: { current: PortalSection }) {
             })}
           </ul>
         </nav>
-        <button onClick={handleLogout} className="btn-ghost btn-sm ms-auto">
+        <LanguageSwitcher className="ms-auto" />
+        <button onClick={handleLogout} className="btn-ghost btn-sm">
           <LogOut size={16} aria-hidden />
-          Вийти
+          {t('portal.nav.logout')}
         </button>
       </div>
     </header>

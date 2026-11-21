@@ -22,19 +22,19 @@ const p = (
 
 describe('the five states each get their own words', () => {
   it.each(STATES)('%s has a label of its own', (state) => {
-    const others = STATES.filter((s) => s !== state).map(stateLabel)
-    expect(others).not.toContain(stateLabel(state))
+    const others = STATES.filter((s) => s !== state).map((s) => stateLabel('uk', s))
+    expect(others).not.toContain(stateLabel('uk', state))
   })
 
   it.each(STATES)('%s has a phrase of its own', (state) => {
     const others = STATES.filter((s) => s !== state).map((s) =>
-      presentationPhrase(p(s)),
+      presentationPhrase('uk', p(s)),
     )
-    expect(others).not.toContain(presentationPhrase(p(state)))
+    expect(others).not.toContain(presentationPhrase('uk', p(state)))
   })
 
   it.each(STATES)('%s says something, and not the generic', (state) => {
-    const phrase = presentationPhrase(p(state))
+    const phrase = presentationPhrase('uk', p(state))
     expect(phrase.length).toBeGreaterThan(10)
     expect(phrase).not.toMatch(/сталася помилка/)
   })
@@ -43,8 +43,8 @@ describe('the five states each get their own words', () => {
     // The whole point of task 03 on this side: four different things used to
     // reach the student under one word.
     for (const state of STATES) {
-      expect(stateLabel(state)).not.toBe('Помилка')
-      expect(presentationPhrase(p(state))).not.toMatch(/^Помилка/)
+      expect(stateLabel('uk', state)).not.toBe('Помилка')
+      expect(presentationPhrase('uk', p(state))).not.toMatch(/^Помилка/)
     }
   })
 
@@ -58,11 +58,11 @@ describe('the five states each get their own words', () => {
 
 describe('the wording the operator ratified', () => {
   it('«не схоже на спробу» answers the student instead of blaming the system', () => {
-    expect(stateLabel('not_an_attempt')).toBe('Не схоже на спробу')
-    expect(presentationPhrase(p('not_an_attempt'))).toMatch(
+    expect(stateLabel('uk', 'not_an_attempt')).toBe('Не схоже на спробу')
+    expect(presentationPhrase('uk', p('not_an_attempt'))).toMatch(
       /не схоже на рішення цього завдання/,
     )
-    expect(presentationPhrase(p('not_an_attempt'))).toMatch(
+    expect(presentationPhrase('uk', p('not_an_attempt'))).toMatch(
       /Перевірте, що подаєте правильний файл/,
     )
   })
@@ -75,19 +75,19 @@ describe('the wording the operator ratified', () => {
     const sentence =
       'Перевірку призупинено: на початок перевірки не вистачило юнітів. ' +
       'Після купівлі перевірка продовжиться сама — надсилати роботу знову не потрібно.'
-    expect(presentationPhrase(p('awaiting_funds'))).toBe(sentence)
-    expect(presentationPhrase(p('awaiting_funds', 'awaiting_funds'))).toBe(sentence)
+    expect(presentationPhrase('uk', p('awaiting_funds'))).toBe(sentence)
+    expect(presentationPhrase('uk', p('awaiting_funds', 'awaiting_funds'))).toBe(sentence)
     expect(sentence).not.toMatch(/викладач|поповн[іи]ть|баланс|кредит/)
   })
 
   it('a safety refusal keeps the sentence it was ratified with', () => {
-    expect(presentationPhrase(p('not_opened', 'stage2_rejected'))).toMatch(
+    expect(presentationPhrase('uk', p('not_opened', 'stage2_rejected'))).toMatch(
       /не пройшло перевірку безпеки/,
     )
   })
 
   it('a broken run says what to do about it', () => {
-    const phrase = presentationPhrase(p('not_opened', 'processing_failed'))
+    const phrase = presentationPhrase('uk', p('not_opened', 'processing_failed'))
     expect(phrase).toMatch(/Не вдалося перевірити роботу/)
     expect(phrase).toMatch(/Надішліть її ще раз/)
   })
@@ -95,8 +95,8 @@ describe('the wording the operator ratified', () => {
 
 describe('the three layers, in order', () => {
   it('layer 1: an article for the code wins over the phrase for the state', () => {
-    const withArticle = presentationPhrase(p('not_opened', 'processing_failed'))
-    const stateOnly = presentationPhrase(p('not_opened'))
+    const withArticle = presentationPhrase('uk', p('not_opened', 'processing_failed'))
+    const stateOnly = presentationPhrase('uk', p('not_opened'))
 
     expect(withArticle).not.toBe(stateOnly)
     expect(withArticle).toMatch(/Не вдалося перевірити роботу/)
@@ -105,26 +105,26 @@ describe('the three layers, in order', () => {
   it('layer 2: a code this build has never seen falls to the state phrase', () => {
     // A server newer than the portal. The state is still known, so the student
     // gets a true sentence rather than a generic one.
-    expect(presentationPhrase(p('not_an_attempt', 'code_from_the_future'))).toBe(
-      presentationPhrase(p('not_an_attempt')),
+    expect(presentationPhrase('uk', p('not_an_attempt', 'code_from_the_future'))).toBe(
+      presentationPhrase('uk', p('not_an_attempt')),
     )
   })
 
   it('layer 3: an unknown state AND an unknown code still say something', () => {
     expect(
-      presentationPhrase(p('state_from_the_future', 'code_from_the_future')),
+      presentationPhrase('uk', p('state_from_the_future', 'code_from_the_future')),
     ).toMatch(/сталася помилка/)
   })
 
   it('an unknown state gets a label and a tone rather than nothing', () => {
-    expect(stateLabel('state_from_the_future')).toBe('Стан невідомий')
+    expect(stateLabel('uk', 'state_from_the_future')).toBe('Стан невідомий')
     expect(stateTone('state_from_the_future')).toContain('ink-muted')
   })
 
   it('never returns an empty string, whatever it is handed', () => {
     for (const state of [...STATES, 'nonsense']) {
       for (const code of [null, 'processing_failed', 'nonsense']) {
-        expect(presentationPhrase(p(state, code)).length).toBeGreaterThan(0)
+        expect(presentationPhrase('uk', p(state, code)).length).toBeGreaterThan(0)
       }
     }
   })

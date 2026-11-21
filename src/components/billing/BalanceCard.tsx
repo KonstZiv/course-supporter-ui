@@ -1,6 +1,7 @@
 import type { BillingBalanceResponse } from '../../types/api'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 import { formatDate, formatUnits } from '../../utils/units'
-import { SITE_PRICING_URL } from '../site/siteLinks'
+import { siteUrl } from '../site/siteLinks'
 import { NewTabLink } from './NewTabLink'
 
 interface BalanceCardProps {
@@ -12,7 +13,7 @@ interface BalanceCardProps {
    */
   withDifference?: boolean
   /**
-   * The reminders right under "Доступно": the author passes theirs, the portal
+   * The reminders right under the available units: the author passes theirs, the portal
    * its own.
    */
   reminders?: React.ReactNode
@@ -27,53 +28,51 @@ export function BalanceCard({
   withDifference = true,
   reminders,
 }: BalanceCardProps) {
+  const language = useLanguage()
+  const t = useT()
   const { reserved, held, next_expiry: expiry } = balance
   const difference = withDifference ? balance.difference : 0
   const nothing =
-    balance.balance === 0 &&
-    reserved === 0 &&
-    held === 0 &&
-    difference === 0 &&
-    expiry === null
+  balance.balance === 0 &&
+  reserved === 0 &&
+  held === 0 &&
+  difference === 0 &&
+  expiry === null
 
   return (
     <section aria-labelledby="billing-balance" className="card p-6 space-y-3">
       <h2 id="billing-balance" className="font-display text-xl text-ink">
-        Залишок
+        {t('shared.balance.title')}
       </h2>
       <p className="text-2xl font-semibold text-ink">
-        Доступно: {formatUnits(balance.available)}
+        {t('shared.balance.available', { units: formatUnits(language, balance.available) })}
       </p>
-      {/* The reminders under "Доступно": the author's or the portal's own. */}
+      {/* The reminders under the available units: the author's or the portal's own. */}
       <div data-billing-reminders="">{reminders}</div>
       <div className="space-y-1 text-ink-light">
         {reserved > 0 && (
-          <p>
-            Зарезервовано для дій, які виконуються зараз: {formatUnits(reserved)}.
-          </p>
+          <p>{t('shared.balance.reserved', { units: formatUnits(language, reserved) })}</p>
         )}
         {held > 0 && (
-          <p>
-            Тимчасово недоступно: {formatUnits(held)} — на час повернення оплати
-            або спору щодо платежу.
-          </p>
+          <p>{t('shared.balance.held', { units: formatUnits(language, held) })}</p>
         )}
         {difference > 0 && (
           <p>
-            Використано понад залишок: {formatUnits(difference)} — це буде
-            враховано першим під час наступної купівлі.
+            {t('shared.balance.difference', { units: formatUnits(language, difference) })}
           </p>
         )}
         {expiry && (
           <p>
-            Найближче згорання: {formatUnits(expiry.units)} —{' '}
-            {formatDate(expiry.expires_on)}.
+            {t('shared.balance.nextExpiry', {
+              units: formatUnits(language, expiry.units),
+              date: formatDate(language, expiry.expires_on),
+            })}
           </p>
         )}
-        {nothing && <p>Юнітів поки немає.</p>}
+        {nothing && <p>{t('shared.balance.nothing')}</p>}
       </div>
       <p>
-        <NewTabLink href={SITE_PRICING_URL}>Як визначається вартість</NewTabLink>
+        <NewTabLink href={siteUrl(language, 'pricing')}>{t('shared.balance.pricingLink')}</NewTabLink>
       </p>
     </section>
   )

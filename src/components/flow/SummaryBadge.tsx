@@ -1,15 +1,17 @@
 import { clsx } from 'clsx'
 import type { SummaryStatus } from '../../types/api'
+import { useT } from '../../i18n/LanguageContext'
+import type { MessageKey } from '../../i18n/translate'
 
 // Status chip — one per summary state. ``none`` is intentionally absent:
 // a node without a summary carries NO badge (no visual noise on a large
 // tree), so the component returns null for it (Task 3.2.5b c2).
 const statusConfig: Record<
   Exclude<SummaryStatus, 'none'>,
-  { label: string; cls: string }
+  { labelKey: MessageKey; cls: string }
 > = {
-  draft: { label: 'Чернетка', cls: 'bg-amber-pale text-amber-dark' },
-  approved: { label: 'Затверджено', cls: 'bg-forest-pale text-forest' },
+  draft: { labelKey: 'panel.flow.summaryBadge.draft', cls: 'bg-amber-pale text-amber-dark' },
+  approved: { labelKey: 'panel.flow.summaryBadge.approved', cls: 'bg-forest-pale text-forest' },
 }
 
 /**
@@ -31,6 +33,7 @@ export function SummaryBadge({
   status: SummaryStatus
   materialsChanged: boolean
 }) {
+  const t = useT()
   if (status === 'none') return null
   const c = statusConfig[status]
   return (
@@ -41,15 +44,15 @@ export function SummaryBadge({
           c.cls,
         )}
       >
-        {c.label}
+        {t(c.labelKey)}
       </span>
       {materialsChanged && (
         <span
           className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px]
                      font-medium bg-coral-pale text-coral"
-          title="Матеріали вузла змінились після генерації опису"
+          title={t('panel.flow.summaryBadge.materialsChangedHint')}
         >
-          матеріали змінились
+          {t('panel.flow.summaryBadge.materialsChanged')}
         </span>
       )}
     </span>

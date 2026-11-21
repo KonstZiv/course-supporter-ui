@@ -17,8 +17,8 @@ import type {
 } from '../../types/api'
 import { StatusBadge } from '../ui/StatusBadge'
 import {
-  JOB_STATE_LABEL,
-  JOB_KIND_LABEL,
+  jobStateLabel,
+  jobKindLabel,
   jobStateWordClass,
 } from '../../utils/stateVocabulary'
 import {
@@ -27,6 +27,7 @@ import {
 } from '../../utils/materialLabel'
 import { relativeTime } from '../../utils/relativeTime'
 import { sourceTypeMeta } from '../../utils/sourceTypeIcon'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 
 // Icon-name → component, curated to keep the bundle small (same pattern as
 // NodeDetailPanel). Total over the seven names sourceTypeMeta can return; anything
@@ -60,6 +61,8 @@ function PhaseChip({ phase }: { phase: ProcessingPhase | null }) {
 // chip is NOT here — it lives in its own column (Г8 п.5), so names align on one
 // left edge regardless of whether a chip is present.
 function MaterialName({ item }: { item: MaterialHistoryItemResponse }) {
+  const t = useT()
+  const language = useLanguage()
   // No ``truncate`` (which carries ``white-space: nowrap``): the name WRAPS like the
   // students-table sample, so a long name never forces the material column past the
   // card and clips the row (Г8 п.6).
@@ -70,9 +73,9 @@ function MaterialName({ item }: { item: MaterialHistoryItemResponse }) {
     // over the one-line rows; the second line is the row's only planned wrap.
     return (
       <span className="flex flex-col leading-tight text-ink-muted">
-        <span>{deletedMaterialLabelShort()}</span>
+        <span>{deletedMaterialLabelShort(language)}</span>
         <span className="text-xs text-ink-muted">
-          {deletedMaterialAuthorLine(item.material_deleted_at ?? '')}
+          {deletedMaterialAuthorLine(language, item.material_deleted_at ?? '')}
         </span>
       </span>
     )
@@ -80,7 +83,7 @@ function MaterialName({ item }: { item: MaterialHistoryItemResponse }) {
   if (item.display_name) {
     return <span>{item.display_name}</span>
   }
-  return <span className="italic text-ink-muted">Без назви</span>
+  return <span className="italic text-ink-muted">{t('panel.history.row.untitled')}</span>
 }
 
 // One collapsed material row of the history page (§3 c4, columns split in the Г8
@@ -104,10 +107,11 @@ export function MaterialHistoryRow({
   expanded?: boolean
   onToggle?: () => void
 }) {
+  const language = useLanguage()
   const last = item.last_job
-  const when = relativeTime(last.completed_at ?? last.queued_at, now)
+  const when = relativeTime(language, last.completed_at ?? last.queued_at, now)
   const meta = item.material_source_type
-    ? sourceTypeMeta(item.material_source_type)
+    ? sourceTypeMeta(language, item.material_source_type)
     : null
   const SourceIcon = meta ? (ICON_BY_NAME[meta.icon] ?? FileIcon) : null
 
@@ -146,9 +150,9 @@ export function MaterialHistoryRow({
           fixed column into the count on narrow, Г11). The space both breaks and
           spaces; the state word stays distinct by weight + colour (В1). */}
       <td className="px-4 py-3 align-middle">
-        <span className="text-ink-light">{JOB_KIND_LABEL[last.job_type]}</span>{' '}
+        <span className="text-ink-light">{jobKindLabel(language, last.job_type)}</span>{' '}
         <span className={clsx('font-medium', jobStateWordClass(last.job_state))}>
-          {JOB_STATE_LABEL[last.job_state]}
+          {jobStateLabel(language, last.job_state)}
         </span>
       </td>
       {/* Робіт — a count, centred in its own column so it never crowds the

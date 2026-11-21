@@ -48,7 +48,7 @@ function coded(
 // What an action says when the server gave no reason — the words a code
 // without its own would fall to.
 function noReason(action: TestAction): string {
-  return actionFailure(action, new TypeError('Failed to fetch')).banner
+  return actionFailure('uk', action, new TypeError('Failed to fetch')).banner
 }
 
 // Every code a test's routes and a YAML file's upload answer with, written
@@ -89,12 +89,13 @@ describe('testRefusals', () => {
   it('words every refusal of a test for the author', () => {
     // A YAML file's refusals: each its own reason.
     const fileWords = FILE_CODES.map((code) =>
-      ownWords(yamlFileRefusalWords(coded(code)), code),
+      ownWords(yamlFileRefusalWords('uk', coded(code)), code),
     )
     expect(new Set(fileWords).size).toBe(FILE_CODES.length)
 
     // A save: at the question or option, or at the top.
     const at = actionFailure(
+      'uk',
       'save',
       refused(
         422,
@@ -104,6 +105,7 @@ describe('testRefusals', () => {
     expect(at.banner).toBe(NOT_SAVED_SEE_BELOW)
     ownWords(at.at?.words, 'TEST_FIELD_INVALID')
     const tooMany = actionFailure(
+      'uk',
       'save',
       refused(
         422,
@@ -123,7 +125,7 @@ describe('testRefusals', () => {
             details: 'zero_width U+200B at index 4',
           }),
       ),
-    ].map((error) => actionFailure('save', error).banner)
+    ].map((error) => actionFailure('uk', 'save', error).banner)
     expect(new Set([...saveBanners, noReason('save')]).size).toBe(6)
 
     // A collision: what it stopped, in its own words.
@@ -131,14 +133,15 @@ describe('testRefusals', () => {
       code: 'GENERATION_IN_PROGRESS',
       details: 'another job of this task is still running',
     })
-    const checking = actionFailure('check', collision).banner
-    const publishing = actionFailure('publish', collision).banner
+    const checking = actionFailure('uk', 'check', collision).banner
+    const publishing = actionFailure('uk', 'publish', collision).banner
     expect(new Set([checking, publishing, noReason('check'), noReason('publish')]).size).toBe(4)
 
     // An unfinished draft: the banner, and every place it lists.
     const incomplete = [{ code: 'TEST_NO_CORRECT_OPTION', question: 2, option: null }]
     for (const action of ['check', 'publish'] as const) {
       const failure = actionFailure(
+        'uk',
         action,
         refused(422, { code: 'TEST_DRAFT_INCOMPLETE', details: 'x', incomplete }),
       )
@@ -148,23 +151,23 @@ describe('testRefusals', () => {
 
     // Opening: gone, not a test, or no answer.
     const opening = [
-      openingFailure(refused(404, { detail: 'Document not found' })),
-      openingFailure(refused(422, { code: 'NOT_A_TEST_OBJECT', details: 'x' })),
-      openingFailure(new TypeError('Failed to fetch')),
+      openingFailure('uk', refused(404, { detail: 'Document not found' })),
+      openingFailure('uk', refused(422, { code: 'NOT_A_TEST_OBJECT', details: 'x' })),
+      openingFailure('uk', new TypeError('Failed to fetch')),
     ]
     expect(new Set(opening).size).toBe(3)
 
     // Unfinished places and fields checked before a request.
     const unfinished = UNFINISHED_PLACES.map((place) =>
-      ownWords(incompleteWords(place), place.code),
+      ownWords(incompleteWords('uk', place), place.code),
     )
     expect(new Set(unfinished).size).toBe(UNFINISHED_PLACES.length)
     const fields = FIELD_PROBLEMS.map((problem) =>
-      ownWords(fieldProblemWords(problem), problem.field),
+      ownWords(fieldProblemWords('uk', problem), problem.field),
     )
     expect(new Set(fields).size).toBe(FIELD_PROBLEMS.length)
-    expect(yamlFileProblemWords('not_yaml')).not.toBe(
-      yamlFileProblemWords('too_large'),
+    expect(yamlFileProblemWords('uk', 'not_yaml')).not.toBe(
+      yamlFileProblemWords('uk', 'too_large'),
     )
 
     // With no reason, each action still says what failed and what to do.
@@ -174,8 +177,8 @@ describe('testRefusals', () => {
     for (const words of plain) {
       expect(words).toContain("Перевірте з'єднання й спробуйте ще раз.")
     }
-    expect(actionFailure('hide', refused(404, { detail: 'Document not found' })).banner).toBe(
-      openingFailure(refused(404, { detail: 'Document not found' })),
+    expect(actionFailure('uk', 'hide', refused(404, { detail: 'Document not found' })).banner).toBe(
+      openingFailure('uk', refused(404, { detail: 'Document not found' })),
     )
   })
 
@@ -208,6 +211,7 @@ describe('testRefusals', () => {
     }
     // The backend's own body for question 2, option 2 of the body sent.
     const failure = actionFailure(
+      'uk',
       'save',
       refused(422, {
         code: 'TEST_FIELD_INVALID',
@@ -239,23 +243,24 @@ describe('testRefusals', () => {
       category: null,
     }
 
-    expect(yamlFileRefusalWords(duplicate)).toBe(
+    expect(yamlFileRefusalWords('uk', duplicate)).toBe(
       'Файл не прочитано: одне поле записано двічі — лишіть один запис — ' +
         'рядок 9, стовпчик 9 (питання 1, варіант 2)',
     )
-    expect(yamlFileRefusalWords(duplicate, 'змінні.yaml')).toBe(
+    expect(yamlFileRefusalWords('uk', duplicate, 'змінні.yaml')).toBe(
       'змінні.yaml: тест не прочитано — одне поле записано двічі — лишіть ' +
         'один запис — рядок 9, стовпчик 9 (питання 1, варіант 2)',
     )
     expect(
       yamlFileRefusalWords(
+        'uk',
         coded('TEST_YAML_UNREADABLE', { ...NOWHERE, line: 3, column: 1 }),
       ),
     ).toBe(
       'Файл не прочитано: файл не читається як YAML — перевірте відступи, ' +
         'двокрапки й лапки — рядок 3, стовпчик 1',
     )
-    expect(yamlFileRefusalWords(coded('TEST_TOO_LARGE'))).toBe(
+    expect(yamlFileRefusalWords('uk', coded('TEST_TOO_LARGE'))).toBe(
       'Файл не прочитано: файл завеликий: тест може мати до 256 КБ — ' +
         'скоротіть тексти чи розділіть тест',
     )
@@ -263,12 +268,14 @@ describe('testRefusals', () => {
     // in the words every upload of a file gets.
     expect(
       actionFailure(
+        'uk',
         'replace',
         refused(422, formatBody(duplicate.code, duplicate.place)),
       ).banner,
-    ).toBe(yamlFileRefusalWords(duplicate))
+    ).toBe(yamlFileRefusalWords('uk', duplicate))
     expect(
       actionFailure(
+        'uk',
         'replace',
         refused(400, {
           code: 'SECURITY_REJECTED',
@@ -276,7 +283,7 @@ describe('testRefusals', () => {
           details: 'zero_width U+200B at index 4',
         }),
       ).banner,
-    ).toBe(ingestErrorMessage('suspicious_unicode'))
-    expect(yamlFileRefusalWords(coded('GENERATION_IN_PROGRESS'))).toBeNull()
+    ).toBe(ingestErrorMessage('uk', 'suspicious_unicode'))
+    expect(yamlFileRefusalWords('uk', coded('GENERATION_IN_PROGRESS'))).toBeNull()
   })
 })

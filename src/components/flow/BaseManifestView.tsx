@@ -5,27 +5,30 @@ import type {
   EntryClass,
   ExcludedReason,
 } from '../../types/api'
+import { useT } from '../../i18n/LanguageContext'
+import { Message } from '../../i18n/Message'
+import type { MessageKey, MessageValues } from '../../i18n/translate'
 
 // Lean read-only manifest view (KD18 P6): included tree + collapsed excluded +
 // totals. NOT a full diff viewer (DD-6-Q, out of scope).
 
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} Б`
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} КБ`
-  return `${(n / (1024 * 1024)).toFixed(1)} МБ`
+function formatBytes(n: number, t: (key: MessageKey, values?: MessageValues) => string): string {
+  if (n < 1024) return t('panel.size.bytes', { n: String(n) })
+  if (n < 1024 * 1024) return t('panel.size.kilobytes', { n: (n / 1024).toFixed(1) })
+  return t('panel.size.megabytes', { n: (n / (1024 * 1024)).toFixed(1) })
 }
 
-const CLS_LABEL: Record<EntryClass, string> = {
-  text: 'текст',
-  document: 'документ',
-  binary: 'бінарний',
+const CLS_LABEL: Record<EntryClass, MessageKey> = {
+  text: 'panel.flow.manifest.cls.text',
+  document: 'panel.flow.manifest.cls.document',
+  binary: 'panel.flow.manifest.cls.binary',
 }
 
-const REASON_LABEL: Record<ExcludedReason, string> = {
-  denylist_dir: 'службова тека',
-  magic_mismatch: 'невідповідність типу',
-  nested_archive: 'вкладений архів',
-  may_contain_secrets: 'можливі секрети',
+const REASON_LABEL: Record<ExcludedReason, MessageKey> = {
+  denylist_dir: 'panel.flow.manifest.reason.denylistDir',
+  magic_mismatch: 'panel.flow.manifest.reason.magicMismatch',
+  nested_archive: 'panel.flow.manifest.reason.nestedArchive',
+  may_contain_secrets: 'panel.flow.manifest.reason.mayContainSecrets',
 }
 
 interface DirNode {
@@ -54,6 +57,7 @@ function buildTree(entries: ManifestEntry[]): DirNode {
 }
 
 function TreeNode({ node, depth }: { node: DirNode; depth: number }) {
+  const t = useT()
   const dirs = [...node.dirs.values()].sort((a, b) => a.name.localeCompare(b.name))
   const files = [...node.files].sort((a, b) => a.name.localeCompare(b.name))
   return (
@@ -79,9 +83,9 @@ function TreeNode({ node, depth }: { node: DirNode; depth: number }) {
           <FileText size={13} className="shrink-0" />
           <span className="truncate text-ink">{f.name}</span>
           <span className="text-[10px] px-1 rounded bg-navy/6 shrink-0">
-            {CLS_LABEL[f.entry.cls]}
+            {t(CLS_LABEL[f.entry.cls])}
           </span>
-          <span className="text-[10px] shrink-0">{formatBytes(f.entry.size)}</span>
+          <span className="text-[10px] shrink-0">{formatBytes(f.entry.size, t)}</span>
         </li>
       ))}
     </ul>
@@ -89,27 +93,34 @@ function TreeNode({ node, depth }: { node: DirNode; depth: number }) {
 }
 
 export function BaseManifestView({ manifest }: { manifest: ProjectBaseManifest }) {
+  const t = useT()
   const tree = buildTree(manifest.included)
   return (
     <div className="space-y-4 text-sm">
       <div className="flex items-center gap-3 flex-wrap text-xs text-ink-muted">
         <span>
-          <strong className="text-ink">{manifest.total_files}</strong> файлів
+          <Message
+            id="panel.flow.manifest.totalFiles"
+            values={{
+              count: manifest.total_files,
+              strong: (chunks) => <strong className="text-ink">{chunks}</strong>,
+            }}
+          />
         </span>
         <span>
-          <strong className="text-ink">{formatBytes(manifest.total_bytes)}</strong>
+          <strong className="text-ink">{formatBytes(manifest.total_bytes, t)}</strong>
         </span>
         <span className="font-mono truncate" title={manifest.aggregate_hash}>
-          відбиток {manifest.aggregate_hash.slice(0, 12)}…
+          {t('panel.flow.manifest.fingerprint', { hash: manifest.aggregate_hash.slice(0, 12) })}
         </span>
       </div>
 
       <div>
         <h3 className="text-xs font-semibold text-ink-muted uppercase tracking-wide mb-1.5">
-          Включено ({manifest.included.length})
+          {t('panel.flow.manifest.included', { count: manifest.included.length })}
         </h3>
         {manifest.included.length === 0 ? (
-          <p className="text-xs text-ink-muted">Немає включених файлів.</p>
+          <p className="text-xs text-ink-muted">{t('panel.flow.manifest.noIncludedFiles')}</p>
         ) : (
           <TreeNode node={tree} depth={0} />
         )}
@@ -118,7 +129,7 @@ export function BaseManifestView({ manifest }: { manifest: ProjectBaseManifest }
       {manifest.excluded.length > 0 && (
         <div>
           <h3 className="text-xs font-semibold text-ink-muted uppercase tracking-wide mb-1.5">
-            Виключено ({manifest.excluded.length})
+            {t('panel.flow.manifest.excluded', { count: manifest.excluded.length })}
           </h3>
           <ul className="space-y-0.5">
             {manifest.excluded.map((e) => (
@@ -128,10 +139,10 @@ export function BaseManifestView({ manifest }: { manifest: ProjectBaseManifest }
               >
                 <span className="truncate text-ink">{e.path}</span>
                 <span className="text-[10px] px-1 rounded bg-coral-pale text-coral shrink-0">
-                  {REASON_LABEL[e.reason] ?? 'Причину не вказано.'}
+                  {e.reason in REASON_LABEL ? t(REASON_LABEL[e.reason]) : t('panel.flow.manifest.noReasonGiven')}
                 </span>
                 <span className="text-[10px] shrink-0">
-                  {e.entries} · {formatBytes(e.size)}
+                  {e.entries} · {formatBytes(e.size, t)}
                 </span>
               </li>
             ))}

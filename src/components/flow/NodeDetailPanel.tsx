@@ -22,13 +22,15 @@ import { validateUploadFiles } from '../../utils/uploadValidation'
 import { useUploadBatch, type UploadTask } from '../../hooks/useUploadBatch'
 import { ingestErrorMessage } from '../../utils/ingestErrors'
 import {
-  BUY_UNITS,
+  buyUnitsText,
   INSUFFICIENT_UNITS_CATEGORY,
 } from '../../utils/authorBillingTexts'
 import { NewTabLink } from '../billing/NewTabLink'
 import { Modal } from '../ui/Modal'
 import { estimateKindOf, kindOnlyPriceLine } from '../../utils/kindOnlyPrice'
-import { PRICE_PENDING } from '../../utils/priceEstimate'
+import { pricePendingText } from '../../utils/priceEstimate'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
+import type { MessageKey, MessageValues } from '../../i18n/translate'
 import {
   CODE_ELIGIBLE_TEXT_EXTENSIONS,
   sourceTypeForExtension,
@@ -77,14 +79,20 @@ interface NodeDetailPanelProps {
 }
 
 /** The question before a material's processing is started again. */
-function retryQuestion(mat: AuthoredDocumentSummary, force: boolean): string {
+function retryQuestion(
+  t: (key: MessageKey, values?: MessageValues) => string,
+  mat: AuthoredDocumentSummary,
+  force: boolean,
+): string {
   const name = documentLabel(mat)
   return force
-    ? `Перезапустити обробку «${name}»? Поточний результат буде замінено новим.`
-    : `Запустити обробку «${name}» ще раз?`
+    ? t('panel.flow.detail.retryForceQuestion', { name })
+    : t('panel.flow.detail.retryQuestion', { name })
 }
 
 export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
+  const language = useLanguage()
+  const t = useT()
   const tree = useCourseStore((s) => s.tree)
   const selectedNodeId = useCourseStore((s) => s.selectedNodeId)
   const setSelectedNodeId = useCourseStore((s) => s.setSelectedNodeId)
@@ -160,7 +168,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
     async (files: File[]) => {
       if (files.length === 0) return
       const { accepted, durations, rejectionMessage } =
-        await validateUploadFiles(files)
+        await validateUploadFiles(language, files)
       // Always called, with an empty list when nothing was refused: a new drop
       // is a new answer, and a previous gesture's notice must not read as this
       // one's.
@@ -170,7 +178,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
         setPendingFileDurations(durations)
       }
     },
-    [reportFailures],
+    [language, reportFailures],
   )
 
   // Link add → show confirmation
@@ -252,7 +260,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
           // the material came through.
           reportFailures([
             authoredRejectionMessage(err) ??
-              'Не вдалося додати матеріал за посиланням. Спробуйте ще раз.',
+              t('panel.flow.detail.addLinkFailed'),
           ])
         } finally {
           setAddingLink(false)
@@ -267,6 +275,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
       requestRefresh,
       runUpload,
       reportFailures,
+      t,
     ],
   )
 
@@ -290,10 +299,8 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
       // attempts, so the question names both (PRE-FLIGHT §21.5).
       const isTest = mat.source_type === 'test_object'
       const question = isTest
-        ? `Приховати тест «${name}»? Студенти більше не побачать його в курсі; ` +
-          'спроби, які вже зроблено, збережуться. Скасувати приховування в ' +
-          'програмі автора не можна.'
-        : `Видалити «${name}»?`
+        ? t('panel.flow.detail.hideTestQuestion', { name })
+        : t('panel.flow.detail.deleteMaterialQuestion', { name })
       if (!confirm(question)) return
       setActionError(null)
       try {
@@ -301,15 +308,15 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
       } catch {
         setActionError({
           message: isTest
-            ? `Не вдалося приховати тест «${name}». Спробуйте ще раз.`
-            : `Не вдалося видалити «${name}». Спробуйте ще раз.`,
+            ? t('panel.flow.detail.hideTestFailed', { name })
+            : t('panel.flow.detail.deleteMaterialFailed', { name }),
           materialName: name,
         })
         return
       }
       await refresh()
     },
-    [refresh],
+    [refresh, t],
   )
 
   const runRetry = useCallback(
@@ -320,9 +327,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
         await documentsApi.retry(mat.id, force)
       } catch {
         setActionError({
-          message:
-            `Не вдалося запустити обробку «${name}». Спробуйте ще раз; якщо ` +
-            'повториться, напишіть нам.',
+          message: t('panel.flow.detail.startProcessingFailed', { name }),
           materialName: name,
         })
         return
@@ -330,7 +335,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
       await refresh()
       requestRefresh() // Д10 — wake the shell poll for the re-queued job
     },
-    [refresh, requestRefresh],
+    [refresh, requestRefresh, t],
   )
 
   const handleRetry = useCallback(
@@ -344,16 +349,16 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
       const kind = estimateKindOf(mat.source_type)
       setPricingId(mat.id)
       const line =
-        node && kind ? await kindOnlyPriceLine(node.id, kind) : null
+        node && kind ? await kindOnlyPriceLine(language, node.id, kind) : null
       setPricingId(null)
       if (line !== null) {
         setRetryAsk({ mat, force, line })
         return
       }
-      if (force && !confirm(retryQuestion(mat, force))) return
+      if (force && !confirm(retryQuestion(t, mat, force))) return
       await runRetry(mat, force)
     },
-    [node, runRetry],
+    [language, node, runRetry, t],
   )
 
   // Toggle material role on existing material (clickable badge)
@@ -399,7 +404,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
             onClick={() => onOpenSummary?.(node.id, node.title)}
           >
             <FileText size={14} />
-            Переглянути/редагувати опис
+            {t('panel.flow.detail.openSummary')}
           </button>
         </div>
       )}
@@ -430,12 +435,12 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
             {isDragActive ? (
               <>
                 <Upload size={20} className="mx-auto mb-2 text-navy" />
-                <p className="text-sm text-navy font-medium">Відпустіть файли тут</p>
+                <p className="text-sm text-navy font-medium">{t('panel.flow.detail.dropActive')}</p>
               </>
             ) : (
               <div className="flex flex-col items-center gap-2">
                 <Upload size={20} className="text-ink-muted" />
-                <span className="text-sm text-ink-muted">Перетягніть файли сюди</span>
+                <span className="text-sm text-ink-muted">{t('panel.flow.detail.dropPrompt')}</span>
                 <input
                   type="file"
                   multiple
@@ -467,7 +472,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
             <input
               type="url"
               className="input pl-8 text-sm"
-              placeholder="https://youtu.be/... або URL"
+              placeholder={t('panel.flow.detail.linkPlaceholder')}
               value={linkUrl}
               onChange={(e) => setLinkUrl(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddLink()}
@@ -479,7 +484,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
             onClick={handleAddLink}
             disabled={addingLink || !linkUrl.trim()}
           >
-            {addingLink ? <Loader2 size={14} className="animate-spin" /> : 'Додати'}
+            {addingLink ? <Loader2 size={14} className="animate-spin" /> : t('panel.flow.detail.addLink')}
           </button>
         </div>
 
@@ -491,7 +496,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
           onClick={() => navigate(newTestPath(node.id, tree?.id ?? null))}
         >
           <ListChecks size={14} />
-          Новий тест
+          {t('panel.flow.detail.newTest')}
         </button>
       </div>
 
@@ -520,7 +525,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
             <button
               type="button"
               onClick={() => setActionError(null)}
-              aria-label="Закрити повідомлення"
+              aria-label={t('panel.flow.detail.closeError')}
               className="shrink-0 p-1 rounded-lg text-coral hover:bg-coral/10
                          transition-colors cursor-pointer self-start"
             >
@@ -534,11 +539,11 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {node.authored_documents.length === 0 ? (
           <p className="text-ink-muted text-sm text-center py-8">
-            Документи ще не завантажені
+            {t('panel.flow.detail.noDocuments')}
           </p>
         ) : (
           node.authored_documents.map((mat) => {
-            const meta = sourceTypeMeta(mat.source_type)
+            const meta = sourceTypeMeta(language, mat.source_type)
             const Icon = iconMap[meta.icon] || FileIcon
             const isMethodological = mat.material_role === 'methodological'
             // A test is written, never processed: no phase to show, nothing
@@ -587,9 +592,9 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                             ? 'bg-plum/10 text-plum hover:bg-plum/20'
                             : 'bg-navy/6 text-ink-muted hover:bg-navy/12'}
                         `}
-                        title="Натисніть щоб змінити тип"
+                        title={t('panel.flow.detail.toggleRoleHint')}
                       >
-                        {isMethodological ? '📋 методичний' : '📚 навчальний'}
+                        {isMethodological ? t('panel.flow.detail.roleMethodological') : t('panel.flow.detail.roleEducational')}
                       </button>
                     )}
                     {isTest && (
@@ -599,9 +604,9 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                         className="text-[10px] px-1.5 py-0.5 rounded font-medium
                                    bg-navy text-white hover:bg-navy-light
                                    transition-colors cursor-pointer"
-                        title="Відкрити тест у редакторі"
+                        title={t('panel.flow.detail.openTestHint')}
                       >
-                        Відкрити тест
+                        {t('panel.flow.detail.openTest')}
                       </button>
                     )}
                     {mat.processing_phase === 'awaiting_author' && (
@@ -612,9 +617,9 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                         className="text-[10px] px-1.5 py-0.5 rounded font-medium
                                    bg-navy text-white hover:bg-navy-light
                                    transition-colors cursor-pointer"
-                        title="Підтвердити ролі файлів перед обробкою"
+                        title={t('panel.flow.detail.confirmRolesHint')}
                       >
-                        Підтвердити ролі
+                        {t('panel.flow.detail.confirmRoles')}
                       </button>
                     )}
                   </div>
@@ -622,12 +627,12 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                     mat.error_category === INSUFFICIENT_UNITS_CATEGORY && (
                       <>
                         <p className="text-xs text-coral mt-1">
-                          {ingestErrorMessage(mat.error_category)}
+                          {ingestErrorMessage(language, mat.error_category)}
                         </p>
                         {/* Beside the card's own retry: the purchase, in a new
                             tab; the retry stays as it is. */}
                         <p className="text-xs mt-1">
-                          <NewTabLink href="/billing">{BUY_UNITS}</NewTabLink>
+                          <NewTabLink href="/billing">{buyUnitsText(language)}</NewTabLink>
                         </p>
                       </>
                     )}
@@ -636,10 +641,10 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                     (mat.error_category || mat.error_message) && (
                     <>
                       <p className="text-xs text-coral mt-1 line-clamp-2">
-                        {ingestErrorMessage(mat.error_category)}
+                        {ingestErrorMessage(language, mat.error_category)}
                       </p>
                       <ContactAdmin
-                        message={ingestErrorMessage(mat.error_category)}
+                        message={ingestErrorMessage(language, mat.error_category)}
                         context={{
                           course: tree?.title ?? null,
                           section: node.title ?? null,
@@ -666,10 +671,10 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                       className="p-1.5 rounded-lg hover:bg-amber-pale transition-colors"
                       title={
                         pricingId === mat.id
-                          ? PRICE_PENDING
+                          ? pricePendingText(language)
                           : mat.state === 'error'
-                            ? 'Повторити обробку'
-                            : 'Перезапустити обробку (force)'
+                            ? t('panel.flow.detail.retryProcessingHint')
+                            : t('panel.flow.detail.retryProcessingForceHint')
                       }
                     >
                       {pricingId === mat.id ? (
@@ -682,7 +687,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                   <button
                     onClick={() => handleDelete(mat)}
                     className="p-1.5 rounded-lg hover:bg-coral-pale transition-colors"
-                    title={isTest ? 'Приховати тест' : 'Видалити'}
+                    title={isTest ? t('panel.flow.detail.hideTestHint') : t('panel.flow.detail.deleteMaterialHint')}
                   >
                     <Trash2 size={14} className="text-coral" />
                   </button>
@@ -703,12 +708,12 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
       <Modal
         open={retryAsk !== null}
         onClose={() => setRetryAsk(null)}
-        title="Обробка матеріалу"
+        title={t('panel.flow.detail.retryModalTitle')}
       >
         {retryAsk && (
           <>
             <p className="text-sm text-ink mb-3">
-              {retryQuestion(retryAsk.mat, retryAsk.force)}
+              {retryQuestion(t, retryAsk.mat, retryAsk.force)}
             </p>
             <p className="text-sm text-ink-light mb-4">{retryAsk.line}</p>
             <div className="flex justify-end gap-2">
@@ -716,7 +721,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                 className="btn-secondary btn-sm"
                 onClick={() => setRetryAsk(null)}
               >
-                Скасувати
+                {t('panel.flow.detail.retryModalCancel')}
               </button>
               <button
                 className="btn-primary btn-sm"
@@ -726,7 +731,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                   void runRetry(mat, force)
                 }}
               >
-                Запустити обробку
+                {t('panel.flow.detail.retryModalConfirm')}
               </button>
             </div>
           </>

@@ -1,26 +1,14 @@
 import { useId } from 'react'
 import { Loader2 } from 'lucide-react'
 import { Modal } from '../ui/Modal'
-import {
-  CONSENT_LINES,
-  REFUNDS_LINK_WORDS,
-  TERMS_LINK_WORDS,
-  type ConsentLines,
-} from '../../utils/billingConsent'
-import { SITE_REFUNDS_URL, SITE_TERMS_URL } from '../site/siteLinks'
+import { CONSENT_LINES, type ConsentLines } from '../../utils/billingConsent'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
+import { siteUrl } from '../site/siteLinks'
 import { NewTabLink } from './NewTabLink'
 
-const LINKS: Record<string, string> = {
-  [TERMS_LINK_WORDS]: SITE_TERMS_URL,
-  [REFUNDS_LINK_WORDS]: SITE_REFUNDS_URL,
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
-
-// The checkbox line with its two phrases as links: the words stay exactly the
-// consent text's, so what the holder reads is what is fingerprinted.
-const LINK_PHRASES = new RegExp(`(${TERMS_LINK_WORDS}|${REFUNDS_LINK_WORDS})`)
-
-export const TERMS_UPDATED =
-  'Умови оновилися. Перегляньте чинну редакцію й підтвердьте її, щоб продовжити.'
 
 interface ConsentDialogProps {
   open: boolean
@@ -52,13 +40,22 @@ export function ConsentDialog({
   onCancel,
 }: ConsentDialogProps) {
   const checkboxId = useId()
+  const language = useLanguage()
+  const t = useT()
   const [title, checkboxLine, summaryLine, changeLine] = lines
+  // The checkbox line with its two phrases as links: the words stay exactly
+  // the consent text's, so what the holder reads is what is fingerprinted.
+  const links: Record<string, string> = {
+    [t('shared.consent.termsLinkWords')]: siteUrl(language, 'terms'),
+    [t('shared.consent.refundsLinkWords')]: siteUrl(language, 'refunds'),
+  }
+  const linkPhrases = new RegExp(`(${Object.keys(links).map(escapeRegExp).join('|')})`)
   return (
     <Modal open={open} onClose={onCancel} title={title}>
       <div className="space-y-4 text-ink">
         {termsUpdated && (
           <p role="status" className="rounded-xl bg-navy-pale p-3 text-ink">
-            {TERMS_UPDATED}
+            {t('shared.consent.termsUpdated')}
           </p>
         )}
         <div className="flex items-start gap-3">
@@ -70,9 +67,9 @@ export function ConsentDialog({
             onChange={(e) => onCheckedChange(e.target.checked)}
           />
           <label htmlFor={checkboxId}>
-            {checkboxLine.split(LINK_PHRASES).map((part, i) =>
-              LINKS[part] ? (
-                <NewTabLink key={i} href={LINKS[part]}>
+            {checkboxLine.split(linkPhrases).map((part, i) =>
+              links[part] ? (
+                <NewTabLink key={i} href={links[part]}>
                   {part}
                 </NewTabLink>
               ) : (
@@ -86,7 +83,7 @@ export function ConsentDialog({
         {error && <div className="space-y-2">{renderFailure(error)}</div>}
         <div className="flex flex-wrap justify-end gap-2 pt-2">
           <button type="button" className="btn-secondary" onClick={onCancel}>
-            Скасувати
+            {t('shared.consent.cancel')}
           </button>
           <button
             type="button"
@@ -95,7 +92,7 @@ export function ConsentDialog({
             onClick={onConfirm}
           >
             {submitting && <Loader2 size={16} className="animate-spin" />}
-            Підтвердити й перейти до оплати
+            {t('shared.consent.confirm')}
           </button>
         </div>
       </div>

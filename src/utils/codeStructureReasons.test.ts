@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
-  STRUCTURE_BLOCK_ACTION,
   detailIsShowable,
   notReadCountLabel,
+  structureBlockAction,
   structureReasonPhrase,
 } from './codeStructureReasons'
 import { notOpenedCountLabel } from '../portal/rejectionReasons'
@@ -30,7 +30,7 @@ describe('structureReasonPhrase — oversize numbers (крок Д)', () => {
   it('reads both numbers out of the detail in a human measure', () => {
     // Server sends "<actual>/<cap>" in bytes (PR-1 commit B). 6 MiB over a
     // 4 MiB cap — the author reads sizes, not byte counts.
-    expect(structureReasonPhrase('oversize', '6291456/4194304')).toBe(
+    expect(structureReasonPhrase('uk', 'oversize', '6291456/4194304')).toBe(
       'Файл завеликий: 6,0 МБ при межі 4,0 МБ.',
     )
   })
@@ -38,7 +38,7 @@ describe('structureReasonPhrase — oversize numbers (крок Д)', () => {
   it('crosses units where the numbers do', () => {
     // formatBytes keeps one decimal below ten and whole numbers above, so the
     // cap reads "64 КБ" — past ten the fraction is noise.
-    expect(structureReasonPhrase('oversize', '1258291/65536')).toBe(
+    expect(structureReasonPhrase('uk', 'oversize', '1258291/65536')).toBe(
       'Файл завеликий: 1,2 МБ при межі 64 КБ.',
     )
   })
@@ -47,10 +47,10 @@ describe('structureReasonPhrase — oversize numbers (крок Д)', () => {
     // Rows written before the server changed shape still carry a sentence.
     // Inventing numbers for them would be worse than saying less.
     const old = 'file size 6291456 B exceeds the 4194304 B per-file cap'
-    expect(structureReasonPhrase('oversize', old)).toBe(
+    expect(structureReasonPhrase('uk', 'oversize', old)).toBe(
       'Файл завеликий — для читання не взято.',
     )
-    expect(structureReasonPhrase('oversize')).toBe(
+    expect(structureReasonPhrase('uk', 'oversize')).toBe(
       'Файл завеликий — для читання не взято.',
     )
   })
@@ -58,26 +58,26 @@ describe('structureReasonPhrase — oversize numbers (крок Д)', () => {
   it('states no cap of its own when it has no numbers', () => {
     // The phrase used to hardcode "4 МБ" — a copy of a server constant with
     // nothing holding the two together.
-    expect(structureReasonPhrase('oversize')).not.toMatch(/\d/)
+    expect(structureReasonPhrase('uk', 'oversize')).not.toMatch(/\d/)
   })
 })
 
 describe('structureReasonPhrase', () => {
   it.each(TOKENS)('%s has a phrase of its own', (token) => {
-    const phrase = structureReasonPhrase(token)
+    const phrase = structureReasonPhrase('uk', token)
     expect(phrase).not.toBe('Причину не вказано.')
     expect(phrase).not.toContain(token) // a product sentence, never the token
   })
 
   it('every phrase is distinct — two reasons never read the same', () => {
-    const phrases = TOKENS.map((token) => structureReasonPhrase(token))
+    const phrases = TOKENS.map((token) => structureReasonPhrase('uk', token))
     expect(new Set(phrases).size).toBe(TOKENS.length)
   })
 
   it('carries no action — the block carries one for all of them', () => {
     // A per-row instruction under a `.DS_Store` would be invented noise.
     for (const token of TOKENS) {
-      expect(structureReasonPhrase(token)).not.toMatch(/залийте|виправте/i)
+      expect(structureReasonPhrase('uk', token)).not.toMatch(/залийте|виправте/i)
     }
   })
 
@@ -85,18 +85,18 @@ describe('structureReasonPhrase', () => {
     // "structure_only" is the machine name of a role; the author chose
     // something on a screen, not a token.
     for (const token of TOKENS) {
-      expect(structureReasonPhrase(token)).not.toMatch(/структур\w*_only|structure/i)
+      expect(structureReasonPhrase('uk', token)).not.toMatch(/структур\w*_only|structure/i)
     }
   })
 
   it('a token from a future backend still yields a line', () => {
-    expect(structureReasonPhrase('reason_from_the_future')).toBe(
+    expect(structureReasonPhrase('uk', 'reason_from_the_future')).toBe(
       'Причину не вказано.',
     )
   })
 
   it('the block action tells the author what to do, once', () => {
-    expect(STRUCTURE_BLOCK_ACTION).toMatch(/залийте знову/)
+    expect(structureBlockAction('uk')).toMatch(/залийте знову/)
   })
 })
 
@@ -135,14 +135,14 @@ describe('notReadCountLabel', () => {
     [111, '111 файлів не прочитано'],
     [201, '201 файл не прочитано'],
   ])('%i → «%s»', (n, expected) => {
-    expect(notReadCountLabel(n)).toBe(expected)
+    expect(notReadCountLabel('uk', n)).toBe(expected)
   })
 
   it('agrees with the portal twin it was copied from', () => {
     // Two bundles, one rule. If either is edited alone this fails, which is
     // the only guard the boundary between them allows.
     for (const n of [1, 2, 4, 5, 11, 14, 21, 22, 101, 201]) {
-      expect(notReadCountLabel(n)).toBe(notOpenedCountLabel(n))
+      expect(notReadCountLabel('uk', n)).toBe(notOpenedCountLabel('uk', n))
     }
   })
 })

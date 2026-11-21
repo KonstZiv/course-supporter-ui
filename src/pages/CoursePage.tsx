@@ -14,6 +14,7 @@ import { ArrowLeft, Loader2, AlertTriangle, Pencil, Check, X } from 'lucide-reac
 import { LanguageSelect, LanguageBadge } from '../components/ui/LanguageSelect'
 import { findNode } from '../utils/tree'
 import type { UncoveredStaleNodesDetail } from '../types/api'
+import { useT } from '../i18n/LanguageContext'
 
 // One bottom-right slot, mutually exclusive: a polled run, OR a 422 rejection
 // (returned before any job exists). Local to the page — never Zustand
@@ -29,6 +30,7 @@ type GenerationSlot =
     }
 
 export function CoursePage() {
+  const t = useT()
   const { nodeId } = useParams<{ nodeId: string }>()
   const [searchParams] = useSearchParams()
   // A-UI-2: one-time preselect target from ``?selected=`` — captured at mount so
@@ -154,7 +156,7 @@ export function CoursePage() {
       },
       (err) => {
         if (cancelled) return
-        setError(err instanceof Error ? err.message : 'Не вдалося завантажити курс')
+        setError(err instanceof Error ? err.message : t('panel.course.loadFailed'))
       },
     )
 
@@ -162,7 +164,7 @@ export function CoursePage() {
       cancelled = true
       useCourseStore.getState().reset()
     }
-  }, [nodeId])
+  }, [nodeId, t])
 
   if (loading) {
     return (
@@ -176,11 +178,11 @@ export function CoursePage() {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] px-6">
         <AlertTriangle size={40} className="text-coral mb-4" />
-        <p className="text-ink text-lg mb-2">Помилка завантаження</p>
+        <p className="text-ink text-lg mb-2">{t('panel.course.errorTitle')}</p>
         <p className="text-ink-muted text-sm mb-4">{error}</p>
         <Link to="/" className="btn-primary">
           <ArrowLeft size={16} />
-          До списку курсів
+          {t('panel.course.backToCourses')}
         </Link>
       </div>
     )
@@ -200,7 +202,7 @@ export function CoursePage() {
         <Link
           to="/"
           className="p-2 rounded-lg hover:bg-canvas-dark transition-colors"
-          title="До списку курсів"
+          title={t('panel.course.backToCourses')}
         >
           <ArrowLeft size={18} className="text-ink-muted" />
         </Link>
@@ -218,7 +220,7 @@ export function CoursePage() {
               <LanguageSelect
                 value={draftLang}
                 onChange={setDraftLang}
-                autoLabel="Автовизначення"
+                autoLabel={t('panel.course.autoDetect')}
                 disabled={savingLang}
                 className="min-w-[200px]"
               />
@@ -226,7 +228,7 @@ export function CoursePage() {
                 className="p-2 rounded-lg hover:bg-forest-pale text-forest"
                 onClick={saveLang}
                 disabled={savingLang}
-                title="Зберегти"
+                title={t('panel.course.save')}
               >
                 {savingLang ? (
                   <Loader2 size={18} className="animate-spin" />
@@ -238,7 +240,7 @@ export function CoursePage() {
                 className="p-2 rounded-lg hover:bg-canvas-dark text-ink-muted"
                 onClick={() => setEditingLang(false)}
                 disabled={savingLang}
-                title="Скасувати"
+                title={t('panel.course.cancel')}
               >
                 <X size={18} />
               </button>
@@ -248,7 +250,7 @@ export function CoursePage() {
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg
                          hover:bg-canvas-dark text-sm"
               onClick={startEditLang}
-              title="Змінити мову курсу"
+              title={t('panel.course.changeLanguage')}
             >
               <LanguageBadge code={tree.default_language} />
               <Pencil size={12} className="text-ink-muted" />

@@ -996,6 +996,8 @@ export interface BillingConsentResponse {
 export interface BillingPackage {
   id: string
   units: number
+  /** How long the package's units are valid from the day of purchase, in months. */
+  validity_months: number
   /** Price per currency (ISO 4217) in minor units; EUR always. */
   prices_minor: Record<string, number>
 }

@@ -69,18 +69,18 @@ beforeEach(() => vi.clearAllMocks())
 
 describe('the words of a held review', () => {
   it('the author\'s units: «Чекає перевірки», its sentence, the tone of a hold', () => {
-    expect(presentationLabel(AUTHOR_HELD)).toBe('Чекає перевірки')
-    expect(presentationPhrase(AUTHOR_HELD)).toBe(AUTHOR_TEXT)
+    expect(presentationLabel('uk', AUTHOR_HELD)).toBe('Чекає перевірки')
+    expect(presentationPhrase('uk', AUTHOR_HELD)).toBe(AUTHOR_TEXT)
     expect(stateTone(AUTHOR_HELD.state)).toBe(stateTone('awaiting_funds'))
   })
 
   it('the student\'s own units: «Призупинено» and the new sentence', () => {
-    expect(presentationLabel(OWN_HELD)).toBe('Призупинено')
-    expect(presentationPhrase(OWN_HELD)).toBe(OWN_TEXT)
+    expect(presentationLabel('uk', OWN_HELD)).toBe('Призупинено')
+    expect(presentationPhrase('uk', OWN_HELD)).toBe(OWN_TEXT)
   })
 
   it('a code without a label of its own keeps the state\'s label', () => {
-    expect(presentationLabel({ state: 'not_opened', reason_code: 'processing_failed' })).toBe(
+    expect(presentationLabel('uk', { state: 'not_opened', reason_code: 'processing_failed' })).toBe(
       'Не відкрито',
     )
   })

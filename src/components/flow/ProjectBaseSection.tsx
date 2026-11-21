@@ -15,6 +15,7 @@ import type {
 import { ProjectBaseBadge } from './ProjectBaseBadge'
 import { BaseManifestView } from './BaseManifestView'
 import { baseErrorMessage } from './baseErrors'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 
 const POLL_INTERVAL_MS = 4000
 const ACCEPT = '.zip,.tar.gz,.tgz,.gz'
@@ -23,9 +24,6 @@ const ACCEPT = '.zip,.tar.gz,.tgz,.gz'
 // NOT retroactively re-bind existing submissions — they stay diffed against the
 // version they were submitted against. Staleness is a signal to the student,
 // not a breakage.
-const REUPLOAD_WARNING =
-  'Повторне завантаження створює нову версію. Наявні студентські подачі ' +
-  'залишаються прив’язаними до своєї версії — студент побачить сигнал про оновлення.'
 
 /**
  * Author-side project-base panel for a single ``task_type='project'`` document.
@@ -36,6 +34,8 @@ const REUPLOAD_WARNING =
  * state + poller locally — the base is not part of the course-store tree.
  */
 export function ProjectBaseSection({ documentId }: { documentId: string }) {
+  const language = useLanguage()
+  const t = useT()
   const [base, setBase] = useState<ProjectBaseStateResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
@@ -58,12 +58,12 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
       if (err instanceof ApiError && err.status === 404) {
         setBase(null)
       } else {
-        setError('Не вдалося завантажити стан базового архіву.')
+        setError(t('panel.flow.projectBase.loadStateFailed'))
       }
     } finally {
       setLoading(false)
     }
-  }, [documentId])
+  }, [documentId, t])
 
   useEffect(() => {
     void load()
@@ -106,13 +106,13 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
         // Е9/pkt 2 — a base_normalize job enters the work-list; wake the strip.
         requestRefresh()
       } catch (err) {
-        setError(baseErrorMessage(err))
+        setError(baseErrorMessage(language, err))
       } finally {
         setUploading(false)
         setUploadBytes(null)
       }
     },
-    [documentId, requestRefresh],
+    [documentId, requestRefresh, language],
   )
 
   const openManifest = useCallback(async () => {
@@ -122,9 +122,9 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
     try {
       setManifest(await documentsApi.getBaseManifest(documentId))
     } catch {
-      setManifestError('Не вдалося завантажити маніфест.')
+      setManifestError(t('panel.flow.projectBase.loadManifestFailed'))
     }
-  }, [documentId, manifest])
+  }, [documentId, manifest, t])
 
   const busy = uploading || base?.state === 'pending'
 
@@ -160,12 +160,12 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
       )}
 
       {loading ? (
-        <p className="text-ink-muted text-xs">Завантаження стану базового архіву…</p>
+        <p className="text-ink-muted text-xs">{t('panel.flow.projectBase.loadingState')}</p>
       ) : base === null ? (
         /* No base attached — a valid state (submissions diff as all-new). */
         <div className="flex items-center gap-2 flex-wrap">
           <FileArchive size={14} className="text-ink-muted shrink-0" />
-          <span className="text-ink-muted text-xs">Базовий архів не прикріплено.</span>
+          <span className="text-ink-muted text-xs">{t('panel.flow.projectBase.noBaseAttached')}</span>
           <button
             onClick={pickFile}
             disabled={uploading}
@@ -174,7 +174,7 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
                        disabled:opacity-50 cursor-pointer"
           >
             <Upload size={12} />
-            {uploading ? 'Завантаження…' : 'Прикріпити базовий архів'}
+            {uploading ? t('panel.flow.projectBase.uploading') : t('panel.flow.projectBase.attachBase')}
           </button>
         </div>
       ) : (
@@ -182,7 +182,7 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
           <div className="flex items-center gap-2 flex-wrap">
             <FileArchive size={14} className="text-ink-muted shrink-0" />
             <span className="text-ink font-medium">
-              Базовий архів, версія {base.version}
+              {t('panel.flow.projectBase.version', { version: base.version })}
             </span>
             <ProjectBaseBadge state={base.state} />
             {base.state === 'ready' && (
@@ -191,10 +191,10 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
                 className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg
                            bg-navy/6 text-ink-muted hover:bg-navy/12 transition-colors
                            cursor-pointer"
-                title="Переглянути manifest нормалізованого base"
+                title={t('panel.flow.projectBase.viewManifestHint')}
               >
                 <ListTree size={12} />
-                Маніфест
+                {t('panel.flow.projectBase.manifestButton')}
               </button>
             )}
             {(base.state === 'ready' || base.state === 'failed') && (
@@ -204,10 +204,10 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
                 className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg
                            bg-navy/6 text-ink-muted hover:bg-navy/12 transition-colors
                            disabled:opacity-50 cursor-pointer"
-                title="Завантажити нову версію base"
+                title={t('panel.flow.projectBase.uploadNewVersionHint')}
               >
                 <Upload size={12} />
-                {uploading ? 'Завантаження…' : 'Повторно'}
+                {uploading ? t('panel.flow.projectBase.uploading') : t('panel.flow.projectBase.reuploadButton')}
               </button>
             )}
           </div>
@@ -221,7 +221,7 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
 
           {(base.state === 'ready' || base.state === 'failed') && (
             <p className="text-[11px] text-ink-muted leading-snug">
-              {REUPLOAD_WARNING}
+              {t('panel.flow.projectBase.reuploadWarning')}
             </p>
           )}
         </div>
@@ -232,7 +232,7 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
       <Modal
         open={manifestOpen}
         onClose={() => setManifestOpen(false)}
-        title={`Маніфест базового архіву, версія ${base?.version ?? ''}`}
+        title={t('panel.flow.projectBase.manifestModalTitle', { version: base?.version ?? '' })}
         wide
       >
         {manifestError ? (
@@ -240,7 +240,7 @@ export function ProjectBaseSection({ documentId }: { documentId: string }) {
         ) : manifest ? (
           <BaseManifestView manifest={manifest} />
         ) : (
-          <p className="text-sm text-ink-muted">Завантаження маніфеста…</p>
+          <p className="text-sm text-ink-muted">{t('panel.flow.projectBase.loadingManifest')}</p>
         )}
       </Modal>
     </div>

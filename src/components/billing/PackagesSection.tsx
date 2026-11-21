@@ -7,13 +7,11 @@ import {
 import { ApiError } from '../../api/client'
 import type { BillingPackagesResponse } from '../../types/api'
 import { CONSENT_LINES } from '../../utils/billingConsent'
-import { ACTION_FAILURE_TEXT } from '../../utils/billingWords'
+import { actionFailureText } from '../../utils/authorBillingTexts'
 import { ContactAdmin } from '../ui/ContactAdmin'
 import { FailureWithLetter } from './FailureWithLetter'
 import { PackagesPurchase, type PurchaseApi } from './PackagesPurchase'
-
-export const PURCHASE_NOT_OPEN_TEXT =
-  'Купівля юнітів у програмі ще не відкрита. Якщо юніти потрібні вам зараз, напишіть адміністраторові платформи.'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 
 // The author's purchase, with the author's key.
 const AUTHOR_PURCHASE: PurchaseApi = {
@@ -35,16 +33,19 @@ interface PackagesSectionProps {
  * consent, the checkout, then the payment page in the same tab.
  */
 export function PackagesSection({ packages, onStale }: PackagesSectionProps) {
+  const language = useLanguage()
+  const t = useT()
+
   return (
     <PackagesPurchase
       packages={packages}
       onStale={onStale}
       api={AUTHOR_PURCHASE}
       consentLines={CONSENT_LINES}
-      failureWords={ACTION_FAILURE_TEXT}
+      failureWords={actionFailureText(language)}
       closedNote={
         <>
-          <p className="text-ink">{PURCHASE_NOT_OPEN_TEXT}</p>
+          <p className="text-ink">{t('panel.billing.packagesClosedNote')}</p>
           <ContactAdmin fallback="always" />
         </>
       }

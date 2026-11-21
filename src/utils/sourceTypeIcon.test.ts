@@ -16,7 +16,7 @@ const ALL_SOURCE_TYPES: SourceType[] = [
 
 describe('sourceTypeMeta', () => {
   it('returns audio meta for "audio" source_type (Phase 2.2 UI sub-area item #4)', () => {
-    expect(sourceTypeMeta('audio')).toEqual({
+    expect(sourceTypeMeta('uk', 'audio')).toEqual({
       label: 'Аудіо',
       icon: 'AudioLines',
       color: 'text-amber',
@@ -24,14 +24,14 @@ describe('sourceTypeMeta', () => {
   })
 
   it('preserves existing cases unchanged', () => {
-    expect(sourceTypeMeta('video').icon).toBe('Video')
-    expect(sourceTypeMeta('presentation').icon).toBe('FileImage')
-    expect(sourceTypeMeta('text').icon).toBe('FileText')
-    expect(sourceTypeMeta('web').icon).toBe('Globe')
+    expect(sourceTypeMeta('uk', 'video').icon).toBe('Video')
+    expect(sourceTypeMeta('uk', 'presentation').icon).toBe('FileImage')
+    expect(sourceTypeMeta('uk', 'text').icon).toBe('FileText')
+    expect(sourceTypeMeta('uk', 'web').icon).toBe('Globe')
   })
 
   it('gives code its own word and icon (step Г c4 — closes the raw-token gap)', () => {
-    expect(sourceTypeMeta('code')).toEqual({
+    expect(sourceTypeMeta('uk', 'code')).toEqual({
       label: 'Код',
       icon: 'FileCode',
       color: 'text-ink',
@@ -41,12 +41,12 @@ describe('sourceTypeMeta', () => {
   it('code uses a neutral distinct from the unknown-default (Г8 — readable by icon alone)', () => {
     // No 6th chromatic hue exists; code takes a STRONG neutral that must not read
     // like the muted grey the unknown fallback gets (Р7 for a deleted code file).
-    expect(sourceTypeMeta('code').color).not.toBe(sourceTypeMeta('unknown').color)
+    expect(sourceTypeMeta('uk', 'code').color).not.toBe(sourceTypeMeta('uk', 'unknown').color)
   })
 
   it('is total over the SourceType union — no value falls to the raw-token default', () => {
     for (const t of ALL_SOURCE_TYPES) {
-      const m = sourceTypeMeta(t)
+      const m = sourceTypeMeta('uk', t)
       expect(m.label).not.toBe(t) // a product word, never the raw token
       expect(m.icon).not.toBe('File') // a real icon, never the generic fallback
       expect(m.label).not.toMatch(/[A-Za-z]/) // ...and no Latin leak in the word
@@ -54,7 +54,7 @@ describe('sourceTypeMeta', () => {
   })
 
   it('falls back to generic File icon for unknown source_type', () => {
-    expect(sourceTypeMeta('unknown')).toEqual({
+    expect(sourceTypeMeta('uk', 'unknown')).toEqual({
       label: 'unknown',
       icon: 'File',
       color: 'text-ink-muted',

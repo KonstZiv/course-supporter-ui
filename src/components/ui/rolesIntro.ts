@@ -9,45 +9,32 @@
 // renders it both as an acknowledge-gated first-visit modal and as a voluntary
 // reopen via the permanent «Навіщо це?» link.
 import { STORAGE_KEYS } from '../../privacy/surface'
+import type { Language } from '../../i18n/languages'
+import { translate } from '../../i18n/translate'
 
-export const ROLES_INTRO = {
-  screenLead: [
-    'Система розібрала проєкт автоматично й запропонувала роль кожному файлу. Перегляньте перелік і виправте те, що потрібно.',
-    'Власні файли вашого проєкту система пропонує лишити повними. Радимо залишити повним лише те, що потрібно для розуміння теми заняття: тоді увага студента зосереджена на головному, а обробка матеріалу обходиться дешевше. Рішення — за вами.',
-  ],
-  title: 'Навіщо це?',
-  paragraphs: [
-    'Лише ви точно знаєте, які файли цього розділу є ключовими для навчання ' +
-      'студента, а які — допоміжні: створюють робоче середовище або просто ' +
-      'змушують проєкт працювати. Коли система зосереджена на ключових файлах, ' +
-      'вона краще розуміє ваш задум: саме повні файли формують знання Ментора і ' +
-      'перелік понять уроку.',
-    'Чому не варто розширювати набір повних файлів без потреби? Окрім ' +
-      'розмивання уваги системи, це прямі витрати — ваші або ваших студентів: ' +
-      'що більше матеріалу системі доводиться опрацьовувати, то дорожчими ' +
-      'стають і підготовка курсу, і перевірка домашніх робіт. Але це не заклик ' +
-      'різати все — залишайте повним усе, що справді стосується теми цього ' +
-      'заняття.',
-  ],
-  important:
-    'Важливо: розмітка стосується лише внутрішнього уявлення системи про ' +
-    'курс. Студент завантажує повний архів без жодних скорочень.',
-  strategyHeading: 'Найкраща стратегія:',
-  strategy: [
-    'файли, що не пройшли перевірку безпеки, і вміст службових тек система ' +
-      'вилучила ще під час розпакування — їх не можна ані побачити, ані повернути;',
-    'у повному обсязі залишайте те, що розкриває основні ідеї цього розділу;',
-    'як допоміжні позначайте файли, створені вами в межах проєкту, але не ' +
-      'центральні для теми заняття: система знатиме, що вони другорядні — ' +
-      'жодне їхнє поняття не стане основним поняттям уроку, а Ментор триматиме ' +
-      'їх лише як довідковий фон;',
-    'несуттєвими для теми позначайте автоматично сформовані файли, стандартні ' +
-      'бібліотеки, тривіальні файли: система чудово розуміє їхню роль і вміст — ' +
-      'у курсі залишиться лише згадка в дереві проєкту.',
-  ],
-  ackLabel: 'Прочитав, зрозуміло',
-  closeLabel: 'Закрити',
-} as const
+export function rolesIntro(language: Language) {
+  return {
+    screenLead: [
+      translate(language, 'panel.rolesIntro.screenLead1'),
+      translate(language, 'panel.rolesIntro.screenLead2'),
+    ],
+    title: translate(language, 'panel.rolesIntro.title'),
+    paragraphs: [
+      translate(language, 'panel.rolesIntro.paragraph1'),
+      translate(language, 'panel.rolesIntro.paragraph2'),
+    ],
+    important: translate(language, 'panel.rolesIntro.important'),
+    strategyHeading: translate(language, 'panel.rolesIntro.strategyHeading'),
+    strategy: [
+      translate(language, 'panel.rolesIntro.strategy1'),
+      translate(language, 'panel.rolesIntro.strategy2'),
+      translate(language, 'panel.rolesIntro.strategy3'),
+      translate(language, 'panel.rolesIntro.strategy4'),
+    ],
+    ackLabel: translate(language, 'panel.rolesIntro.ackLabel'),
+    closeLabel: translate(language, 'panel.rolesIntro.closeLabel'),
+  }
+}
 
 // Persistence carrier for the "already seen" flag. localStorage is the ONLY
 // option today: there is no backend profile/preferences store (confirmed by

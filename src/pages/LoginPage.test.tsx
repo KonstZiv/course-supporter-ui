@@ -24,11 +24,7 @@ import { LoginPage } from './LoginPage'
 import { createAppRouter } from '../router'
 import { useAuthStore } from '../stores/auth'
 import { SUPPORT_ADDRESS } from '../utils/contactAdmin'
-import {
-  BECOME_AUTHOR_URL,
-  DOCS_AUTHORS_URL,
-  SITE_PRICING_URL,
-} from '../components/site/siteLinks'
+import { docsUrl, siteUrl } from '../components/site/siteLinks'
 
 const fetchMock = vi.fn()
 
@@ -113,8 +109,9 @@ describe('LoginPage', () => {
       ).toBeInTheDocument()
       expect(within(block).getByRole('link', { name: 'Як стати автором' })).toHaveAttribute(
         'href',
-        BECOME_AUTHOR_URL,
+        siteUrl('uk', 'become-author'),
       )
+      expect(siteUrl('uk', 'become-author')).toBe('https://pythoncourse.me/uk/become-author/')
     })
 
     it('offers a letter to the administrator, with the address as text', () => {
@@ -131,10 +128,13 @@ describe('LoginPage', () => {
 
     it("is framed by the site's header and footer", () => {
       renderLogin()
-      expect(screen.getByRole('link', { name: 'Ціни' })).toHaveAttribute('href', SITE_PRICING_URL)
+      expect(screen.getByRole('link', { name: 'Ціни' })).toHaveAttribute(
+        'href',
+        siteUrl('uk', 'pricing'),
+      )
       expect(screen.getByRole('link', { name: 'Документація' })).toHaveAttribute(
         'href',
-        DOCS_AUTHORS_URL,
+        docsUrl('uk', 'authors/'),
       )
       expect(screen.getByRole('contentinfo')).toHaveTextContent('EXSOL DOO, Чорногорія')
     })

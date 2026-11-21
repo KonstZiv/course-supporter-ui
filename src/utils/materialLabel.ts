@@ -1,3 +1,5 @@
+import type { Language } from '../i18n/languages'
+import { translate } from '../i18n/translate'
 import { formatDateTime } from './dateTime'
 
 // The label shown IN PLACE OF a deleted material's name (ARC §7 Г3 / Р7). The
@@ -19,16 +21,21 @@ import { formatDateTime } from './dateTime'
  * The FACT of deletion: "Матеріал видалено", no date. The strip form, and the
  * first of the history page's two lines.
  */
-export function deletedMaterialLabelShort(): string {
-  return 'Матеріал видалено'
+export function deletedMaterialLabelShort(language: Language): string {
+  return translate(language, 'panel.materialLabel.short')
 }
 
 /**
  * History line two — author + the exact deletion moment in the author's language:
  * "автором 8 серпня 2026, 14:30". Takes the moment only, never the scrubbed name.
  */
-export function deletedMaterialAuthorLine(deletedAtIso: string): string {
-  return `автором ${formatDateTime(deletedAtIso)}`
+export function deletedMaterialAuthorLine(
+  language: Language,
+  deletedAtIso: string,
+): string {
+  return translate(language, 'panel.materialLabel.authorLine', {
+    date: formatDateTime(deletedAtIso),
+  })
 }
 
 /**
@@ -36,6 +43,9 @@ export function deletedMaterialAuthorLine(deletedAtIso: string): string {
  * The canonical words — the history page renders these SAME words as two lines
  * (short + author line, Г9); this joined form stays the truth the split equals.
  */
-export function deletedMaterialLabelFull(deletedAtIso: string): string {
-  return `${deletedMaterialLabelShort()} ${deletedMaterialAuthorLine(deletedAtIso)}`
+export function deletedMaterialLabelFull(
+  language: Language,
+  deletedAtIso: string,
+): string {
+  return `${deletedMaterialLabelShort(language)} ${deletedMaterialAuthorLine(language, deletedAtIso)}`
 }

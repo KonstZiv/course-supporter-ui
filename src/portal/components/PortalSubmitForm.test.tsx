@@ -5,6 +5,7 @@ import { submitErrorMessage } from '../submissionCodes'
 import { portalApi, PortalApiError } from '../api/portalClient'
 import { resetPortalLanguages } from '../languages'
 import { resetSubmissionPolicy } from '../submissionPolicy'
+import { LanguageProvider } from '../../i18n/LanguageProvider'
 import type { PortalMe, PortalTaskBase, SubmissionPolicyResponse } from '../types'
 
 vi.mock('../api/portalClient', async (importOriginal) => {
@@ -84,6 +85,7 @@ const me = (over: Partial<PortalMe> = {}): PortalMe => ({
   recovery_email: null,
   recovery_email_confirmed: false,
   preferred_language: null,
+  interface_language: null,
   ...over,
 })
 
@@ -437,7 +439,7 @@ describe('submitErrorMessage — no server string ever reaches the student', () 
     'status %i — no body shape leaks the string',
     (status) => {
       for (const body of bodies) {
-        const phrase = submitErrorMessage(new PortalApiError(status, SERVER, body))
+        const phrase = submitErrorMessage('uk', new PortalApiError(status, SERVER, body))
         expect(phrase).not.toContain(SERVER)
         expect(phrase).not.toContain('File extension')
         expect(phrase.length).toBeGreaterThan(0)
@@ -446,16 +448,16 @@ describe('submitErrorMessage — no server string ever reaches the student', () 
   )
 
   it('a non-API failure keeps its own specific phrase', () => {
-    expect(submitErrorMessage(new TypeError('Failed to fetch'))).toMatch(
+    expect(submitErrorMessage('uk', new TypeError('Failed to fetch'))).toMatch(
       /Перевірте зʼєднання/,
     )
-    expect(submitErrorMessage(new TypeError('Failed to fetch'))).not.toContain(
+    expect(submitErrorMessage('uk', new TypeError('Failed to fetch'))).not.toContain(
       'Failed to fetch',
     )
   })
 
   it('the three curated statuses answer with their own sentence', () => {
-    const say = (s: number) => submitErrorMessage(new PortalApiError(s, 'x', null))
+    const say = (s: number) => submitErrorMessage('uk', new PortalApiError(s, 'x', null))
     expect(say(401)).toMatch(/Сесія закінчилась/)
     expect(say(404)).toMatch(/Завдання не знайдено/)
     expect(say(409)).toMatch(/ще не готове до подачі/)
@@ -551,22 +553,41 @@ describe('PortalSubmitForm — мова рецензії (крок Г2 §2.1)', 
     // one naming none.
     mockedLanguages.mockRejectedValue(new Error('offline'))
     renderForm()
-    await waitFor(() => expect(mockedMe).toHaveBeenCalled())
+    await waitFor(() => expect(mockedLanguages).toHaveBeenCalled())
     expect(
       screen.getByRole('option', { name: 'Мовою курсу' }),
     ).toBeInTheDocument()
   })
 
-  it('opens on the stored preference', async () => {
+  // Г-1 §5, the product owner's decision: the field opens on the language of
+  // the pages; the last review's language (``preferred_language``) is no
+  // longer read for it.
+  it('opens on "course language" on a Ukrainian page of a Ukrainian course, whatever the last review was in', async () => {
     mockedMe.mockResolvedValue(me({ preferred_language: 'eng' }))
     renderForm()
-    await waitFor(() => expect(languageField()).toHaveValue('eng'))
+    await screen.findByRole('option', { name: 'English' })
+    expect(languageField()).toHaveValue('')
+    expect(mockedMe).not.toHaveBeenCalled()
   })
 
-  it('opens on "course language" when the student has no preference', async () => {
-    renderForm()
-    await waitFor(() => expect(mockedMe).toHaveBeenCalled())
-    expect(languageField()).toHaveValue('')
+  it('opens on English on an English page, without a choice', async () => {
+    render(
+      <LanguageProvider language="en">
+        <PortalSubmitForm taskId="task-1" courseLanguage="ukr" onSubmitted={vi.fn()} />
+      </LanguageProvider>,
+    )
+    await waitFor(() => expect(screen.getByLabelText('Review language')).toHaveValue('eng'))
+  })
+
+  it('opens on "course language" when the list does not offer the language of the pages', async () => {
+    mockedLanguages.mockResolvedValue({ items: [LANGUAGES[0]!, LANGUAGES[2]!], total: 2 })
+    render(
+      <LanguageProvider language="en">
+        <PortalSubmitForm taskId="task-1" courseLanguage="ukr" onSubmitted={vi.fn()} />
+      </LanguageProvider>,
+    )
+    await screen.findByRole('option', { name: 'Montenegrin' })
+    expect(screen.getByLabelText('Review language')).toHaveValue('')
   })
 
   it('sends response_language only when a language is chosen', async () => {
@@ -589,7 +610,7 @@ describe('PortalSubmitForm — мова рецензії (крок Г2 §2.1)', 
     // last review instead. Naming the code is the only way the label and the
     // outcome agree.
     renderForm()
-    await waitFor(() => expect(mockedMe).toHaveBeenCalled())
+    await waitFor(() => expect(mockedLanguages).toHaveBeenCalled())
     pickFile()
     fireEvent.click(submitBtn())
     await waitFor(() => expect(mockedSubmit).toHaveBeenCalled())
@@ -597,15 +618,15 @@ describe('PortalSubmitForm — мова рецензії (крок Г2 §2.1)', 
     expect(body.get('response_language')).toBe('ukr')
   })
 
-  it('sends the course code even when the preference says otherwise', async () => {
-    // The case that was measured on prod: preference eng, course ukr, review
-    // in English under a Ukrainian label. The field still OPENS on the
-    // preference (unchanged); choosing "course language" now overrides it.
-    mockedMe.mockResolvedValue(me({ preferred_language: 'eng' }))
+  it('sends the course code when "course language" is chosen back after another', async () => {
+    // The case that was measured on prod: another language, course ukr,
+    // review in English under a Ukrainian label. Choosing "course language"
+    // sends the course's code. (Г-1 §5: the field no longer opens on the
+    // stored preference, so the other language is chosen here by hand.)
     renderForm()
-    await waitFor(() =>
-      expect((languageField() as HTMLSelectElement).value).toBe('eng'),
-    )
+    await screen.findByRole('option', { name: 'English' })
+    fireEvent.change(languageField(), { target: { value: 'eng' } })
+    expect(languageField()).toHaveValue('eng')
     fireEvent.change(languageField(), { target: { value: '' } })
     pickFile()
     fireEvent.click(submitBtn())
@@ -630,7 +651,7 @@ describe('PortalSubmitForm — мова рецензії (крок Г2 §2.1)', 
   it('stays usable when the language list cannot be fetched', async () => {
     mockedLanguages.mockRejectedValue(new Error('offline'))
     renderForm()
-    await waitFor(() => expect(mockedMe).toHaveBeenCalled())
+    await waitFor(() => expect(mockedLanguages).toHaveBeenCalled())
     // Only the fallback option — and submitting still works, which is the
     // behaviour that existed before this field did.
     expect(screen.getAllByRole('option')).toHaveLength(1)

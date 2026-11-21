@@ -3,6 +3,9 @@ import type {
   BillingHeldReviews,
   BillingOutlookResponse,
 } from '../types/api'
+import type { Language } from '../i18n/languages'
+import { translate, type MessageKey } from '../i18n/translate'
+import type { ActionFailure } from './billingWords'
 import { formatDate, formatDays, formatUnits, formatWorks } from './units'
 
 // What the author app says about units outside the "Юніти" page's own
@@ -10,20 +13,27 @@ import { formatDate, formatDays, formatUnits, formatWorks } from './units'
 // units, the price before a paid action and a processing stopped for want of
 // units. A pure module: the words only, chosen by the server's codes.
 
-export const BUY_UNITS = 'Купити юніти'
+export function buyUnitsText(language: Language): string {
+  return translate(language, 'panel.billing.buyUnits')
+}
 
 // ── Reminders (GET /billing/outlook) ──
 
 /** "За вашого темпу…" — only with the warning and a number of days. */
-export function runsOutText(outlook: BillingOutlookResponse): string | null {
+export function runsOutText(language: Language, outlook: BillingOutlookResponse): string | null {
   if (outlook.warning !== 'runs_out_soon' || outlook.days_left === null) {
     return null
   }
-  return `За вашого темпу юнітів вистачить приблизно на ${formatDays(outlook.days_left)}.`
+  return translate(language, 'panel.billing.runsOut', {
+    days: formatDays(language, outlook.days_left),
+  })
 }
 
-export function expiringText(expiring: BillingExpiringSoon): string {
-  return `${formatUnits(expiring.units)} згорить ${formatDate(expiring.expires_on)}: тоді закінчується строк пакета.`
+export function expiringText(language: Language, expiring: BillingExpiringSoon): string {
+  return translate(language, 'panel.billing.expiring', {
+    units: formatUnits(language, expiring.units),
+    date: formatDate(language, expiring.expires_on),
+  })
 }
 
 // ── Students' reviews waiting for the author's units ──
@@ -35,19 +45,23 @@ export interface HeldReviewsWords {
 }
 
 export function heldReviewsWords(
+  language: Language,
   held: BillingHeldReviews,
 ): HeldReviewsWords | null {
   if (held.count <= 0) return null
   if (held.missing_units > 0) {
     return {
-      text:
-        `Перевірки робіт ваших студентів чекають юнітів: ${formatWorks(held.count)}. ` +
-        `Щоб вони почалися, потрібно ще ${formatUnits(held.missing_units)}.`,
+      text: translate(language, 'panel.billing.heldReviews.waiting', {
+        works: formatWorks(language, held.count),
+        units: formatUnits(language, held.missing_units),
+      }),
       buy: true,
     }
   }
   return {
-    text: `Юнітів уже вистачає: перевірки робіт ваших студентів (${formatWorks(held.count)}) почнуться найближчим часом.`,
+    text: translate(language, 'panel.billing.heldReviews.enough', {
+      works: formatWorks(language, held.count),
+    }),
     buy: false,
   }
 }
@@ -55,3 +69,37 @@ export function heldReviewsWords(
 // ── A processing stopped for want of units (`error_category`) ──
 
 export const INSUFFICIENT_UNITS_CATEGORY = 'insufficient_units'
+
+// ── A failed load or action on the "Юніти" page ──
+//
+// The author's sentences send the author to the letter (ContactAdmin); the
+// portal's name the support address instead (`portal/billingTexts`).
+
+export function loadFailedText(language: Language): string {
+  return translate(language, 'panel.billing.loadFailed')
+}
+
+export function providerUnavailableText(language: Language): string {
+  return translate(language, 'panel.billing.providerUnavailable')
+}
+
+export function actionFailedText(language: Language): string {
+  return translate(language, 'panel.billing.actionFailed')
+}
+
+const ACTION_FAILURE_KEY: Record<ActionFailure, MessageKey> = {
+  package_not_found: 'shared.billing.packageNotFound',
+  provider_unavailable: 'panel.billing.providerUnavailable',
+  refused: 'panel.billing.actionFailed',
+  unreachable: 'shared.billing.networkFailed',
+}
+
+/** The author's words for each failure of an action. */
+export function actionFailureText(language: Language): Record<ActionFailure, string> {
+  return {
+    package_not_found: translate(language, ACTION_FAILURE_KEY.package_not_found),
+    provider_unavailable: translate(language, ACTION_FAILURE_KEY.provider_unavailable),
+    refused: translate(language, ACTION_FAILURE_KEY.refused),
+    unreachable: translate(language, ACTION_FAILURE_KEY.unreachable),
+  }
+}

@@ -60,21 +60,21 @@ export function authoredRejectionMessage(
   if (code === 'SECURITY_REJECTED') {
     const category =
       'category' in detail ? (detail as { category?: unknown }).category : null
-    return ingestErrorMessage(typeof category === 'string' ? category : null)
+    return ingestErrorMessage('uk', typeof category === 'string' ? category : null)
   }
   if (code.startsWith('INTAKE_')) {
     const details =
       'details' in detail ? (detail as { details?: unknown }).details : null
-    return typeof details === 'string' ? details : ingestErrorMessage(null)
+    return typeof details === 'string' ? details : ingestErrorMessage('uk', null)
   }
   if (code.startsWith('TEST_')) {
     const refusal = testRefusal(err.body)
-    const words = refusal && yamlFileRefusalWords(refusal, fileName)
+    const words = refusal && yamlFileRefusalWords('uk', refusal, fileName)
     if (words) return words
   }
   // A recognised envelope with a code we have no specific text for degrades to
   // the generic phrase — never the raw ``details``.
-  return ingestErrorMessage(null)
+  return ingestErrorMessage('uk', null)
 }
 
 /**

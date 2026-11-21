@@ -79,6 +79,7 @@ describe('PortalLoginPage', () => {
       token_type: 'bearer',
       student_id: '019edaa5-1111-7000-8000-000000000001',
       display_name: 'Олена',
+      interface_language: null,
     })
     renderAt(`/${TENANT_A}/login`)
     fillCredentials()
@@ -126,6 +127,7 @@ describe('PortalLoginPage', () => {
       token_type: 'bearer',
       student_id: '019edaa5-1111-7000-8000-000000000001',
       display_name: 'Олена',
+      interface_language: null,
     }
     const login = (next: string) =>
       `/${TENANT_A}/login?next=${encodeURIComponent(next)}`

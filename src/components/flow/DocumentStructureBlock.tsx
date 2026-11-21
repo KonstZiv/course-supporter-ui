@@ -3,12 +3,13 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 import { documentsApi } from '../../api/documents'
 import type { DocumentStructureEntry, DocumentStructureResponse } from '../../types/api'
 import {
-  STRUCTURE_BLOCK_ACTION,
   detailIsShowable,
   notReadCountLabel,
+  structureBlockAction,
   structureReasonPhrase,
 } from '../../utils/codeStructureReasons'
 import { formatBytes } from '../../utils/formatBytes'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 
 // What a code material's processing left out, on the author's own card
 // (step Г2 §2.6, the post-hoc half of R5 visibility).
@@ -39,6 +40,8 @@ function StructureGroup({
   title: string
   entries: DocumentStructureEntry[]
 }) {
+  const language = useLanguage()
+  const t = useT()
   if (entries.length === 0) return null
   return (
     <div className="space-y-0.5">
@@ -51,16 +54,16 @@ function StructureGroup({
                 it reads as one, which is the difference between "a stray
                 folder" and "a third of my project". */}
             {e.entries !== null && e.entries > 1 && (
-              <span className="text-ink-muted"> · {e.entries} файлів</span>
+              <span className="text-ink-muted">{t('panel.flow.structure.filesCount', { count: e.entries })}</span>
             )}
             {' — '}
-            {structureReasonPhrase(e.reason, e.detail)}
+            {structureReasonPhrase(language, e.reason, e.detail)}
             {e.detail && detailIsShowable(e.reason) && (
               <span className="text-ink-muted"> ({e.detail})</span>
             )}
             <span className="text-ink-muted whitespace-nowrap">
               {' '}
-              ({formatBytes(e.size)})
+              ({formatBytes(language, e.size)})
             </span>
           </li>
         ))}
@@ -70,6 +73,8 @@ function StructureGroup({
 }
 
 export function DocumentStructureBlock({ documentId }: { documentId: string }) {
+  const language = useLanguage()
+  const t = useT()
   const [open, setOpen] = useState(false)
   const [data, setData] = useState<DocumentStructureResponse | null>(null)
 
@@ -107,22 +112,22 @@ export function DocumentStructureBlock({ documentId }: { documentId: string }) {
                    hover:bg-amber-pale/70 transition-colors cursor-pointer"
       >
         {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-        {notReadCountLabel(count)}
+        {notReadCountLabel(language, count)}
       </button>
 
       {open && (
         <div className="mt-1 pl-4 space-y-1.5">
           <StructureGroup
-            title="Не увійшли до матеріалу"
+            title={t('panel.flow.structure.excludedTitle')}
             entries={data!.excluded}
           />
           <StructureGroup
-            title="Увійшли лише назвою"
+            title={t('panel.flow.structure.descriptionOnlyTitle')}
             entries={data!.description_only}
           />
           {/* One action for the block, never per row: a per-line instruction
               under a `.DS_Store` would be invented noise. */}
-          <p className="text-xs text-ink-muted">{STRUCTURE_BLOCK_ACTION}</p>
+          <p className="text-xs text-ink-muted">{structureBlockAction(language)}</p>
         </div>
       )}
     </div>

@@ -11,7 +11,10 @@ import { usePortalSession } from '../stores/session'
 import { portalLogin, PortalApiError } from '../api/portalClient'
 import { isUuid } from '../uuid'
 import { InvalidPortalLink } from '../components/InvalidPortalLink'
+import { PublicPage } from '../components/PublicPage'
 import { afterSignIn, nextOf } from '../signInReturn'
+import { useT } from '../../i18n/LanguageContext'
+import { applySignInLanguage } from '../stores/language'
 
 // Student portal login (Phase 6 / T4b, c1). The tenant comes from the URL
 // segment (ratify Q3) and is sent as ``tenant_id`` in the unauthenticated
@@ -22,6 +25,7 @@ import { afterSignIn, nextOf } from '../signInReturn'
 // portal, else home.
 export function PortalLoginPage() {
   const { tenantId } = useParams()
+  const t = useT()
   const token = usePortalSession((s) => s.token)
   const sessionTenant = usePortalSession((s) => s.tenantId)
   const setSession = usePortalSession((s) => s.setSession)
@@ -62,14 +66,17 @@ export function PortalLoginPage() {
         studentId: res.student_id,
         displayName: res.display_name,
       })
+      // The language kept in the student's account, or — with none kept —
+      // this browser's choice goes there.
+      applySignInLanguage(res.access_token, res.interface_language)
       navigate(target, { replace: true })
     } catch (err) {
       if (err instanceof PortalApiError && err.status === 401) {
-        setError('Невірний логін або пароль.')
+        setError(t('portal.login.wrongCredentials'))
       } else if (err instanceof PortalApiError && err.status === 429) {
-        setError('Забагато спроб входу. Спробуйте трохи згодом.')
+        setError(t('portal.login.rateLimited'))
       } else {
-        setError('Не вдалося зʼєднатися із сервером.')
+        setError(t('portal.login.network'))
       }
     } finally {
       setLoading(false)
@@ -77,27 +84,23 @@ export function PortalLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-canvas flex items-center justify-center px-6">
+    <PublicPage>
       <div className="w-full max-w-sm">
         <div className="flex items-center gap-3 mb-10">
           <div className="w-10 h-10 rounded-xl bg-navy flex items-center justify-center">
             <BookOpen size={20} className="text-amber-light" />
           </div>
-          <span className="font-display text-2xl text-ink">Навчальний портал</span>
+          <span className="font-display text-2xl text-ink">{t('portal.header.name')}</span>
         </div>
 
-        <h2 className="font-display text-2xl text-ink mb-2">Вхід</h2>
-        <p className="text-ink-muted mb-2">
-          Введіть логін і пароль, які надав автор курсу.
-        </p>
-        <p className="text-ink-muted mb-8">
-          Збережіть адресу цієї сторінки: за нею ви входите в портал курсу з будь-якого пристрою.
-        </p>
+        <h2 className="font-display text-2xl text-ink mb-2">{t('portal.login.title')}</h2>
+        <p className="text-ink-muted mb-2">{t('portal.login.lead')}</p>
+        <p className="text-ink-muted mb-8">{t('portal.login.saveAddress')}</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label htmlFor="portal-login" className="block text-sm font-medium text-ink mb-1.5">
-              Логін
+              {t('portal.login.loginLabel')}
             </label>
             <input
               id="portal-login"
@@ -111,7 +114,7 @@ export function PortalLoginPage() {
 
           <div>
             <label htmlFor="portal-password" className="block text-sm font-medium text-ink mb-1.5">
-              Пароль
+              {t('portal.login.passwordLabel')}
             </label>
             <input
               id="portal-password"
@@ -125,7 +128,7 @@ export function PortalLoginPage() {
                 to={`/${tenantId}/forgot-password`}
                 className="text-sm text-ink-muted hover:text-ink"
               >
-                Забули пароль?
+                {t('portal.login.forgot')}
               </Link>
             </div>
           </div>
@@ -146,13 +149,13 @@ export function PortalLoginPage() {
               <Loader2 size={18} className="animate-spin" />
             ) : (
               <>
-                Увійти
+                {t('portal.login.submit')}
                 <ArrowRight size={18} />
               </>
             )}
           </button>
         </form>
       </div>
-    </div>
+    </PublicPage>
   )
 }

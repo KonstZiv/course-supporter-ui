@@ -13,20 +13,7 @@ import {
 import { clsx } from 'clsx'
 import type { JobListItemResponse } from '../../types/api'
 import { ActivityStrip } from '../activity/ActivityStrip'
-
-// Header nav items, in product order. Довідка is last, before the logout action
-// (Є1); the history item precedes it — its place is the operator's call (§3 c7 / Г1).
-const NAV = [
-  { to: '/', label: 'Курси', icon: LayoutDashboard },
-  { to: '/students', label: 'Студенти', icon: Users },
-  { to: '/billing', label: 'Юніти', icon: Package },
-  { to: '/cost', label: 'Витрати', icon: DollarSign },
-  // Витрати ДЗ = homework-review cost. ClipboardCheck (not a $-shaped icon) so it
-  // never reads the same as "Витрати" (DollarSign) once labels collapse (Г8 п.4).
-  { to: '/cost/homework', label: 'Витрати ДЗ', icon: ClipboardCheck },
-  { to: '/history', label: 'Історія матеріалів', icon: History },
-  { to: '/help', label: 'Довідка', icon: HelpCircle },
-] as const
+import { useT } from '../../i18n/LanguageContext'
 
 // The base :focus-visible outline (3px, offset 3px) drawn inside the control
 // below `sm`, where the nav row scrolls and clips what lies outside it.
@@ -39,6 +26,21 @@ export function Header({
 }) {
   const location = useLocation()
   const navigate = useNavigate()
+  const t = useT()
+
+  // Header nav items, in product order. Довідка is last, before the logout action
+  // (Є1); the history item precedes it — its place is the operator's call (§3 c7 / Г1).
+  const nav = [
+    { to: '/', label: t('panel.header.nav.courses'), icon: LayoutDashboard },
+    { to: '/students', label: t('panel.header.nav.students'), icon: Users },
+    { to: '/billing', label: t('panel.header.nav.units'), icon: Package },
+    { to: '/cost', label: t('panel.header.nav.cost'), icon: DollarSign },
+    // Витрати ДЗ = homework-review cost. ClipboardCheck (not a $-shaped icon) so it
+    // never reads the same as "Витрати" (DollarSign) once labels collapse (Г8 п.4).
+    { to: '/cost/homework', label: t('panel.header.nav.homeworkCost'), icon: ClipboardCheck },
+    { to: '/history', label: t('panel.header.nav.materialHistory'), icon: History },
+    { to: '/help', label: t('panel.header.nav.help'), icon: HelpCircle },
+  ] as const
 
   const linkClass = (active: boolean) =>
     clsx(
@@ -113,7 +115,7 @@ export function Header({
             e.target.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
           }
         >
-          {NAV.map(({ to, label, icon: Icon }) => (
+          {nav.map(({ to, label, icon: Icon }) => (
             <Link
               key={to}
               to={to}
@@ -129,8 +131,8 @@ export function Header({
               unsaved changes asks before the move, as for any other (task 07c). */}
           <button
             onClick={() => navigate('/logout')}
-            aria-label="Вийти"
-            title="Вийти"
+            aria-label={t('panel.header.logout')}
+            title={t('panel.header.logout')}
             className={clsx(
               'flex items-center gap-2 px-2 sm:px-2.5 xl:px-4 py-2 rounded-xl text-sm font-medium',
               'text-ink-muted hover:bg-coral-pale hover:text-coral transition-colors ml-1 sm:ml-2',
@@ -138,7 +140,7 @@ export function Header({
             )}
           >
             <LogOut size={16} />
-            <span className="hidden xl:inline">Вийти</span>
+            <span className="hidden xl:inline">{t('panel.header.logout')}</span>
           </button>
         </nav>
       </div>

@@ -6,6 +6,7 @@ import type { NodeResponse, StudentRosterResponse } from '../types/api'
 import { EmptyState } from '../components/ui/EmptyState'
 import { StudentRow } from '../components/students/StudentRow'
 import { ProvisionStudentModal } from '../components/students/ProvisionStudentModal'
+import { useT } from '../i18n/LanguageContext'
 
 const PAGE_SIZE = 20
 
@@ -24,6 +25,7 @@ export function StudentsPage() {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>(
     'idle',
   )
+  const t = useT()
 
   const load = useCallback(async (off: number) => {
     setLoading(true)
@@ -31,11 +33,11 @@ export function StudentsPage() {
     try {
       setResp(await studentsApi.list(PAGE_SIZE, off))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Помилка завантаження')
+      setError(e instanceof Error ? e.message : t('panel.students.loadError'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     void load(offset)
@@ -89,9 +91,9 @@ export function StudentsPage() {
           off the 320 floor; from `sm`+ the original single-row layout returns. */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
-          <h1 className="page-title">Студенти</h1>
+          <h1 className="page-title">{t('panel.students.title')}</h1>
           <p className="page-subtitle">
-            Доступ студентів до порталу та зарахування на курси
+            {t('panel.students.subtitle')}
           </p>
         </div>
         <div className="flex flex-wrap sm:flex-nowrap gap-2">
@@ -101,24 +103,24 @@ export function StudentsPage() {
             onClick={() => void copyPortalLink()}
             title={
               !PORTAL_ORIGIN
-                ? 'Портальне посилання недоступне: не задано VITE_PORTAL_ORIGIN.'
+                ? t('panel.students.portalOriginMissing')
                 : undefined
             }
           >
             <Copy size={16} />
             {copyState === 'copied'
-              ? 'Скопійовано!'
-              : 'Скопіювати посилання порталу'}
+              ? t('panel.students.copied')
+              : t('panel.students.copyPortalLink')}
           </button>
           <button className="btn-primary" onClick={() => setProvisionOpen(true)}>
-            <UserPlus size={16} /> Додати студента
+            <UserPlus size={16} /> {t('panel.students.addStudent')}
           </button>
         </div>
       </div>
 
       {copyState === 'failed' && portalLink && (
         <div className="card p-3 mb-4 text-sm text-ink-light">
-          Не вдалося скопіювати автоматично. Скопіюйте вручну:{' '}
+          {t('panel.students.copyFailed')}{' '}
           <span className="select-all font-mono text-ink break-all">
             {portalLink}
           </span>
@@ -137,8 +139,8 @@ export function StudentsPage() {
       ) : total === 0 ? (
         <EmptyState
           icon={Users}
-          title="Ще немає студентів"
-          description="Додайте першого студента, щоб надати доступ до порталу."
+          title={t('panel.students.emptyTitle')}
+          description={t('panel.students.emptyDescription')}
         />
       ) : (
         <>
@@ -153,11 +155,11 @@ export function StudentsPage() {
             <table className="w-full text-sm">
               <thead className="bg-canvas text-ink-muted text-xs uppercase">
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium">Студент</th>
-                  <th className="text-left px-4 py-3 font-medium">Логін</th>
-                  <th className="text-left px-4 py-3 font-medium">Статус</th>
-                  <th className="text-left px-4 py-3 font-medium">Курсів</th>
-                  <th className="text-right px-4 py-3 font-medium">Дії</th>
+                  <th className="text-left px-4 py-3 font-medium">{t('panel.students.table.student')}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t('panel.students.table.login')}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t('panel.students.table.status')}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t('panel.students.table.courses')}</th>
+                  <th className="text-right px-4 py-3 font-medium">{t('panel.students.table.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -182,14 +184,14 @@ export function StudentsPage() {
           <div className="min-[896px]:hidden">
             <EmptyState
               icon={Users}
-              title="Перелік студентів потребує ширшого екрана"
-              description="Ваші студенти на місці — тут просто замало місця, щоб показати їх і керувати доступом. Відкрийте цю сторінку на комп'ютері або розгорніть вікно ширше."
+              title={t('panel.students.narrowTitle')}
+              description={t('panel.students.narrowDescription')}
             />
           </div>
 
           <div className="flex items-center justify-between mt-4 text-sm text-ink-muted">
             <span>
-              Показано {from}–{to} з {total}
+              {t('panel.students.rangeOfTotal', { from, to, total })}
             </span>
             {/* Count stays at every width (Р3); Назад/Далі hide below the threshold
                 so we never page a list the author cannot see. */}
@@ -199,14 +201,14 @@ export function StudentsPage() {
                 disabled={!canPrev}
                 onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
               >
-                Назад
+                {t('panel.students.pagination.prev')}
               </button>
               <button
                 className="btn-ghost btn-sm"
                 disabled={!canNext}
                 onClick={() => setOffset((o) => o + PAGE_SIZE)}
               >
-                Далі
+                {t('panel.students.pagination.next')}
               </button>
             </div>
           </div>

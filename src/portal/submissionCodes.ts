@@ -41,70 +41,47 @@
 // dictionary
 // is submit-time only.
 
+import type { Language } from '../i18n/languages'
+import { translate, type MessageKey } from '../i18n/translate'
 import { doorRefusal, PortalApiError } from './api/portalClient'
 import { articlePhrase, reasonArticle, UNKNOWN_REASON } from './rejectionReasons'
 import { formatCount, STUDENT_NOTE_MAX_CHARS } from './studentNote'
 
-const SUBMISSION_CODES: Record<string, string> = {
-  ARCHIVE_ONLY:
-    'Це завдання очікує архів проєкту. Завантажте весь проєкт одним архівом ' +
-    '(.zip, .tar.gz, .tgz або .gz) — окремий файл не приймається.',
-  BASE_NOT_READY:
-    'Базовий проєкт ще готується. Ваша подача звіряється з ним, тож зачекайте ' +
-    'трохи й спробуйте подати ще раз.',
-  MISSING_BASE_ECHO:
-    'Не вдалося визначити версію базового проєкту для звірки. Оновіть сторінку ' +
-    'й спробуйте подати ще раз.',
-  UNKNOWN_BASE_ECHO:
-    'Базовий проєкт оновився, відколи ви відкрили завдання. Подачу неможливо ' +
-    'звірити зі старою версією. Оновіть сторінку, завантажте новий базовий ' +
-    'проєкт і спробуйте ще раз.',
+const SUBMISSION_CODES: Record<string, MessageKey> = {
+  ARCHIVE_ONLY: 'portal.door.archiveOnly',
+  BASE_NOT_READY: 'portal.door.baseNotReady',
+  MISSING_BASE_ECHO: 'portal.door.missingBaseEcho',
+  UNKNOWN_BASE_ECHO: 'portal.door.unknownBaseEcho',
   // Task 07 — the doors of a test. Worded for the student from the error index
   // of the documentation site (``/uk/errors/``): what happened, and what the
   // student can do about it. The server's ``details`` never reaches the screen.
-  TEST_ANSWERS_REQUIRED:
-    'Це завдання — тест: на нього відповідають у формі тесту, файл не ' +
-    'приймається. Оновіть сторінку — зʼявиться форма тесту.',
-  TEST_FORM_UNAVAILABLE:
-    'Цей тест поки що приймає роботу файлом. Оновіть сторінку — зʼявиться ' +
-    'форма для файла.',
-  NOT_A_TEST_TASK:
-    'Це завдання не є тестом. Оновіть сторінку й надішліть роботу файлом.',
-  TEST_VERSION_CHANGED:
-    'Тест оновився, поки ви відповідали, і відповіді на стару версію не ' +
-    'приймаються. Позначте відповіді в новій версії тесту й надішліть знову.',
-  TEST_NOT_READY:
-    'Тест ще не готовий приймати відповіді. Спробуйте трохи згодом.',
-  ANSWERS_DO_NOT_MATCH_TEST:
-    'Відповіді не збігаються з питаннями тесту. Оновіть сторінку й надішліть ' +
-    'відповіді ще раз.',
+  TEST_ANSWERS_REQUIRED: 'portal.door.testAnswersRequired',
+  TEST_FORM_UNAVAILABLE: 'portal.door.testFormUnavailable',
+  NOT_A_TEST_TASK: 'portal.door.notATestTask',
+  TEST_VERSION_CHANGED: 'portal.door.testVersionChanged',
+  TEST_NOT_READY: 'portal.door.testNotReady',
+  ANSWERS_DO_NOT_MATCH_TEST: 'portal.door.answersDoNotMatchTest',
   // Hotfix 6 — the student's comment, refused before anything is stored. The
   // screens are the ones a text file meets, so the words follow the file's
   // (``suspicious_unicode`` and ``prompt_injection`` in rejectionReasons.ts);
   // the category the server names in ``details`` is not read here.
-  STUDENT_NOTE_TOO_LONG:
-    `Коментар задовгий — максимум ${formatCount(STUDENT_NOTE_MAX_CHARS)} знаків. ` +
-    'Скоротіть його й надішліть знову.',
-  STUDENT_NOTE_REJECTED:
-    'Коментар не прийнято: у ньому є приховані чи підмінені символи або ' +
-    'інструкції, адресовані системі перевірки. Такі символи часто приносить ' +
-    'текст, скопійований з іншої програми, і деякі емодзі. Приберіть їх і ' +
-    'надішліть знову.',
+  STUDENT_NOTE_TOO_LONG: 'portal.door.studentNoteTooLong',
+  STUDENT_NOTE_REJECTED: 'portal.door.studentNoteRejected',
   // Task 05 — the one refusal an answer about a review can meet. Not a door
   // code: the student reaches it from the review panel, not from the submit
   // form. It lives here because this is where a code becomes a sentence, and a
   // second module doing the same thing is a second place to keep in step.
-  no_review:
-    'Рецензії для цієї роботи зараз немає, тож відповідати немає про що. ' +
-    'Оновіть сторінку — вона покаже поточний стан роботи.',
+  no_review: 'portal.door.noReview',
 }
 
 // Resolve a door code to a uk phrase. Total: an unknown code — a future backend
 // code this interface has not learned — yields the ratified generic.
-export function submissionCodePhrase(code: string): string {
+export function submissionCodePhrase(language: Language, code: string): string {
   const project = SUBMISSION_CODES[code]
-  if (project !== undefined) return project
-  return articlePhrase(reasonArticle(code) ?? UNKNOWN_REASON)
+  if (project !== undefined) {
+    return translate(language, project, { max: formatCount(STUDENT_NOTE_MAX_CHARS) })
+  }
+  return articlePhrase(language, reasonArticle(code) ?? UNKNOWN_REASON)
 }
 
 // Curated phrase per HTTP status, for a refusal that carried no code. These
@@ -118,10 +95,10 @@ export function submissionCodePhrase(code: string): string {
 // session and redirected. It is kept for the reason an unreachable dictionary
 // key is kept — the day that centralised handling moves, the student gets a
 // sentence rather than the generic.
-const STATUS_PHRASES: Record<number, string> = {
-  401: 'Сесія закінчилась — увійдіть знову.',
-  404: 'Завдання не знайдено.',
-  409: 'Завдання ще не готове до подачі. Спробуйте трохи згодом.',
+const STATUS_PHRASES: Record<number, MessageKey> = {
+  401: 'portal.door.status.sessionEnded',
+  404: 'portal.door.status.taskNotFound',
+  409: 'portal.door.status.taskNotReady',
 }
 
 // Map a submit failure to a uk message. FastAPI nests an HTTPException's detail
@@ -142,31 +119,29 @@ const STATUS_PHRASES: Record<number, string> = {
 // Statuses an ANSWER about a review can meet, as distinct from a submission's.
 // A 409 never lands here: that refusal carries the ``no_review`` code and is
 // answered by the dictionary above.
-const TOUCH_STATUS_PHRASES: Record<number, string> = {
-  401: 'Сесія закінчилась — увійдіть знову.',
-  404: 'Цієї роботи більше немає у вашому списку. Оновіть сторінку.',
+const TOUCH_STATUS_PHRASES: Record<number, MessageKey> = {
+  401: 'portal.door.status.sessionEnded',
+  404: 'portal.door.status.workGone',
 }
 
 // Map a failed answer about a review to a uk message. Same order as
 // ``submitErrorMessage`` and the same rule: the backend's own English strings
 // are read at no point.
-export function touchErrorMessage(err: unknown): string {
+export function touchErrorMessage(language: Language, err: unknown): string {
   const refusal = doorRefusal(err)
-  if (refusal !== null) return submissionCodePhrase(refusal.code)
+  if (refusal !== null) return submissionCodePhrase(language, refusal.code)
   if (err instanceof PortalApiError) {
-    return (
-      TOUCH_STATUS_PHRASES[err.status] ??
-      'Не вдалося зберегти відповідь. Спробуйте ще раз.'
-    )
+    return translate(language, TOUCH_STATUS_PHRASES[err.status] ?? 'portal.door.touchFailed')
   }
-  return 'Не вдалося зберегти відповідь. Перевірте зʼєднання та спробуйте ще раз.'
+  return translate(language, 'portal.door.touchNetwork')
 }
 
-export function submitErrorMessage(err: unknown): string {
+export function submitErrorMessage(language: Language, err: unknown): string {
   const refusal = doorRefusal(err)
-  if (refusal !== null) return submissionCodePhrase(refusal.code)
+  if (refusal !== null) return submissionCodePhrase(language, refusal.code)
   if (err instanceof PortalApiError) {
-    return STATUS_PHRASES[err.status] ?? articlePhrase(UNKNOWN_REASON)
+    const phrase = STATUS_PHRASES[err.status]
+    return phrase ? translate(language, phrase) : articlePhrase(language, UNKNOWN_REASON)
   }
-  return 'Не вдалося надіслати. Перевірте зʼєднання та спробуйте ще раз.'
+  return translate(language, 'portal.door.submitNetwork')
 }

@@ -15,35 +15,24 @@
 // block carries one action for all of them, because a per-row instruction
 // would be invented noise under a `.DS_Store`.
 
+import type { Language } from '../i18n/languages'
+import { translate, type MessageKey } from '../i18n/translate'
 import { formatBytes } from './formatBytes'
 
-/** Files whose contents never reached the model at all. */
-const NOT_INCLUDED: Record<string, string> = {
-  denylist_dir: 'Службова тека середовища або редактора.',
-  denylist_file: 'Службовий файл системи або редактора.',
-  non_code_type: 'Не є кодом — такий тип файлу в кодовому матеріалі не читається.',
-  magic_mismatch: 'Вміст файлу не відповідає його розширенню.',
-  nested_archive: 'Архів усередині архіву — не розпаковувався.',
-  charset_violation: 'Кодування не розпізнано — текст прочитати не вдалося.',
+const REASON_KEYS: Record<string, MessageKey> = {
+  denylist_dir: 'panel.codeStructure.denylistDir',
+  denylist_file: 'panel.codeStructure.denylistFile',
+  non_code_type: 'panel.codeStructure.nonCodeType',
+  magic_mismatch: 'panel.codeStructure.magicMismatch',
+  nested_archive: 'panel.codeStructure.nestedArchive',
+  charset_violation: 'panel.codeStructure.charsetViolation',
+  vendored_dir: 'panel.codeStructure.vendoredDir',
+  lockfile: 'panel.codeStructure.lockfile',
+  generated_artifact: 'panel.codeStructure.generatedArtifact',
+  oversize: 'panel.codeStructure.oversize',
+  build_config: 'panel.codeStructure.buildConfig',
+  author_structure_only: 'panel.codeStructure.authorStructureOnly',
 }
-
-/** Files the model was given by name and place, but not by content. */
-const NAME_ONLY: Record<string, string> = {
-  vendored_dir: 'Стороння бібліотека у складі проєкту.',
-  lockfile: 'Список залежностей проєкту.',
-  generated_artifact: 'Файл, згенерований збіркою.',
-  // Numberless fallback only. The cap used to be written here as "4 МБ" — a
-  // copy of a server constant with nothing holding the two together, and it
-  // was already wrong by the time anyone read it. Since step Д the server
-  // sends both numbers in the detail, so the phrase below is built from them
-  // and this line is what remains when the detail is missing or malformed.
-  oversize: 'Файл завеликий — для читання не взято.',
-  build_config: 'Налаштування складання проєкту.',
-  author_structure_only:
-    'За вашим вибором на екрані підтвердження ролей: увійшла лише назва.',
-}
-
-const REASON_PHRASES: Record<string, string> = { ...NOT_INCLUDED, ...NAME_ONLY }
 
 /**
  * "3 файли не прочитано" for the collapsed block heading.
@@ -51,27 +40,15 @@ const REASON_PHRASES: Record<string, string> = { ...NOT_INCLUDED, ...NAME_ONLY }
  * Counts BOTH groups: excluded files and description-only ones alike did not
  * reach the model by content, which is the one thing the heading has room to
  * say. The split into two reasons is what opening it is for.
- *
- * A twin of the portal's ``notOpenedCountLabel`` — same three Ukrainian forms,
- * same rule — because the two bundles import nothing from each other (checked
- * both directions). Picking one form would be visibly wrong two thirds of the
- * time, and this is the line the author reads before deciding to open anything.
  */
-export function notReadCountLabel(count: number): string {
-  const last = count % 10
-  const teens = count % 100
-  const noun =
-    last === 1 && teens !== 11
-      ? 'файл'
-      : last >= 2 && last <= 4 && (teens < 12 || teens > 14)
-        ? 'файли'
-        : 'файлів'
-  return `${count} ${noun} не прочитано`
+export function notReadCountLabel(language: Language, count: number): string {
+  return translate(language, 'panel.codeStructure.notReadCount', { count })
 }
 
 /** One action for the whole block — never per row (ratified §4). */
-export const STRUCTURE_BLOCK_ACTION =
-  'Матеріал оброблено без цих файлів; якщо вони потрібні — виправте і залийте знову.'
+export function structureBlockAction(language: Language): string {
+  return translate(language, 'panel.codeStructure.blockAction')
+}
 
 /**
  * Phrase for a reason token, or a neutral line for one this build has not met.
@@ -80,14 +57,22 @@ export const STRUCTURE_BLOCK_ACTION =
  * says the reason is missing rather than dropping the row — the same rule the
  * student-side dictionary follows, for the same reason.
  */
-export function structureReasonPhrase(reason: string, detail?: string | null): string {
+export function structureReasonPhrase(
+  language: Language,
+  reason: string,
+  detail?: string | null,
+): string {
   if (reason === 'oversize') {
     const sizes = parseOversizeDetail(detail)
     if (sizes !== null) {
-      return `Файл завеликий: ${formatBytes(sizes.size)} при межі ${formatBytes(sizes.cap)}.`
+      return translate(language, 'panel.codeStructure.oversizeDetail', {
+        size: formatBytes(language, sizes.size),
+        cap: formatBytes(language, sizes.cap),
+      })
     }
   }
-  return REASON_PHRASES[reason] ?? 'Причину не вказано.'
+  const key = REASON_KEYS[reason] ?? 'panel.codeStructure.unknown'
+  return translate(language, key)
 }
 
 /**

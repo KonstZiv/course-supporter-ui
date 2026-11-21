@@ -8,7 +8,7 @@ describe('submissionCodePhrase — the UPPER_SNAKE project vocabulary', () => {
     ['MISSING_BASE_ECHO', /визначити версію/],
     ['UNKNOWN_BASE_ECHO', /оновився/],
   ])('%s → its uk phrase', (code, re) => {
-    expect(submissionCodePhrase(code)).toMatch(re)
+    expect(submissionCodePhrase('uk', code)).toMatch(re)
   })
 })
 
@@ -32,14 +32,14 @@ describe('submissionCodePhrase — the doors of a test (task 07)', () => {
     ['TEST_NOT_READY', /^Тест ще не готовий приймати відповіді\./],
     ['ANSWERS_DO_NOT_MATCH_TEST', /не збігаються з питаннями тесту/],
   ])('%s → its uk phrase', (code, re) => {
-    expect(submissionCodePhrase(code)).toMatch(re)
+    expect(submissionCodePhrase('uk', code)).toMatch(re)
   })
 
   it('gives every code a sentence of its own, none of them the generic', () => {
-    const phrases = TEST_CODES.map(submissionCodePhrase)
+    const phrases = TEST_CODES.map((code) => submissionCodePhrase('uk', code))
     expect(new Set(phrases).size).toBe(TEST_CODES.length)
     for (const phrase of phrases) {
-      expect(phrase).not.toBe(submissionCodePhrase('SOME_NEW_CODE'))
+      expect(phrase).not.toBe(submissionCodePhrase('uk', 'SOME_NEW_CODE'))
     }
   })
 })
@@ -48,14 +48,14 @@ describe('submissionCodePhrase — the lower_snake ErrorCategory vocabulary', ()
   // The ordinary submission door speaks ErrorCategory values, not project codes.
   // Both arrive at the same handler, so both must resolve here.
   it('forbidden_type → the ratified format phrase, listing what IS accepted', () => {
-    expect(submissionCodePhrase('forbidden_type')).toBe(
+    expect(submissionCodePhrase('uk', 'forbidden_type')).toBe(
       'Цей формат файла не приймається. Надішліть роботу текстом (.md, .txt), ' +
         'документом (.docx, .pdf), кодом або архівом (.zip, .tar.gz).',
     )
   })
 
   it('size_limit → the ratified size phrase, with no number in it', () => {
-    const phrase = submissionCodePhrase('size_limit')
+    const phrase = submissionCodePhrase('uk', 'size_limit')
     expect(phrase).toMatch(/більший за дозволений розмір/)
     // The cap differs by task type (an ordinary submission and a project
     // submission do not share it), so the sentence must not name one.
@@ -64,15 +64,15 @@ describe('submissionCodePhrase — the lower_snake ErrorCategory vocabulary', ()
 
   it('says the same thing the stored attempt will say later', async () => {
     const { rejectionPhrase } = await import('./rejectionReasons')
-    expect(submissionCodePhrase('size_limit')).toBe(
-      rejectionPhrase({ code: 'size_limit', details: 'work.zip' }),
+    expect(submissionCodePhrase('uk', 'size_limit')).toBe(
+      rejectionPhrase('uk', { code: 'size_limit', details: 'work.zip' }),
     )
   })
 })
 
 describe('submissionCodePhrase — unknown codes (DD-SP-D)', () => {
   it('yields the ratified generic, not silence', () => {
-    expect(submissionCodePhrase('SOME_NEW_CODE')).toBe(
+    expect(submissionCodePhrase('uk', 'SOME_NEW_CODE')).toBe(
       'Під час обробки подачі сталася помилка. Спробуйте подати ще раз.',
     )
   })
@@ -80,20 +80,20 @@ describe('submissionCodePhrase — unknown codes (DD-SP-D)', () => {
   it('has no way to leak the backend string — it no longer takes one', () => {
     // The signature itself is the guarantee: the raw ``details`` is an English
     // developer sentence, and the old fallback put it in front of the student.
-    expect(submissionCodePhrase.length).toBe(1)
+    expect(submissionCodePhrase.length).toBe(2) // (language, code)
   })
 })
 
 describe('submissionCodePhrase — the student comment (hotfix 6)', () => {
   it('STUDENT_NOTE_TOO_LONG names the cap and asks to shorten', () => {
     // ``\s``: the number is grouped with a no-break space.
-    expect(submissionCodePhrase('STUDENT_NOTE_TOO_LONG')).toMatch(
+    expect(submissionCodePhrase('uk', 'STUDENT_NOTE_TOO_LONG')).toMatch(
       /^Коментар задовгий — максимум 2\s000 знаків\. Скоротіть його/,
     )
   })
 
   it('STUDENT_NOTE_REJECTED names both screens and what to do', () => {
-    const phrase = submissionCodePhrase('STUDENT_NOTE_REJECTED')
+    const phrase = submissionCodePhrase('uk', 'STUDENT_NOTE_REJECTED')
     expect(phrase).toMatch(/^Коментар не прийнято/)
     expect(phrase).toMatch(/приховані чи підмінені символи/)
     expect(phrase).toMatch(/інструкції, адресовані системі перевірки/)
@@ -101,12 +101,12 @@ describe('submissionCodePhrase — the student comment (hotfix 6)', () => {
   })
 
   it('gives each code a sentence of its own, neither of them the generic', () => {
-    const phrases = ['STUDENT_NOTE_TOO_LONG', 'STUDENT_NOTE_REJECTED'].map(
-      submissionCodePhrase,
+    const phrases = ['STUDENT_NOTE_TOO_LONG', 'STUDENT_NOTE_REJECTED'].map((code) =>
+      submissionCodePhrase('uk', code),
     )
     expect(new Set(phrases).size).toBe(2)
     for (const phrase of phrases) {
-      expect(phrase).not.toBe(submissionCodePhrase('SOME_NEW_CODE'))
+      expect(phrase).not.toBe(submissionCodePhrase('uk', 'SOME_NEW_CODE'))
     }
   })
 })

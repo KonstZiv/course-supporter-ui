@@ -4,6 +4,7 @@ import {
   useCheckoutWatch,
   type CheckoutSource,
 } from '../../hooks/useCheckoutWatch'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 import { formatUnits } from '../../utils/units'
 
 export interface PaymentResultProps {
@@ -22,7 +23,7 @@ export interface PaymentResultProps {
    * come — the line and the way to write, each app its own.
    */
   stoppedNote: React.ReactNode
-  /** Beside "Зрозуміло" once the units are credited (the portal's way back). */
+  /** Beside the dismiss button once the units are credited (the portal's way back). */
   creditedAction?: React.ReactNode
 }
 
@@ -39,6 +40,8 @@ export function PaymentResult({
   stoppedNote,
   creditedAction,
 }: PaymentResultProps) {
+  const language = useLanguage()
+  const t = useT()
   const { watch, retry } = useCheckoutWatch(checkoutRef, source)
   const [available, setAvailable] = useState<number | null>(null)
 
@@ -76,26 +79,25 @@ export function PaymentResult({
     <div role="status" className={clsx('rounded-2xl p-5 space-y-3 text-ink', tone)}>
       {done ? (
         <p className="font-semibold">
-          Зараховано {formatUnits(credited.units)}. Тепер доступно{' '}
-          {formatUnits(available)}.
+          {t('shared.payment.credited', {
+            units: formatUnits(language, credited.units),
+            available: formatUnits(language, available),
+          })}
         </p>
       ) : watch.status === 'failed' ? (
         <p className="font-semibold">
-          Оплата не пройшла — юніти не зараховано. Можна обрати пакет ще раз.
+          {t('shared.payment.failed')}
         </p>
       ) : (
         <>
-          <p className="font-semibold">Зараховуємо…</p>
+          <p className="font-semibold">{t('shared.payment.crediting')}</p>
           {stage === 'waiting' && (
-            <p>
-              Оплата ще не надійшла. Якщо ви сплатили, юніти з'являться за
-              кілька хвилин — сторінка перевіряє сама, її можна закрити.
-            </p>
+            <p>{t('shared.payment.waiting')}</p>
           )}
           {/* The page no longer asks: the line no longer says it does. */}
           {stage === 'stopped' && (
             <>
-              <p>Оплата ще не надійшла.</p>
+              <p>{t('shared.payment.notArrived')}</p>
               {stoppedNote}
             </>
           )}
@@ -104,12 +106,12 @@ export function PaymentResult({
       <div className="flex flex-wrap gap-2">
         {stage === 'stopped' && !credited && (
           <button type="button" className="btn-secondary btn-sm" onClick={retry}>
-            Перевірити ще раз
+            {t('shared.payment.checkAgain')}
           </button>
         )}
         {done && creditedAction}
         <button type="button" className="btn-secondary btn-sm" onClick={onDismiss}>
-          Зрозуміло
+          {t('shared.payment.dismiss')}
         </button>
       </div>
     </div>

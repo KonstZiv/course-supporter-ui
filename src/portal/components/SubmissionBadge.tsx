@@ -1,14 +1,16 @@
 import type { PortalSubmissionOverlay } from '../types'
 import { isReviewed, presentationLabel, stateTone } from '../presentationPhrases'
+import { useLanguage, useT, type Translate } from '../../i18n/LanguageContext'
 
 // The student's best usable result, as one phrase, or null when no attempt has
 // earned one yet. ``best`` is the backend's own pick (highest-scored REVIEWED
 // attempt with a non-null score — pending and null-score attempts never
 // compete), so this only formats it.
-function bestResult(overlay: PortalSubmissionOverlay): string | null {
+function bestResult(t: Translate, overlay: PortalSubmissionOverlay): string | null {
   const best = overlay.best
   if (!best || best.score === null) return null
-  return `${best.score}/100 · ${best.verdict?.passed ? 'зараховано' : 'не зараховано'}`
+  const verdict = best.verdict?.passed ? t('portal.verdict.passed') : t('portal.verdict.notPassed')
+  return `${best.score}/100 · ${verdict}`
 }
 
 // Read-only submission overlay badge for a task node (Phase 6 / T4b; c2 +
@@ -22,11 +24,13 @@ function bestResult(overlay: PortalSubmissionOverlay): string | null {
 // in the tone of the state, because "what is happening now" and "what I have
 // earned so far" are both true and neither replaces the other.
 export function SubmissionBadge({ overlay }: { overlay: PortalSubmissionOverlay }) {
+  const language = useLanguage()
+  const t = useT()
   const base = 'text-xs px-2 py-0.5 rounded-full whitespace-nowrap'
-  const result = bestResult(overlay)
+  const result = bestResult(t, overlay)
 
   if (overlay.submission_status === 'none') {
-    return <span className={`${base} bg-canvas-dark text-ink-muted`}>Не здано</span>
+    return <span className={`${base} bg-canvas-dark text-ink-muted`}>{t('portal.badge.notSubmitted')}</span>
   }
   const presentation = overlay.presentation
   const state = presentation?.state
@@ -39,7 +43,7 @@ export function SubmissionBadge({ overlay }: { overlay: PortalSubmissionOverlay 
     // The number that rides along is an EARLIER attempt's, which is why it is
     // never shown alone here. DISTINCT from the reviewed branch below, where
     // "{score}/100 · не зараховано" means checked-and-not-passed.
-    const label = presentationLabel(presentation)
+    const label = presentationLabel(language, presentation)
     return (
       <span className={`${base} ${stateTone(state)}`}>
         {result ? `${label} · ${result}` : label}
@@ -53,5 +57,9 @@ export function SubmissionBadge({ overlay }: { overlay: PortalSubmissionOverlay 
     const tone = passed ? 'bg-forest-pale text-forest' : 'bg-coral-pale text-coral'
     return <span className={`${base} ${tone}`}>{result}</span>
   }
-  return <span className={`${base} bg-forest-pale text-forest`}>Перевірено</span>
+  return (
+    <span className={`${base} bg-forest-pale text-forest`}>
+      {t('portal.state.label.reviewed')}
+    </span>
+  )
 }

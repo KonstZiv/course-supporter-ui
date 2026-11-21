@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useT } from '../../i18n/LanguageContext'
 import { Play } from 'lucide-react'
 
 // Click-to-play YouTube embed (privacy, З1). Until the student presses the
@@ -24,6 +25,7 @@ export function YoutubeClickToPlay({
   title: string
 }) {
   const [clicked, setClicked] = useState(false)
+  const t = useT()
 
   return (
     <div className="aspect-video">
@@ -43,16 +45,13 @@ export function YoutubeClickToPlay({
           <button
             type="button"
             className="btn-primary"
-            aria-label={`Відтворити відео: ${title}`}
+            aria-label={t('portal.youtube.playLabel', { title })}
             onClick={() => setClicked(true)}
           >
             <Play size={16} />
-            Відтворити відео
+            {t('portal.youtube.play')}
           </button>
-          <p className="text-sm text-ink-light max-w-md">
-            Відео розміщено на YouTube. Після натискання ваш браузер звернеться до
-            серверів YouTube (Google).
-          </p>
+          <p className="text-sm text-ink-light max-w-md">{t('portal.youtube.notice')}</p>
         </div>
       )}
     </div>

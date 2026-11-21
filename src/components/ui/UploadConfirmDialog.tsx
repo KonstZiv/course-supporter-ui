@@ -11,12 +11,14 @@ import type {
   MaterialRole,
   ProcessingEstimateRequest,
 } from '../../types/api'
-import { TASK_TYPE_OPTIONS, formatAudioDuration } from './uploadConfirmMeta'
+import { formatAudioDuration, taskTypeOptions } from './uploadConfirmMeta'
 import { estimateProcessing } from '../../api/billing'
 import { useActionPrice, type PriceRequest } from '../../hooks/useActionPrice'
 import { readMaterialFeatures } from '../../utils/materialFeatures'
 import { isMaterialEstimateKind } from '../../utils/priceEstimate'
 import { PriceCard } from '../billing/PriceCard'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
+import { translateRich } from '../../i18n/translate'
 
 // «Тип документа» — the pre-upload classification dialog (defect #10 +
 // task-code-materials R6). Extracted from NodeDetailPanel to components/ui/
@@ -127,6 +129,8 @@ export function UploadConfirmDialog({
   onConfirm,
   onCancel,
 }: UploadConfirmProps) {
+  const language = useLanguage()
+  const t = useT()
   const [role, setRole] = useState<MaterialRole | null>(null)
   const [taskType, setTaskType] = useState<AssignmentType | null>(null)
   const [asCode, setAsCode] = useState(false)
@@ -182,7 +186,7 @@ export function UploadConfirmDialog({
     ? linkUrl.slice(0, 50) + (linkUrl.length > 50 ? '…' : '')
     : single
       ? `${single.name}${single.durationSec != null ? ` ${formatAudioDuration(single.durationSec)}` : ''}`
-      : `${files.length} файлів`
+      : t('panel.upload.dialog.filesCount', { count: files.length })
 
   // Code axis surfaces (files only — a link is never code).
   const routedCode = !linkUrl && files.some((f) => f.sourceType === 'code')
@@ -192,12 +196,14 @@ export function UploadConfirmDialog({
   const codeActive = routedCode || asCode
 
   return (
-    <Modal open={open} onClose={handleCancel} title="Тип документа">
+    <Modal open={open} onClose={handleCancel} title={t('panel.upload.dialog.title')}>
       <p className="text-sm text-ink-muted mb-1">
-        Завантаження: <span className="font-medium text-ink">{label}</span>
+        {translateRich(language, 'panel.upload.dialog.uploading', {
+          label: <span className="font-medium text-ink">{label}</span>,
+        })}
       </p>
       <p className="text-sm text-ink-muted mb-4">
-        Оберіть тип документа перед завантаженням:
+        {t('panel.upload.dialog.choosePrompt')}
       </p>
 
       <div className={`flex gap-3 ${testFromYaml ? 'mb-2' : 'mb-6'}`}>
@@ -216,9 +222,9 @@ export function UploadConfirmDialog({
           `}
         >
           <span className="text-2xl block mb-1">📚</span>
-          <span className="text-sm font-medium text-ink">Навчальний</span>
+          <span className="text-sm font-medium text-ink">{t('panel.upload.role.educationalTitle')}</span>
           <span className="text-[11px] text-ink-muted block mt-0.5">
-            Доносить інформацію студенту
+            {t('panel.upload.role.educationalDesc')}
           </span>
         </button>
         <button
@@ -236,21 +242,21 @@ export function UploadConfirmDialog({
           `}
         >
           <span className="text-2xl block mb-1">📋</span>
-          <span className="text-sm font-medium text-ink">Методичний</span>
+          <span className="text-sm font-medium text-ink">{t('panel.upload.role.methodologicalTitle')}</span>
           <span className="text-[11px] text-ink-muted block mt-0.5">
-            Декларує наміри курсу
+            {t('panel.upload.role.methodologicalDesc')}
           </span>
         </button>
       </div>
       {testFromYaml && (
         <p id={`${hintId}-role`} className="text-xs text-ink-muted mb-6">
-          Тест завжди навчальний.
+          {t('panel.upload.dialog.testAlwaysEducational')}
         </p>
       )}
 
       <div className="mb-4">
         <p className="text-sm text-ink-muted mb-2">
-          Якщо документ — це конкретне завдання, оберіть тип:
+          {t('panel.upload.taskType.prompt')}
         </p>
         <div className="grid grid-cols-4 gap-2">
           <button
@@ -262,9 +268,9 @@ export function UploadConfirmDialog({
                 : 'border-canvas-dark text-ink-muted hover:border-navy/40'}
             `}
           >
-            Не завдання
+            {t('panel.upload.taskType.notTask')}
           </button>
-          {TASK_TYPE_OPTIONS.map((opt) => (
+          {taskTypeOptions(language).map((opt) => (
             <button
               key={opt.value}
               onClick={() => setTaskType(opt.value)}
@@ -291,10 +297,9 @@ export function UploadConfirmDialog({
             className="mt-0.5"
           />
           <span className="text-sm text-ink">
-            Це код-матеріал
+            {t('panel.upload.code.label')}
             <span className="block text-[11px] text-ink-muted">
-              HTML-файл буде взято дослівно як приклад коду, без витягання
-              прози (стаття ↔ код розрізняється лише вашим наміром).
+              {t('panel.upload.code.desc')}
             </span>
           </span>
         </label>
@@ -304,25 +309,19 @@ export function UploadConfirmDialog({
           so it replaces the code note. */}
       {testFromYaml ? (
         <div className="rounded-lg bg-navy/5 border border-navy/15 p-3 mb-4 text-[12px] text-ink-muted">
-          Тест із файла YAML: питання, варіанти й позначки буде прочитано з
-          файла, сам файл не зберігається. Студенти побачать тест лише після
-          публікації; відкрити його можна кнопкою «Відкрити тест» у рядку
-          матеріалу.
+          {t('panel.upload.note.testFromYaml')}
         </div>
       ) : testRefused ? (
         <div
           id={`${hintId}-refused`}
           className="rounded-lg bg-navy/5 border border-navy/15 p-3 mb-4 text-[12px] text-ink-muted"
         >
-          Тест завантажується лише файлом YAML (.yaml чи .yml). Оберіть інший
-          вид завдання або завантажте файл YAML.
+          {t('panel.upload.note.testRefused')}
         </div>
       ) : (
         codeActive && (
           <div className="rounded-lg bg-navy/5 border border-navy/15 p-3 mb-4 text-[12px] text-ink-muted">
-            Код-матеріал: ваші власні файли увійдуть до уроку повністю. Типові й
-            службові файли — залежності, стандартні бібліотеки, згенеровані й
-            завеликі — залишаться лише згадкою в структурі проєкту.
+            {t('panel.upload.note.codeActive')}
           </div>
         )
       )}
@@ -335,7 +334,7 @@ export function UploadConfirmDialog({
 
       <div className="flex justify-end gap-2">
         <button className="btn-secondary btn-sm" onClick={handleCancel}>
-          Скасувати
+          {t('panel.upload.dialog.cancel')}
         </button>
         <button
           className="btn-primary btn-sm"
@@ -343,7 +342,7 @@ export function UploadConfirmDialog({
           disabled={chosenRole === null || testRefused || !price.ready}
           aria-describedby={testRefused ? `${hintId}-refused` : undefined}
         >
-          Завантажити
+          {t('panel.upload.dialog.confirm')}
         </button>
       </div>
     </Modal>

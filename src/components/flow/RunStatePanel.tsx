@@ -1,9 +1,11 @@
 import { AlertTriangle, Info, X } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { JobListItemResponse, NodeSummaryRunError } from '../../types/api'
-import { JOB_STATE_LABEL, jobStateWordClass } from '../../utils/stateVocabulary'
+import { jobStateLabel, jobStateWordClass } from '../../utils/stateVocabulary'
 import { workProgressBar } from '../../utils/workProgress'
 import { ProgressMeter } from '../activity/ProgressMeter'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
+import { Message } from '../../i18n/Message'
 
 // The card reads a work-list row (Д1/В2 fold), whose stage_progress is the
 // untyped run-state JSONB. Narrow only the two pieces this card needs — the run
@@ -34,6 +36,8 @@ interface Props {
  * DD-3.2.2-B): ``reason`` verbatim, ``error_class`` never interpreted.
  */
 export function RunStatePanel({ job, nodeTitle, onDismiss }: Props) {
+  const language = useLanguage()
+  const t = useT()
   const sp = job.stage_progress
   const state = job.job_state
   const runLabel = nodeTitle?.trim() || vertexIdOf(sp)?.slice(0, 8) || '—'
@@ -57,20 +61,20 @@ export function RunStatePanel({ job, nodeTitle, onDismiss }: Props) {
       <div className="p-4 border-b border-canvas-dark/30 flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <p className="text-xs text-ink-muted mb-1.5">
-            Генерація опису · «{runLabel}»
+            {t('panel.flow.runState.title', { name: runLabel })}
           </p>
           {/* Work-state word, not a filled chip (§3 formula, В4): motion for a
               live run, muting for a finished one, alarm colour as text for an
               error. Colour belongs to the material phase, never to this word. */}
           <span className={clsx('text-xs font-medium', jobStateWordClass(state))}>
-            {JOB_STATE_LABEL[state]}
+            {jobStateLabel(language, state)}
           </span>
         </div>
         {isDone && (
           <button
             onClick={onDismiss}
-            aria-label="Закрити"
-            title="Закрити"
+            aria-label={t('panel.flow.runState.close')}
+            title={t('panel.flow.runState.close')}
             className="p-1.5 rounded-lg hover:bg-canvas-dark transition-colors shrink-0"
           >
             <X size={15} className="text-ink-muted" />
@@ -102,8 +106,17 @@ export function RunStatePanel({ job, nodeTitle, onDismiss }: Props) {
                     <Info size={13} className="text-amber shrink-0 mt-0.5" />
                   )}
                   <span className="min-w-0 break-words">
-                    {!isError && <span className="font-medium">Очікувано: </span>}
-                    {e.reason}
+                    {!isError ? (
+                      <Message
+                        id="panel.flow.runState.expectedReason"
+                        values={{
+                          reason: e.reason,
+                          b: (chunks) => <span className="font-medium">{chunks}</span>,
+                        }}
+                      />
+                    ) : (
+                      e.reason
+                    )}
                   </span>
                 </li>
               )

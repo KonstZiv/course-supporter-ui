@@ -5,6 +5,7 @@ import {
   type LetterContext,
   supportLetter,
 } from '../../utils/contactAdmin'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 
 interface ContactAdminProps {
   message?: string | null
@@ -19,6 +20,9 @@ export function ContactAdmin({
   fallback,
   compact = false,
 }: ContactAdminProps) {
+  const language = useLanguage()
+  const t = useT()
+
   const [showFallback, setShowFallback] = useState(fallback === 'always')
   const [copyAddressState, setCopyAddressState] = useState<'idle' | 'copied'>(
     'idle',
@@ -37,11 +41,11 @@ export function ContactAdmin({
   const [now] = useState(() => new Date())
 
   const letter = useMemo(
-    () => supportLetter({ message, context, page, now }),
-    [message, context, page, now],
+    () => supportLetter(language, { message, context, page, now }),
+    [language, message, context, page, now],
   )
 
-  if (message !== undefined && !asksToWriteToAdmin(message)) {
+  if (message !== undefined && !asksToWriteToAdmin(language, message)) {
     return null
   }
 
@@ -93,13 +97,13 @@ export function ContactAdmin({
         }
       >
         <Mail size={compact ? 12 : 14} />
-        Написати адміністраторові платформи
+        {t('panel.contactAdmin.button')}
       </a>
 
       {showFallback && (
         <div className="text-xs text-ink-light space-y-2 pt-1">
           <div>
-            Не відкрилася поштова програма? Напишіть на{' '}
+            {t('panel.contactAdmin.notOpenedNote')}{' '}
             <span className="select-all font-mono font-medium text-ink">
               {letter.address}
             </span>
@@ -112,8 +116,8 @@ export function ContactAdmin({
             >
               <Copy size={14} />
               {copyAddressState === 'copied'
-                ? 'Скопійовано!'
-                : 'Скопіювати адресу'}
+                ? t('panel.contactAdmin.copied')
+                : t('panel.contactAdmin.copyAddress')}
             </button>
             <button
               type="button"
@@ -122,26 +126,26 @@ export function ContactAdmin({
             >
               <Copy size={14} />
               {copyBodyState === 'copied'
-                ? 'Скопійовано!'
-                : 'Скопіювати текст листа'}
+                ? t('panel.contactAdmin.copied')
+                : t('panel.contactAdmin.copyBody')}
             </button>
           </div>
           {copyFailed && (
             <div className="space-y-1 pt-1">
               <p className="text-xs text-ink-light">
-                Не вдалося скопіювати — виділіть текст і скопіюйте вручну
+                {t('panel.contactAdmin.copyFailed')}
               </p>
               <label
                 htmlFor="contact-admin-body-textarea"
                 className="block text-xs font-medium text-ink-light"
               >
-                Текст листа
+                {t('panel.contactAdmin.bodyTitle')}
               </label>
               <textarea
                 id="contact-admin-body-textarea"
                 readOnly
                 value={letter.body}
-                aria-label="Текст листа"
+                aria-label={t('panel.contactAdmin.bodyTitle')}
                 rows={5}
                 className="w-full text-xs font-mono p-2 border border-canvas-dark rounded-lg text-ink bg-canvas select-all"
               />

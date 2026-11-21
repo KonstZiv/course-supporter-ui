@@ -9,14 +9,14 @@ function file(name: string, size = 16): File {
 
 describe('validateUploadFiles (Е2 pre-send checks)', () => {
   it('accepts normal files with no rejection message', async () => {
-    const r = await validateUploadFiles([file('notes.txt'), file('slides.pdf')])
+    const r = await validateUploadFiles('uk', [file('notes.txt'), file('slides.pdf')])
     expect(r.accepted.map((f) => f.name)).toEqual(['notes.txt', 'slides.pdf'])
     expect(r.rejectionMessage).toBeNull()
   })
 
   it('rejects an oversized presentation but keeps the rest', async () => {
     const big = file('deck.pptx', 51 * 1024 * 1024)
-    const r = await validateUploadFiles([big, file('ok.txt')])
+    const r = await validateUploadFiles('uk', [big, file('ok.txt')])
     expect(r.accepted.map((f) => f.name)).toEqual(['ok.txt'])
     expect(r.rejectionMessage).toContain(
       'deck.pptx перевищує ліміт 50 МБ для презентацій',
@@ -24,7 +24,7 @@ describe('validateUploadFiles (Е2 pre-send checks)', () => {
   })
 
   it('a presentation at the limit is accepted (boundary)', async () => {
-    const r = await validateUploadFiles([file('deck.pdf', 50 * 1024 * 1024)])
+    const r = await validateUploadFiles('uk', [file('deck.pdf', 50 * 1024 * 1024)])
     expect(r.accepted.map((f) => f.name)).toEqual(['deck.pdf'])
     expect(r.rejectionMessage).toBeNull()
   })
@@ -64,7 +64,7 @@ describe('validateUploadFiles — video mirrors (Е10)', () => {
   afterEach(() => vi.restoreAllMocks())
 
   it('rejects a video over 1 GiB with the ratified text', async () => {
-    const r = await validateUploadFiles([file('big.mp4', 1024 * 1024 * 1024 + 1)])
+    const r = await validateUploadFiles('uk', [file('big.mp4', 1024 * 1024 * 1024 + 1)])
     expect(r.accepted).toEqual([])
     expect(r.rejectionMessage).toContain(
       'big.mp4: відео завелике для надсилання з браузера — до 1 ГБ',
@@ -73,7 +73,7 @@ describe('validateUploadFiles — video mirrors (Е10)', () => {
 
   it('rejects a video over 150 minutes with the ratified text', async () => {
     reportDuration = 151 * 60
-    const r = await validateUploadFiles([file('long.mp4', 10 * 1024 * 1024)])
+    const r = await validateUploadFiles('uk', [file('long.mp4', 10 * 1024 * 1024)])
     expect(r.accepted).toEqual([])
     expect(r.rejectionMessage).toContain(
       'Система зараз обробляє відео до 150 хвилин. Будь ласка, розділіть на коротші частини:',
@@ -83,14 +83,14 @@ describe('validateUploadFiles — video mirrors (Е10)', () => {
 
   it('accepts a normal-length video', async () => {
     reportDuration = 10 * 60
-    const r = await validateUploadFiles([file('ok.mp4', 10 * 1024 * 1024)])
+    const r = await validateUploadFiles('uk', [file('ok.mp4', 10 * 1024 * 1024)])
     expect(r.accepted.map((f) => f.name)).toEqual(['ok.mp4'])
     expect(r.rejectionMessage).toBeNull()
   })
 
   it('fails open when the metadata is unreadable (skip, not block)', async () => {
     fireError = true
-    const r = await validateUploadFiles([file('weird.mkv', 10 * 1024 * 1024)])
+    const r = await validateUploadFiles('uk', [file('weird.mkv', 10 * 1024 * 1024)])
     expect(r.accepted.map((f) => f.name)).toEqual(['weird.mkv'])
     expect(r.rejectionMessage).toBeNull()
   })

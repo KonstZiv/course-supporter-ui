@@ -27,6 +27,8 @@ import { encodingDisplayName, shouldReportEncoding } from '../encodingNames'
 import { touchErrorMessage } from '../submissionCodes'
 import { costOverReserve } from '../unitsTexts'
 import { BuyUnitsLink } from './billing/UnitsCost'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
+import { Message } from '../../i18n/Message'
 
 // A review held for the student's OWN units: they can buy them, and it then
 // goes on by itself. Held for the author's — no action of theirs.
@@ -39,17 +41,25 @@ const HELD_FOR_OWN_UNITS = 'awaiting_funds'
 // The hygiene level is not in the contract, so it is not shown. Absent for a
 // non-project submission (delta === null on the parent).
 function DeltaReceipt({ delta }: { delta: PortalDeltaReceipt }) {
+  const t = useT()
   return (
     <div className="p-3 rounded-xl bg-canvas-dark/40 text-sm text-ink space-y-1">
-      <p className="font-medium">Порівняння з базовим проєктом</p>
+      <p className="font-medium">{t('portal.review.delta.title')}</p>
       <p className="text-ink-light">
-        Змінено {delta.changed}, нових {delta.new}, видалено {delta.deleted}.
+        {t('portal.review.delta.counts', {
+          changed: String(delta.changed),
+          new: String(delta.new),
+          deleted: String(delta.deleted),
+        })}
       </p>
       {delta.base_version !== null && (
         <p className="text-xs text-ink-muted">
           {delta.is_stale
-            ? `Базовий проєкт v${delta.base_version} — автор оновив до v${delta.latest_version}.`
-            : `Базовий проєкт v${delta.base_version} (актуальна версія).`}
+            ? t('portal.review.delta.stale', {
+                base: String(delta.base_version),
+                latest: String(delta.latest_version),
+              })
+            : t('portal.review.delta.current', { base: String(delta.base_version) })}
         </p>
       )}
     </div>
@@ -68,21 +78,21 @@ function DeltaReceipt({ delta }: { delta: PortalDeltaReceipt }) {
 // names. Each line is the file, what happened to it in a sentence, and the size
 // — because "not read" invites "how much did I lose".
 function NotOpenedBlock({ entries }: { entries: PortalNotOpened[] }) {
+  const language = useLanguage()
+  const t = useT()
   if (entries.length === 0) return null
   return (
     <div className="p-3 rounded-xl bg-amber-pale/60 text-sm space-y-1">
-      <p className="font-medium text-ink">Не прочитано під час перевірки</p>
-      <p className="text-ink-light">
-        Ці файли з вашого архіву не розглядалися — рецензія на них не спирається.
-      </p>
+      <p className="font-medium text-ink">{t('portal.review.notOpened.title')}</p>
+      <p className="text-ink-light">{t('portal.review.notOpened.lead')}</p>
       <ul className="space-y-0.5 pt-1">
         {entries.map((entry) => (
           <li key={entry.path} className="text-ink-light">
             <span className="font-medium text-ink break-all">{entry.path}</span>
             {' — '}
-            {notOpenedPhrase(entry)}{' '}
+            {notOpenedPhrase(language, entry)}{' '}
             <span className="text-ink-muted whitespace-nowrap">
-              ({formatFileSize(entry.size)})
+              ({formatFileSize(language, entry.size)})
             </span>
           </li>
         ))}
@@ -106,15 +116,17 @@ function NotOpenedBlock({ entries }: { entries: PortalNotOpened[] }) {
 // saves the next file differently. That is the one action available, and it
 // is not available from anywhere else in the interface.
 function RecoveredEncodingBlock({ encoding }: { encoding: string | null }) {
+  const language = useLanguage()
   if (!shouldReportEncoding(encoding)) return null
   return (
     <div className="p-3 rounded-xl bg-amber-pale/60 text-sm text-ink-light">
-      Файл був збережений не в UTF-8 — кодування розпізнано як{' '}
-      <span className="font-medium text-ink">
-        {encodingDisplayName(encoding as string)}
-      </span>{' '}
-      і прочитано; рецензія складена за цим прочитанням. Щоб уникнути помилок
-      надалі, зберігайте файли в UTF-8.
+      <Message
+        id="portal.review.recoveredEncoding"
+        values={{
+          encoding: encodingDisplayName(language, encoding as string),
+          name: (chunks) => <span className="font-medium text-ink">{chunks}</span>,
+        }}
+      />
     </div>
   )
 }
@@ -123,10 +135,11 @@ function RecoveredEncodingBlock({ encoding }: { encoding: string | null }) {
 // Informative, not an error: the review is whole, the student paid the reserve
 // and no more. Only for the kind this build knows; any other says nothing.
 function BillingNote({ note }: { note: PortalBillingNote | null }) {
+  const language = useLanguage()
   if (note?.kind !== 'cost_over_reserve') return null
   return (
     <div role="note" className="p-3 rounded-xl bg-canvas-dark/40 text-sm text-ink">
-      {costOverReserve(note.cost_units, note.charged_units)}
+      {costOverReserve(language, note.cost_units, note.charged_units)}
     </div>
   )
 }
@@ -155,6 +168,8 @@ function ReviewTouch({
   const [touch, setTouch] = useState<FeedbackTouch | null>(initial)
   const [saving, setSaving] = useState<FeedbackValue | null>(null)
   const [error, setError] = useState('')
+  const language = useLanguage()
+  const t = useT()
 
   useEffect(() => {
     setTouch(initial)
@@ -169,20 +184,20 @@ function ReviewTouch({
       .then((stored) => setTouch(stored))
       .catch((err) => {
         if (err instanceof PortalApiError && err.status === 401) return // centralised
-        setError(touchErrorMessage(err))
+        setError(touchErrorMessage(language, err))
       })
       .finally(() => setSaving(null))
   }
 
   const chosen = touch?.value ?? null
   const options: { value: FeedbackValue; label: string }[] = [
-    { value: 'helped', label: 'Допомогла' },
-    { value: 'not_helped', label: 'Не допомогла' },
+    { value: 'helped', label: t('portal.review.touch.helped') },
+    { value: 'not_helped', label: t('portal.review.touch.notHelped') },
   ]
 
   return (
     <div className="pt-3 border-t border-ink-muted/15 space-y-2">
-      <div className="text-sm text-ink">Чи допомогла вам ця рецензія?</div>
+      <div className="text-sm text-ink">{t('portal.review.touch.question')}</div>
       <div className="flex items-center gap-2">
         {options.map(({ value, label }) => (
           <button
@@ -206,7 +221,7 @@ function ReviewTouch({
       </div>
       {chosen !== null && error === '' && (
         <div className="text-xs text-ink-muted">
-          Дякуємо! Відповідь збережено — її можна змінити будь-коли.
+          {t('portal.review.touch.thanks')}
         </div>
       )}
       {error !== '' && <div className="text-xs text-coral">{error}</div>}
@@ -244,13 +259,15 @@ export function PortalReviewDetail({ row }: { row: PortalSubmissionListItem }) {
   const { id: submissionId, presentation } = row
   const reviewed = isReviewed(presentation.state)
   const [detail, setDetail] = useState<PortalSubmissionDetail | null>(null)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(false)
+  const language = useLanguage()
+  const t = useT()
 
   useEffect(() => {
     if (!reviewed) return // every other state renders from the row alone
     let active = true
     setDetail(null)
-    setError('')
+    setError(false)
     portalApi
       .submission(submissionId)
       .then((d) => {
@@ -259,7 +276,7 @@ export function PortalReviewDetail({ row }: { row: PortalSubmissionListItem }) {
       .catch((err) => {
         if (!active) return
         if (err instanceof PortalApiError && err.status === 401) return // centralised
-        setError('Не вдалося завантажити рецензію.')
+        setError(true)
       })
     return () => {
       active = false
@@ -275,12 +292,12 @@ export function PortalReviewDetail({ row }: { row: PortalSubmissionListItem }) {
     // ``rejection`` is still consulted first: its articles know the FILE, and
     // the state cannot.
     const phrase =
-      (row.rejection && rejectionPhrase(row.rejection)) ??
-      presentationPhrase(presentation)
+      (row.rejection && rejectionPhrase(language, row.rejection)) ??
+      presentationPhrase(language, presentation)
     return (
       <div className="space-y-3">
         <div className={`p-3 rounded-xl text-sm ${stateTone(presentation.state)}`}>
-          {presentationLabel(presentation)} — {phrase}
+          {presentationLabel(language, presentation)} — {phrase}
           {presentation.reason_code === HELD_FOR_OWN_UNITS && (
             <p className="mt-2">
               <BuyUnitsLink />
@@ -301,7 +318,9 @@ export function PortalReviewDetail({ row }: { row: PortalSubmissionListItem }) {
       <div className="space-y-3">
         <RecoveredEncodingBlock encoding={row.recovered_encoding} />
         <NotOpenedBlock entries={row.not_opened} />
-        <div className="p-3 rounded-xl bg-coral-pale text-coral text-sm">{error}</div>
+        <div className="p-3 rounded-xl bg-coral-pale text-coral text-sm">
+          {t('portal.review.loadFailed')}
+        </div>
       </div>
     )
   }
@@ -312,7 +331,7 @@ export function PortalReviewDetail({ row }: { row: PortalSubmissionListItem }) {
         <NotOpenedBlock entries={row.not_opened} />
         <div className="flex items-center gap-2 text-ink-muted text-sm py-3">
           <Loader2 size={16} className="animate-spin" />
-          Завантаження рецензії…
+          {t('portal.review.loading')}
         </div>
       </div>
     )
@@ -332,7 +351,7 @@ export function PortalReviewDetail({ row }: { row: PortalSubmissionListItem }) {
               passed ? 'bg-forest-pale text-forest' : 'bg-coral-pale text-coral'
             }`}
           >
-            {passed ? 'зараховано' : 'не зараховано'}
+            {passed ? t('portal.verdict.passed') : t('portal.verdict.notPassed')}
           </span>
         </div>
       )}
@@ -340,7 +359,7 @@ export function PortalReviewDetail({ row }: { row: PortalSubmissionListItem }) {
       {detail.review_markdown ? (
         <MarkdownContent markdown={detail.review_markdown} />
       ) : (
-        <div className="text-sm text-ink-muted">Рецензію ще не сформовано.</div>
+        <div className="text-sm text-ink-muted">{t('portal.review.notYet')}</div>
       )}
       {detail.review_markdown && (
         <RemarkThreads

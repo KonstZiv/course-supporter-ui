@@ -1,18 +1,38 @@
 // Shared non-component exports of the «Тип документа» dialog (kept out of
 // UploadConfirmDialog.tsx so react-refresh sees a components-only file).
 
+import type { Language } from '../../i18n/languages'
+import { translate } from '../../i18n/translate'
 import type { AssignmentType } from '../../types/api'
 
-export const TASK_TYPE_OPTIONS: {
+export function taskTypeOptions(language: Language): {
   value: AssignmentType
   label: string
   hint: string
-}[] = [
-  { value: 'test', label: 'Тест', hint: '5–10 хв, quiz' },
-  { value: 'short_task', label: 'Коротке завдання', hint: '20–60 хв' },
-  { value: 'task', label: 'Завдання', hint: 'мульти-крок' },
-  { value: 'project', label: 'Проєкт', hint: '1–2 тижні' },
-]
+}[] {
+  return [
+    {
+      value: 'test',
+      label: translate(language, 'panel.upload.taskType.test.label'),
+      hint: translate(language, 'panel.upload.taskType.test.hint'),
+    },
+    {
+      value: 'short_task',
+      label: translate(language, 'panel.upload.taskType.shortTask.label'),
+      hint: translate(language, 'panel.upload.taskType.shortTask.hint'),
+    },
+    {
+      value: 'task',
+      label: translate(language, 'panel.upload.taskType.task.label'),
+      hint: translate(language, 'panel.upload.taskType.task.hint'),
+    },
+    {
+      value: 'project',
+      label: translate(language, 'panel.upload.taskType.project.label'),
+      hint: translate(language, 'panel.upload.taskType.project.hint'),
+    },
+  ]
+}
 
 export function formatAudioDuration(seconds: number): string {
   const total = Math.floor(seconds)

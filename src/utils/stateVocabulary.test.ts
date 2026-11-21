@@ -75,11 +75,11 @@ describe('PHASE_VOCAB — material phase axis', () => {
 
 describe('phaseVocab — total lookup', () => {
   it('returns the entry for a known phase', () => {
-    expect(phaseVocab('ready')).toBe(PHASE_VOCAB.ready)
+    expect(phaseVocab('uk', 'ready')).toBe(PHASE_VOCAB.ready)
   })
 
   it('falls back to a muted "—" chip for an unknown phase (never crashes)', () => {
-    const entry = phaseVocab('brand_new_phase' as ProcessingPhase)
+    const entry = phaseVocab('uk', 'brand_new_phase' as ProcessingPhase)
     expect(entry.label).toBe('—')
     expect(entry.tone).toBe('muted')
   })
@@ -87,7 +87,7 @@ describe('phaseVocab — total lookup', () => {
 
 describe('pillVocab — a canvas pill', () => {
   it('keeps a test neutral and names it when the tree does not say whether it is published (an older backend)', () => {
-    expect(pillVocab({ source_type: 'test_object', processing_phase: 'ready' })).toEqual({
+    expect(pillVocab('uk', { source_type: 'test_object', processing_phase: 'ready' })).toEqual({
       label: 'тест',
       tone: 'muted',
       pulse: false,
@@ -100,14 +100,14 @@ describe('pillVocab — a canvas pill', () => {
     ['changed', 'Є неопубліковані зміни', 'awaiting'],
   ] as const)('gives a %s test the editor\'s word %s', (state, label, tone) => {
     expect(
-      pillVocab({ source_type: 'test_object', processing_phase: 'ready', test_state: state }),
+      pillVocab('uk', { source_type: 'test_object', processing_phase: 'ready', test_state: state }),
     ).toEqual({ label, tone, pulse: false })
   })
 
   it('keeps a test with a null or unknown state neutral', () => {
     for (const test_state of [null, 'brand_new' as TestState]) {
       expect(
-        pillVocab({ source_type: 'test_object', processing_phase: 'ready', test_state }).label,
+        pillVocab('uk', { source_type: 'test_object', processing_phase: 'ready', test_state }).label,
       ).toBe('тест')
     }
   })
@@ -119,7 +119,7 @@ describe('pillVocab — a canvas pill', () => {
   })
 
   it('gives any other material its phase', () => {
-    expect(pillVocab({ source_type: 'text', processing_phase: 'ready' })).toBe(
+    expect(pillVocab('uk', { source_type: 'text', processing_phase: 'ready' })).toBe(
       PHASE_VOCAB.ready,
     )
   })
@@ -127,17 +127,17 @@ describe('pillVocab — a canvas pill', () => {
 
 describe('a test in the tree — hint and panel chips (task Б2)', () => {
   it('lower-cases a test state after the dash, leaving the editor\'s word as it is', () => {
-    expect(pillHint('Змінні', { label: TEXTS.notPublished, tone: 'muted', pulse: false })).toBe(
+    expect(pillHint('uk', 'Змінні', { label: TEXTS.notPublished, tone: 'muted', pulse: false })).toBe(
       'Змінні — не опубліковано',
     )
     expect(TEXTS.notPublished).toBe('Не опубліковано')
-    expect(pillHint('Змінні', { label: 'тест', tone: 'muted', pulse: false })).toBe(
+    expect(pillHint('uk', 'Змінні', { label: 'тест', tone: 'muted', pulse: false })).toBe(
       'Змінні — тест',
     )
   })
 
   it('lower-cases a material\'s phase word after the dash too, leaving the vocabulary as it is', () => {
-    expect(pillHint('lecture.md', PHASE_VOCAB.ready)).toBe('lecture.md — готово')
+    expect(pillHint('uk', 'lecture.md', PHASE_VOCAB.ready)).toBe('lecture.md — готово')
     expect(PHASE_VOCAB.ready.label).toBe('Готово')
   })
 

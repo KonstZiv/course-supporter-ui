@@ -51,13 +51,13 @@ describe('authoredRejectionMessage', () => {
 
   it('maps a SECURITY_REJECTED to the human dictionary by category', () => {
     expect(authoredRejectionMessage(security('suspicious_unicode'))).toBe(
-      ingestErrorMessage('suspicious_unicode'),
+      ingestErrorMessage('uk', 'suspicious_unicode'),
     )
   })
 
   it('degrades an unknown security category to the generic phrase, never raw', () => {
     const msg = authoredRejectionMessage(security('brand_new_category'))
-    expect(msg).toBe(ingestErrorMessage(null))
+    expect(msg).toBe(ingestErrorMessage('uk', null))
     expect(msg).not.toContain('raw stage-1 text')
   })
 
@@ -83,7 +83,7 @@ describe('authoredRejectionMessage', () => {
       },
     })
     const msg = authoredRejectionMessage(err)
-    expect(msg).toBe(ingestErrorMessage(null))
+    expect(msg).toBe(ingestErrorMessage('uk', null))
     expect(msg).not.toContain('archive uploads')
   })
 
@@ -109,7 +109,7 @@ describe('authoredRejectionMessage', () => {
         details: "source_type 'test_object' is not for a client to name",
       },
     })
-    expect(authoredRejectionMessage(reserved)).toBe(ingestErrorMessage(null))
+    expect(authoredRejectionMessage(reserved)).toBe(ingestErrorMessage('uk', null))
   })
 
   it('returns null for a code-less envelope (the caller fallback takes over)', () => {

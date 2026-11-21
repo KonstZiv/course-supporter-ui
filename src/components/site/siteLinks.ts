@@ -1,22 +1,39 @@
+import type { Language } from '../../i18n/languages'
+
 // Addresses of the public site (pythoncourse.me) and of the documentation
 // site that the neutral pages — the author sign-in page today — link to.
 // They are plain links the visitor follows, never requests the app makes
 // (src/privacy/external-allowlist.json).
 
-/** Home page of the public site; the logo in SiteHeader leads here. */
-export const SITE_HOME_URL = 'https://pythoncourse.me/uk/'
+const SCHEME = 'https'
+const SITE_HOST = 'pythoncourse.me'
+const DOCS_HOST = 'about.pythoncourse.me'
 
-/** "How to become an author". Today the site's home page; the address of its own page goes here once it exists. */
-export const BECOME_AUTHOR_URL = 'https://pythoncourse.me/uk/'
+export const SITE_LANGUAGES: readonly Language[] = ['uk', 'en']
 
-export const SITE_PRICING_URL = 'https://pythoncourse.me/uk/pricing/'
-export const SITE_TERMS_URL = 'https://pythoncourse.me/uk/terms/'
-export const SITE_REFUNDS_URL = 'https://pythoncourse.me/uk/refunds/'
-export const SITE_PRIVACY_URL = 'https://pythoncourse.me/uk/privacy/'
-export const SITE_CONTACT_URL = 'https://pythoncourse.me/uk/contact/'
+export type SitePage =
+  | 'home'
+  | 'become-author'
+  | 'become-student'
+  | 'pricing'
+  | 'terms'
+  | 'refunds'
+  | 'privacy'
+  | 'contact'
 
-/** The authors' section of the documentation site. */
-export const DOCS_AUTHORS_URL = 'https://about.pythoncourse.me/uk/authors/'
+export function siteUrl(language: Language, page: SitePage): string {
+  const lang = (SITE_LANGUAGES as readonly string[]).includes(language) ? language : 'en'
+  const base = `${SCHEME}://${SITE_HOST}/${lang}/`
+  return page === 'home' ? base : `${base}${page}/`
+}
+
+export const DOCS_LANGUAGES: readonly Language[] = ['uk']
+
+export function docsUrl(language: Language, path = ''): string {
+  const lang = (DOCS_LANGUAGES as readonly string[]).includes(language) ? language : 'uk'
+  const cleanPath = path.replace(/^\/+/, '')
+  return `${SCHEME}://${DOCS_HOST}/${lang}/${cleanPath}`
+}
 
 export interface SiteLink {
   label: string

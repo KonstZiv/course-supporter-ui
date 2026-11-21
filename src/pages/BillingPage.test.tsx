@@ -61,10 +61,10 @@ const FULL_BALANCE: BillingBalanceResponse = {
 // Ids no screen text would ever contain, so their absence is meaningful.
 const PACKAGES: BillingPackagesResponse = {
   packages: [
-    { id: 'pkgid_alpha', units: 500, prices_minor: { EUR: 999 } },
-    { id: 'pkgid_beta', units: 1500, prices_minor: { EUR: 1499 } },
-    { id: 'pkgid_gamma', units: 5000, prices_minor: { EUR: 3999 } },
-    { id: 'pkgid_delta', units: 10000, prices_minor: { EUR: 6999 } },
+    { id: 'pkgid_alpha', units: 500, validity_months: 6, prices_minor: { EUR: 999 } },
+    { id: 'pkgid_beta', units: 1500, validity_months: 6, prices_minor: { EUR: 1499 } },
+    { id: 'pkgid_gamma', units: 5000, validity_months: 6, prices_minor: { EUR: 3999 } },
+    { id: 'pkgid_delta', units: 10000, validity_months: 6, prices_minor: { EUR: 6999 } },
   ],
   purchase: { open: true, reason: null },
 }
@@ -231,7 +231,7 @@ describe('BillingPage — packages', () => {
     for (const price of ['9,99 EUR', '14,99 EUR', '39,99 EUR', '69,99 EUR']) {
       expect(screen.getByText(price)).toBeInTheDocument()
     }
-    expect(screen.getAllByText('Діє шість місяців від дня купівлі.')).toHaveLength(4)
+    expect(screen.getAllByText('Діє 6 місяців від дня купівлі.')).toHaveLength(4)
     expect(screen.getAllByRole('button', { name: 'Купити' })).toHaveLength(4)
     for (const { id } of PACKAGES.packages) {
       expect(document.body.innerHTML).not.toContain(id)
@@ -254,7 +254,7 @@ describe('BillingPage — packages', () => {
     renderPage()
     expect(
       await screen.findByText(
-        'Ціни пакетів вказано в євро. Чи включають вони податки, залежить від країни покупця; остаточну суму показано на сторінці оплати перед оплатою.',
+        'Ціни пакетів вказано в євро. Ціна вказана без податків, які можуть стягуватися додатково залежно від законів країни вашого податкового резидентства; остаточну суму показано на сторінці оплати перед оплатою.',
       ),
     ).toBeInTheDocument()
     expect(

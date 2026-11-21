@@ -6,11 +6,14 @@ import type { FlowNodeData } from '../../../utils/treeToFlow'
 import { SummaryBadge } from '../SummaryBadge'
 import { pillHint, pillVocab, phasePillClass } from '../../../utils/stateVocabulary'
 import { documentLabel } from '../../../utils/documentLabel'
+import { useLanguage, useT } from '../../../i18n/LanguageContext'
 
 export const SectionNode = memo(function SectionNode({
   data,
   selected,
 }: NodeProps & { data: FlowNodeData }) {
+  const language = useLanguage()
+  const t = useT()
   const docs = data.authored_documents
   const hasError = docs.some((m) => m.processing_phase === 'error')
   const hasAwaiting = docs.some((m) => m.processing_phase === 'awaiting_author')
@@ -79,7 +82,7 @@ export const SectionNode = memo(function SectionNode({
       {docs.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-2">
           {docs.slice(0, 5).map((m) => {
-            const v = pillVocab(m)
+            const v = pillVocab(language, m)
             return (
               <span
                 key={m.id}
@@ -87,7 +90,7 @@ export const SectionNode = memo(function SectionNode({
                   'inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md font-medium',
                   phasePillClass(v),
                 )}
-                title={pillHint(documentLabel(m), v)}
+                title={pillHint(language, documentLabel(m), v)}
               >
                 <Paperclip size={9} />
                 {documentLabel(m).slice(0, 14)}
@@ -105,7 +108,7 @@ export const SectionNode = memo(function SectionNode({
       {/* Footer stats */}
       {data.childrenCount > 0 && (
         <div className="text-[11px] text-ink-muted mt-2">
-          {data.childrenCount} підрозділів
+          {t('panel.flow.sectionNode.subsectionsCount', { count: data.childrenCount })}
         </div>
       )}
 

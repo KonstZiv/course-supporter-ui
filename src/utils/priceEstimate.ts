@@ -1,5 +1,7 @@
 import type { AuthorEstimateResponse, MaterialEstimateKind } from '../types/api'
-import { formatUnits, pluralWord } from './units'
+import type { Language } from '../i18n/languages'
+import { translate } from '../i18n/translate'
+import { formatUnits } from './units'
 
 // The price before an author's paid action (BIL-E): what an estimate answer
 // means on the screen. A pure module — the view and its words; the requests
@@ -109,38 +111,55 @@ export function batchPriceView(outcomes: readonly EstimateOutcome[]): PriceView 
 
 // ── The words ──
 
-export const PRICE_PENDING = 'Рахуємо орієнтовну вартість…'
-export const PRICE_FAILED = 'Орієнтовну вартість зараз порахувати не вдалося.'
-export const PRICE_UNPRICED =
-  'Орієнтовну вартість цього матеріалу до обробки порахувати не вдалося.'
-export const PRICE_UNPRICED_BATCH =
-  'Орієнтовну вартість цих матеріалів до обробки порахувати не вдалося.'
-export const PRICE_MAY_FALL_SHORT =
-  'На всі файли разом юнітів може не вистачити: обробка тих, на які не вистачить, зупиниться, і її можна буде запустити ще раз після купівлі.'
-export const AFTER_PURCHASE =
-  'Після купівлі поверніться на цю вкладку й запустіть дію ще раз.'
-export const UNITS_NOW_ENOUGH = 'Юнітів тепер вистачає.'
+export function pricePendingText(language: Language): string {
+  return translate(language, 'panel.priceEstimate.pending')
+}
 
-export function priceEnoughText(price: number, available: number | null): string {
-  const head = `Орієнтовна вартість: приблизно ${formatUnits(price)}.`
-  return available === null ? head : `${head} У вас доступно ${formatUnits(available)}.`
+export function priceFailedText(language: Language): string {
+  return translate(language, 'panel.priceEstimate.failed')
+}
+
+export function priceUnpricedText(language: Language, batch: boolean): string {
+  return translate(language, batch ? 'panel.priceEstimate.unpricedBatch' : 'panel.priceEstimate.unpriced')
+}
+
+export function priceMayFallShortText(language: Language): string {
+  return translate(language, 'panel.priceEstimate.mayFallShort')
+}
+
+export function afterPurchaseText(language: Language): string {
+  return translate(language, 'panel.priceEstimate.afterPurchase')
+}
+
+export function unitsNowEnoughText(language: Language): string {
+  return translate(language, 'panel.priceEstimate.unitsNowEnough')
+}
+
+export function priceEnoughText(language: Language, price: number, available: number | null): string {
+  const formattedPrice = formatUnits(language, price)
+  if (available === null) {
+    return translate(language, 'panel.priceEstimate.enough', { price: formattedPrice })
+  }
+  return translate(language, 'panel.priceEstimate.enoughAvailable', {
+    price: formattedPrice,
+    available: formatUnits(language, available),
+  })
 }
 
 /** "Для 1 з 3 файлів порахувати до обробки не вдалося." */
-export function unpricedFilesText(count: number, of: number): string {
-  const files = pluralWord(of, {
-    one: 'файла',
-    few: 'файлів',
-    many: 'файлів',
-    other: 'файла',
-  })
-  return `Для ${count} з ${of} ${files} порахувати до обробки не вдалося.`
+export function unpricedFilesText(language: Language, count: number, of: number): string {
+  return translate(language, 'panel.priceEstimate.unpricedFiles', { count, of })
 }
 
 export function priceShortText(
+  language: Language,
   price: number,
   available: number,
   missing: number,
 ): string {
-  return `Ця дія коштує приблизно ${formatUnits(price)}, у вас ${formatUnits(available)}. Не вистачає ${formatUnits(missing)}.`
+  return translate(language, 'panel.priceEstimate.short', {
+    price: formatUnits(language, price),
+    available: formatUnits(language, available),
+    missing: formatUnits(language, missing),
+  })
 }

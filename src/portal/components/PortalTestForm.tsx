@@ -3,11 +3,13 @@ import { Loader2, Send, CheckCircle2, AlertCircle, HelpCircle } from 'lucide-rea
 import { doorRefusal, portalApi, PortalApiError, unitsShortfall } from '../api/portalClient'
 import type { PortalLanguageEntry, TestStructureResponse } from '../types'
 import { getPortalLanguages } from '../languages'
+import { defaultReviewLanguage } from '../reviewLanguage'
+import { iso3Of } from '../../i18n/languages'
 import { submitErrorMessage } from '../submissionCodes'
 import { TEST_THRESHOLD, testCostView } from '../reviewCost'
 import { useReviewEstimate } from '../hooks/useReviewEstimate'
 import { useUnitsWait } from '../hooks/useUnitsWait'
-import { PAID_BY_AUTHOR, TEST_NEEDS_PACKAGE } from '../unitsTexts'
+import { useLanguage, useT, type Translate } from '../../i18n/LanguageContext'
 import { CostCard, UnitsShortPanel } from './billing/UnitsCost'
 
 type TestFormState = 'idle' | 'confirming' | 'submitting' | 'success' | 'error'
@@ -16,11 +18,8 @@ type TestFormState = 'idle' | 'confirming' | 'submitting' | 'success' | 'error'
 // (mentor-rebuild task 07, decision 23): the server takes such answers and
 // counts those questions wrong, so the student is told which ones — before,
 // not after.
-function unansweredWarning(numbers: string[]): string {
-  const list = numbers.join(', ')
-  return numbers.length === 1
-    ? `Без відповіді лишилось питання ${list} — воно зарахується як неправильне.`
-    : `Без відповіді лишились питання ${list} — вони зарахуються як неправильні.`
+function unansweredWarning(t: Translate, numbers: string[]): string {
+  return t('portal.test.unanswered', { count: numbers.length, list: numbers.join(', ') })
 }
 
 // A test answered with its answers (mentor-rebuild task 07). Stands in the
@@ -60,7 +59,7 @@ export function PortalTestForm({
   onSubmitted: (submissionId: string) => void
 }) {
   const [structure, setStructure] = useState<TestStructureResponse | null>(null)
-  const [loadError, setLoadError] = useState('')
+  const [loadError, setLoadError] = useState(false)
   // Bumped to read the test again — after the server said it changed.
   const [reloadKey, setReloadKey] = useState(0)
   // Question number → the labels ticked, in the order they were ticked.
@@ -68,16 +67,23 @@ export function PortalTestForm({
   const [state, setState] = useState<TestFormState>('idle')
   const [message, setMessage] = useState('')
   const [sentId, setSentId] = useState<string | null>(null)
-  const [language, setLanguage] = useState('')
+  // The review language the student picked in the field; until then the
+  // field opens on the default (``defaultReviewLanguage``).
+  const [chosenLanguage, setChosenLanguage] = useState<string | null>(null)
   const [languages, setLanguages] = useState<PortalLanguageEntry[]>([])
 
+  // The reader's language — not the review's (``language`` above).
+  const uiLanguage = useLanguage()
+  const t = useT()
+  const language =
+    chosenLanguage ?? defaultReviewLanguage(iso3Of(uiLanguage), courseLanguage, languages)
   const estimate = useReviewEstimate(taskId, null)
   const cost = testCostView(estimate.outcome, estimate.last)
   useUnitsWait(cost === 'panel' ? TEST_THRESHOLD : null, estimate.askAgain)
 
   useEffect(() => {
     let active = true
-    setLoadError('')
+    setLoadError(false)
     portalApi
       .testStructure(taskId)
       .then((s) => {
@@ -89,33 +95,20 @@ export function PortalTestForm({
       .catch((err) => {
         if (!active) return
         if (err instanceof PortalApiError && err.status === 401) return // centralised
-        setLoadError('Не вдалося завантажити тест. Оновіть сторінку.')
+        setLoadError(true)
       })
     return () => {
       active = false
     }
   }, [taskId, reloadKey])
 
-  // The language list and the student's standing choice — the same two reads,
-  // failing soft the same way, as the file form's review-language field.
+  // The language list — the same read, failing soft the same way, as the file
+  // form's review-language field; the same default (``defaultReviewLanguage``).
   useEffect(() => {
     let active = true
     getPortalLanguages()
       .then((items) => {
         if (active) setLanguages(items)
-      })
-      .catch(() => undefined)
-    return () => {
-      active = false
-    }
-  }, [])
-
-  useEffect(() => {
-    let active = true
-    portalApi
-      .me()
-      .then((me) => {
-        if (active && me.preferred_language) setLanguage(me.preferred_language)
       })
       .catch(() => undefined)
     return () => {
@@ -173,7 +166,7 @@ export function PortalTestForm({
         ...(chosen ? { response_language: chosen } : {}),
       })
       setState('success')
-      setMessage('Відповіді надіслано — очікують перевірки.')
+      setMessage(t('portal.test.sent'))
       setTicked({})
       setSentId(res.submission_id)
       onSubmitted(res.submission_id)
@@ -188,7 +181,7 @@ export function PortalTestForm({
         return
       }
       setState('error')
-      setMessage(submitErrorMessage(err))
+      setMessage(submitErrorMessage(uiLanguage, err))
       if (doorRefusal(err)?.code === 'TEST_VERSION_CHANGED') {
         setReloadKey((k) => k + 1)
       }
@@ -209,8 +202,10 @@ export function PortalTestForm({
   const courseLanguageName = languages.find((l) => l.code === courseLanguage)
   const courseLanguageLabel =
     courseLanguageName === undefined
-      ? 'Мовою курсу'
-      : `Мовою курсу (${courseLanguageName.name_native || courseLanguageName.name_en})`
+      ? t('portal.submit.courseLanguage')
+      : t('portal.submit.courseLanguageNamed', {
+          name: courseLanguageName.name_native || courseLanguageName.name_en,
+        })
 
   const accepting = structure?.accepting_answers === true
   const tone = state === 'success' ? 'bg-forest-pale text-forest' : 'bg-coral-pale text-coral'
@@ -218,16 +213,18 @@ export function PortalTestForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <h3 className="font-display text-lg text-ink">Відповіді на тест</h3>
+      <h3 className="font-display text-lg text-ink">{t('portal.test.title')}</h3>
 
       {structure === null && !loadError && (
         <div className="flex items-center gap-2 text-ink-muted text-sm">
           <Loader2 size={16} className="animate-spin" />
-          Завантаження тесту…
+          {t('portal.test.loading')}
         </div>
       )}
       {loadError && (
-        <div className="p-3 rounded-xl bg-coral-pale text-coral text-sm">{loadError}</div>
+        <div className="p-3 rounded-xl bg-coral-pale text-coral text-sm">
+          {t('portal.test.loadFailed')}
+        </div>
       )}
 
       {structure !== null && (
@@ -265,17 +262,17 @@ export function PortalTestForm({
 
           {!accepting ? (
             <p className="p-3 rounded-xl bg-canvas-dark text-ink-muted text-sm">
-              Тест ще не готовий приймати відповіді.
+              {t('portal.test.notAccepting')}
             </p>
           ) : (
             <>
               <label className="block">
                 <span className="block text-sm font-medium text-ink mb-1.5">
-                  Мова рецензії
+                  {t('portal.submit.reviewLanguage')}
                 </span>
                 <select
                   value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
+                  onChange={(e) => setChosenLanguage(e.target.value)}
                   className="input"
                 >
                   {courseLanguage !== null && (
@@ -292,30 +289,30 @@ export function PortalTestForm({
               {state === 'confirming' ? (
                 <div
                   role="alertdialog"
-                  aria-label="Підтвердження подачі"
+                  aria-label={t('portal.test.confirmLabel')}
                   className="p-3 rounded-xl bg-navy/10 text-navy text-sm space-y-3"
                 >
                   <p className="flex items-start gap-2">
                     <HelpCircle size={16} className="shrink-0 mt-0.5" />
-                    {unansweredWarning(unanswered)}
+                    {unansweredWarning(t, unanswered)}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <button type="submit" className="btn-primary btn-sm">
-                      Надіслати все одно
+                      {t('portal.test.sendAnyway')}
                     </button>
                     <button
                       type="button"
                       className="btn-secondary btn-sm"
                       onClick={() => setState('idle')}
                     >
-                      Повернутися до тесту
+                      {t('portal.test.backToTest')}
                     </button>
                   </div>
                 </div>
               ) : (
                 <>
                   {cost === 'author' && (
-                    <p className="text-sm text-ink-light">{PAID_BY_AUTHOR}</p>
+                    <p className="text-sm text-ink-light">{t('portal.units.paidByAuthor')}</p>
                   )}
                   {cost === 'now_enough' && <CostCard nowEnough />}
                   {message && (
@@ -327,7 +324,7 @@ export function PortalTestForm({
                     </div>
                   )}
                   {cost === 'panel' ? (
-                    <UnitsShortPanel text={TEST_NEEDS_PACKAGE} fileChosen={false} />
+                    <UnitsShortPanel text={t('portal.units.testNeedsPackage')} fileChosen={false} />
                   ) : (
                     <button
                       type="submit"
@@ -339,7 +336,7 @@ export function PortalTestForm({
                       ) : (
                         <>
                           <Send size={16} />
-                          Надіслати відповіді
+                          {t('portal.test.send')}
                         </>
                       )}
                     </button>

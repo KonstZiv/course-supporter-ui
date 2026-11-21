@@ -1,5 +1,7 @@
 import { ApiError } from '../../api/client'
 import { rejectionDetail, validationMessage } from '../../utils/apiError'
+import type { Language } from '../../i18n/languages'
+import { translate } from '../../i18n/translate'
 
 // Author-facing phrases for the project-base attach / re-upload write codes.
 // The codes are transcribed by hand from the backend HTTPException raises
@@ -15,13 +17,6 @@ import { rejectionDetail, validationMessage } from '../../utils/apiError'
 // NB: the reader is an OBJECT reader — the code lives at ``body.detail.code``
 // (FastAPI nests the raised detail under ``detail``). Do NOT read a top-level
 // ``body.code`` (the P5-FE Commit #6 bug — green unit tests against a fiction).
-const BASE_ERROR_PHRASES: Record<string, string> = {
-  BASE_VERSION_CONFLICT:
-    'Інша версія base зараз завантажується. Зачекайте мить і спробуйте ще раз.',
-  UPLOAD_TOO_LARGE: 'Архів завеликий — ліміт 100 МБ.',
-  NOT_A_PROJECT_TASK: 'Base прикріплюється лише до завдання типу «Проєкт».',
-  NOT_AN_ARCHIVE: 'Потрібен архів: .zip, .tar.gz, .tgz або .gz.',
-}
 
 function baseErrorCode(err: ApiError): string | null {
   const detail = (err.body as { detail?: unknown } | null)?.detail
@@ -41,15 +36,25 @@ function baseErrorCode(err: ApiError): string | null {
  * generic fallback. NO_BASE_ATTACHED (404 on GET) is NOT here — it is
  * control-flow (render the attach slot), never an error toast.
  */
-export function baseErrorMessage(err: unknown): string {
+export function baseErrorMessage(language: Language, err: unknown): string {
   if (err instanceof ApiError) {
     const code = baseErrorCode(err)
-    const phrase = code ? BASE_ERROR_PHRASES[code] : undefined
-    if (phrase) return phrase
+    if (code === 'BASE_VERSION_CONFLICT') {
+      return translate(language, 'panel.flow.baseError.versionConflict')
+    }
+    if (code === 'UPLOAD_TOO_LARGE') {
+      return translate(language, 'panel.flow.baseError.uploadTooLarge')
+    }
+    if (code === 'NOT_A_PROJECT_TASK') {
+      return translate(language, 'panel.flow.baseError.notAProjectTask')
+    }
+    if (code === 'NOT_AN_ARCHIVE') {
+      return translate(language, 'panel.flow.baseError.notAnArchive')
+    }
     const native = validationMessage(err)
     if (native) return native
     const server = rejectionDetail(err)
     if (server) return server
   }
-  return 'Не вдалося прикріпити base. Перевірте зʼєднання та спробуйте ще раз.'
+  return translate(language, 'panel.flow.baseError.generic')
 }

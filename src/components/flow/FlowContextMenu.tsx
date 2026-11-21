@@ -35,6 +35,7 @@ import type {
   MaterialRole,
 } from '../../types/api'
 import { estimateKindOf, kindOnlyPriceLine } from '../../utils/kindOnlyPrice'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 
 export interface MenuPosition {
   x: number
@@ -61,32 +62,9 @@ type ProcessNotice =
   /** Charging is on: the price line, then «Обробити» starts the retries. */
   | { kind: 'price'; line: string; failed: AuthoredDocumentResponse[] }
 
-/* ── Pipeline step descriptions ── */
-
-const PIPELINE_INFO: Record<string, { title: string; description: string }> = {
-  process: {
-    title: 'Шар 1 + 2: Обробка матеріалів',
-    description:
-      'Шар 1 — перетворення всіх матеріалів (відео, презентації, тексти, веб-сторінки) у текст. ' +
-      'Ідемпотентні текстові "зліпки" кожного джерела.\n\n' +
-      'Шар 2 — створення макроінформації (summary, теми, ключові концепти) та впорядкування ' +
-      'основного тексту БЕЗ стиснення і втрат. Кожен матеріал отримує структурований outline.\n\n' +
-      'Обидва шари генеруються автоматично при завантаженні матеріалу. ' +
-      'Цей пункт повторює обробку матеріалів, що завершилася помилкою. ' +
-      'Готовий матеріал обробляють наново кнопкою в його рядку.',
-  },
-  generate: {
-    title: 'Шар 3: Опис вузла (NodeSummary)',
-    description:
-      'Двопрохідна генерація методичного опису піддерева цього вузла. ' +
-      'Прохід 1 (знизу-вгору) — узагальнення дочірніх вузлів; ' +
-      'прохід 2 (згори-вниз) — охоплюючий контекст позиції кожного вузла.\n\n' +
-      'Запускає фоновий прогін; прогрес і результат видно у картці стану ' +
-      'праворуч унизу. Вже свіжі вузли пропускаються (мемоізація за хешем).',
-  },
-}
-
 export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
+  const language = useLanguage()
+  const t = useT()
   const ref = useRef<HTMLDivElement>(null)
   const [showRename, setShowRename] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
@@ -195,13 +173,11 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
     } catch {
       // A cross-origin/offline failure rejects fetch() before any HTTP status,
       // so no server error category exists to map — a local, human message.
-      setRenameError(
-        'Не вдалося зберегти назву — спробуйте ще раз. Якщо повториться, напишіть нам.',
-      )
+      setRenameError(t('panel.flow.contextMenu.renameFailed'))
     } finally {
       setBusy(false)
     }
-  }, [renameTitle, position.nodeId, position.nodeTitle, refreshTree, onClose])
+  }, [renameTitle, position.nodeId, position.nodeTitle, refreshTree, onClose, t])
 
   // Close the rename modal. If it closes after a successful rename (the hint
   // was showing) also close the whole context menu, mirroring the pre-fix
@@ -215,7 +191,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
   }, [renameDone, onClose])
 
   const deleteNode = useCallback(async () => {
-    if (!confirm(`Видалити «${position.nodeTitle}» та все вкладене?`)) return
+    if (!confirm(t('panel.flow.contextMenu.deleteConfirm', { title: position.nodeTitle }))) return
     setBusy(true)
     try {
       await nodesApi.delete(position.nodeId)
@@ -230,7 +206,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
     } finally {
       setBusy(false)
     }
-  }, [position, refreshTree, onClose, navigate])
+  }, [position, refreshTree, onClose, navigate, t])
 
   // Start again every failed material of the node; refusals read together.
   const retryFailed = useCallback(
@@ -276,7 +252,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
       // The price first, with a kind alone (the materials are on the server):
       // one line for the whole node, not one per material.
       const kind = estimateKindOf(failed[0]!.source_type)
-      if (kind) line = await kindOnlyPriceLine(position.nodeId, kind, failed.length)
+      if (kind) line = await kindOnlyPriceLine(language, position.nodeId, kind, failed.length)
     } finally {
       setBusy(false)
     }
@@ -285,7 +261,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
       return
     }
     await retryFailed(failed)
-  }, [position.nodeId, retryFailed])
+  }, [language, position.nodeId, retryFailed])
 
   const closeProcessNotice = useCallback(() => {
     setProcessNotice(null)
@@ -321,7 +297,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
       if (!input.files?.length) return
       // Same pre-send checks as the side panel (Е2 parity — the canvas ran none).
       const { accepted, durations, rejectionMessage } =
-        await validateUploadFiles(Array.from(input.files))
+        await validateUploadFiles(language, Array.from(input.files))
       // Always called, empty list included — see the panel's onDrop.
       reportFailures(rejectionMessage ? [rejectionMessage] : [])
       if (accepted.length > 0) {
@@ -330,7 +306,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
       }
     }
     input.click()
-  }, [reportFailures])
+  }, [reportFailures, language])
 
   const handleConfirmUpload = useCallback(
     async (
@@ -394,15 +370,26 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
     dividerBefore?: boolean
   }
 
+  const pipelineInfo: Record<string, { title: string; description: string }> = {
+    process: {
+      title: t('panel.flow.pipeline.processTitle'),
+      description: t('panel.flow.pipeline.processDescription'),
+    },
+    generate: {
+      title: t('panel.flow.pipeline.generateTitle'),
+      description: t('panel.flow.pipeline.generateDescription'),
+    },
+  }
+
   const items: MenuItem[] = [
-    { icon: FolderPlus, label: 'Додати підрозділ', action: () => setShowAdd(true) },
-    { icon: Upload, label: 'Завантажити матеріал', action: triggerUpload },
-    { icon: ListChecks, label: 'Новий тест', action: openNewTest },
+    { icon: FolderPlus, label: t('panel.flow.contextMenu.addSubfolder'), action: () => setShowAdd(true) },
+    { icon: Upload, label: t('panel.flow.contextMenu.uploadMaterial'), action: triggerUpload },
+    { icon: ListChecks, label: t('panel.flow.contextMenu.newTest'), action: openNewTest },
     // ── Pipeline steps ──
     {
       icon: Zap,
-      label: 'Обробити матеріали',
-      subtitle: 'Шар 1 + 2',
+      label: t('panel.flow.contextMenu.processMaterials'),
+      subtitle: t('panel.flow.contextMenu.layer12'),
       action: processMaterials,
       accent: true,
       pipelineKey: 'process',
@@ -410,8 +397,8 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
     },
     {
       icon: Sparkles,
-      label: 'Згенерувати опис',
-      subtitle: 'Шар 3',
+      label: t('panel.flow.contextMenu.generateSummary'),
+      subtitle: t('panel.flow.contextMenu.layer3'),
       action: handleGenerate,
       accent: true,
       pipelineKey: 'generate',
@@ -419,11 +406,11 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
     // ── Edit actions ──
     {
       icon: Pencil,
-      label: 'Перейменувати',
+      label: t('panel.flow.contextMenu.rename'),
       action: () => setShowRename(true),
       dividerBefore: true,
     },
-    { icon: Trash2, label: 'Видалити', action: deleteNode, danger: true },
+    { icon: Trash2, label: t('panel.flow.contextMenu.delete'), action: deleteNode, danger: true },
   ]
 
   return (
@@ -501,7 +488,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
                   }}
                   onMouseEnter={() => handleInfoHover(item.pipelineKey!)}
                   onMouseLeave={handleInfoLeave}
-                  title="Детальніше"
+                  title={t('panel.flow.contextMenu.moreDetails')}
                 >
                   <Info size={13} className="text-ink-muted" />
                 </button>
@@ -513,7 +500,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
 
       {/* Tooltip on hover */}
       <AnimatePresence>
-        {hoveredInfo && PIPELINE_INFO[hoveredInfo] && (
+        {hoveredInfo && pipelineInfo[hoveredInfo] && (
           <motion.div
             className="fixed z-[60] bg-ink text-white text-xs rounded-lg px-3 py-2 max-w-[280px]
                        shadow-lg pointer-events-none"
@@ -523,9 +510,9 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
             exit={{ opacity: 0, x: -5 }}
             transition={{ duration: 0.15 }}
           >
-            <p className="font-medium mb-1">{PIPELINE_INFO[hoveredInfo].title}</p>
+            <p className="font-medium mb-1">{pipelineInfo[hoveredInfo].title}</p>
             <p className="text-white/80 leading-relaxed whitespace-pre-line">
-              {PIPELINE_INFO[hoveredInfo].description.slice(0, 120)}…
+              {pipelineInfo[hoveredInfo].description.slice(0, 120)}…
             </p>
           </motion.div>
         )}
@@ -535,11 +522,11 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
       <Modal
         open={showPipelineInfo !== null}
         onClose={() => setShowPipelineInfo(null)}
-        title={showPipelineInfo ? PIPELINE_INFO[showPipelineInfo]?.title || '' : ''}
+        title={showPipelineInfo ? pipelineInfo[showPipelineInfo]?.title || '' : ''}
       >
-        {showPipelineInfo && PIPELINE_INFO[showPipelineInfo] && (
+        {showPipelineInfo && pipelineInfo[showPipelineInfo] && (
           <div className="text-sm text-ink leading-relaxed whitespace-pre-line">
-            {PIPELINE_INFO[showPipelineInfo].description}
+            {pipelineInfo[showPipelineInfo].description}
           </div>
         )}
         <div className="flex justify-end mt-4">
@@ -547,7 +534,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
             className="btn-secondary btn-sm"
             onClick={() => setShowPipelineInfo(null)}
           >
-            Зрозуміло
+            {t('panel.flow.contextMenu.gotIt')}
           </button>
         </div>
       </Modal>
@@ -558,8 +545,8 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
         onClose={closeProcessNotice}
         title={
           processNotice?.kind === 'refused'
-            ? 'Не все вдалося запустити'
-            : 'Обробити матеріали'
+            ? t('panel.flow.contextMenu.processNotice.refusedTitle')
+            : t('panel.flow.contextMenu.processMaterials')
         }
       >
         {processNotice?.kind === 'price' ? (
@@ -571,20 +558,19 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
             {processNotice.names.map((name, i) => (
               // Two materials may share a name; the list never reorders.
               <li key={i} className="break-words">
-                {name} — не вдалося запустити обробку — спробуйте ще раз
+                {t('panel.flow.contextMenu.processNotice.refusedItem', { name })}
               </li>
             ))}
           </ul>
         ) : (
           <p className="text-sm text-ink leading-relaxed">
-            Матеріалів із помилкою в цьому розділі немає. Готовий матеріал
-            обробляють наново кнопкою в його рядку.
+            {t('panel.flow.contextMenu.processNotice.nothingFailed')}
           </p>
         )}
         {processNotice?.kind === 'price' ? (
           <div className="flex justify-end gap-2 mt-4">
             <button className="btn-secondary btn-sm" onClick={closeProcessNotice}>
-              Скасувати
+              {t('panel.flow.contextMenu.cancel')}
             </button>
             <button
               className="btn-primary btn-sm"
@@ -595,23 +581,23 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
                 void retryFailed(failed)
               }}
             >
-              Обробити
+              {t('panel.flow.contextMenu.process')}
             </button>
           </div>
         ) : (
           <div className="flex justify-end mt-4">
             <button className="btn-secondary btn-sm" onClick={closeProcessNotice}>
-              Зрозуміло
+              {t('panel.flow.contextMenu.gotIt')}
             </button>
           </div>
         )}
       </Modal>
 
       {/* Add child modal */}
-      <Modal open={showAdd} onClose={() => setShowAdd(false)} title="Новий підрозділ">
+      <Modal open={showAdd} onClose={() => setShowAdd(false)} title={t('panel.flow.contextMenu.addChild.title')}>
         <input
           className="input mb-4"
-          placeholder="Назва розділу"
+          placeholder={t('panel.flow.contextMenu.addChild.placeholder')}
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addChild()}
@@ -619,25 +605,24 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
         />
         <div className="flex justify-end gap-2">
           <button className="btn-secondary btn-sm" onClick={() => setShowAdd(false)}>
-            Скасувати
+            {t('panel.flow.contextMenu.cancel')}
           </button>
           <button className="btn-primary btn-sm" onClick={addChild} disabled={busy || !newTitle.trim()}>
-            Створити
+            {t('panel.flow.contextMenu.addChild.submit')}
           </button>
         </div>
       </Modal>
 
       {/* Rename modal */}
-      <Modal open={showRename} onClose={dismissRename} title="Перейменувати">
+      <Modal open={showRename} onClose={dismissRename} title={t('panel.flow.contextMenu.rename')}>
         {renameDone ? (
           <>
             <p className="text-sm mb-4">
-              Назву змінено. Опис вузла не оновиться автоматично — якщо
-              потрібно, поправте його вручну.
+              {t('panel.flow.contextMenu.renameModal.doneHint')}
             </p>
             <div className="flex justify-end">
               <button className="btn-primary btn-sm" onClick={dismissRename}>
-                Зрозуміло
+                {t('panel.flow.contextMenu.gotIt')}
               </button>
             </div>
           </>
@@ -670,14 +655,14 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
             )}
             <div className="flex justify-end gap-2">
               <button className="btn-secondary btn-sm" onClick={dismissRename}>
-                Скасувати
+                {t('panel.flow.contextMenu.cancel')}
               </button>
               <button
                 className="btn-primary btn-sm"
                 onClick={rename}
                 disabled={busy || !renameTitle.trim()}
               >
-                Зберегти
+                {t('panel.flow.contextMenu.renameModal.save')}
               </button>
             </div>
           </>

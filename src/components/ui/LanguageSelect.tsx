@@ -15,6 +15,7 @@
 
 import type { ChangeEvent } from 'react'
 import { findLanguage, getCachedLanguages } from '../../utils/languages'
+import { useT } from '../../i18n/LanguageContext'
 
 interface Props {
   value: string | null
@@ -33,11 +34,13 @@ export function LanguageSelect({
   value,
   onChange,
   label,
-  autoLabel = 'Автовизначення',
+  autoLabel,
   required = false,
   disabled = false,
   className = '',
 }: Props) {
+  const t = useT()
+  const resolvedAutoLabel = autoLabel ?? t('panel.languageSelect.autoDetect')
   const handleChange = (e: ChangeEvent<HTMLSelectElement>) => {
     const v = e.target.value
     onChange(v === '' ? null : v)
@@ -62,10 +65,10 @@ export function LanguageSelect({
       >
         {required ? (
           <option value="" disabled>
-            Виберіть мову…
+            {t('panel.languageSelect.chooseLanguage')}
           </option>
         ) : (
-          <option value="">🔍 {autoLabel}</option>
+          <option value="">🔍 {resolvedAutoLabel}</option>
         )}
         {languages.map((lang) => (
           <option key={lang.code} value={lang.code}>
@@ -79,12 +82,13 @@ export function LanguageSelect({
 
 /** Compact read-only badge showing the language's English name. */
 export function LanguageBadge({ code }: { code: string | null | undefined }) {
+  const t = useT()
   const lang = findLanguage(code)
   if (!lang) {
     return (
       <span className="inline-flex items-center gap-1 text-xs text-ink-muted">
         <span>🔍</span>
-        <span>авто</span>
+        <span>{t('panel.languageSelect.autoBadge')}</span>
       </span>
     )
   }

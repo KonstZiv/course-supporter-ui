@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { documentsApi } from '../../api/documents'
 import { nodesApi } from '../../api/nodes'
 import { testsApi } from '../../api/tests'
+import { useLanguage } from '../../i18n/LanguageContext'
 import { usePolling } from '../../hooks/usePolling'
 import type { WrittenTestCheck, WrittenTestResponse } from '../../types/api'
 import {
@@ -16,14 +17,14 @@ import {
 } from '../../utils/testDraft'
 import {
   actionFailure,
-  NO_NODE_FOR_NEW_TEST,
-  NOT_SAVED_SEE_BELOW,
+  noNodeForNewTest,
+  notSavedSeeBelow,
   openingFailure,
   placeInDraft,
-  POLLING_FAILED,
+  pollingFailed,
   type TestAction,
 } from '../../utils/testRefusals'
-import { TEXTS } from './editorTexts'
+import { editorTexts } from './editorTexts'
 
 /** An existing test by its document, or a new one for a node of a course. */
 export type EditorAddress =
@@ -52,6 +53,8 @@ function hasDoubts(check: WrittenTestCheck): boolean {
  * it did in ``status`` or what went wrong in ``banner``.
  */
 export function useTestEditor(address: EditorAddress) {
+  const uiLanguage = useLanguage()
+  const texts = editorTexts(uiLanguage)
   const [saved, setSaved] = useState<WrittenTestResponse | null>(null)
   const [language, setLanguage] = useState<string | null>(null)
   const [draft, setDraft] = useState<TestDraft>(emptyDraft)
@@ -98,12 +101,12 @@ export function useTestEditor(address: EditorAddress) {
         },
         (error: unknown) => {
           if (cancelled) return
-          setOpenError(openingFailure(error))
+          setOpenError(openingFailure(uiLanguage, error))
           setLoading(false)
         },
       )
     } else if (nodeId === null || courseId === null) {
-      setOpenError(NO_NODE_FOR_NEW_TEST)
+      setOpenError(noNodeForNewTest(uiLanguage))
       setLoading(false)
     } else {
       // A new test's options are lettered in its course's language.
@@ -115,7 +118,7 @@ export function useTestEditor(address: EditorAddress) {
         },
         () => {
           if (cancelled) return
-          setOpenError(NO_NODE_FOR_NEW_TEST)
+          setOpenError(noNodeForNewTest(uiLanguage))
           setLoading(false)
         },
       )
@@ -123,7 +126,7 @@ export function useTestEditor(address: EditorAddress) {
     return () => {
       cancelled = true
     }
-  }, [documentId, nodeId, courseId])
+  }, [documentId, nodeId, courseId, uiLanguage])
 
   const savedDraft = useMemo(
     () => (saved === null ? emptyDraft() : draftFromServer(saved)),
@@ -141,12 +144,12 @@ export function useTestEditor(address: EditorAddress) {
   }, [])
 
   const fail = useCallback((action: TestAction, error: unknown) => {
-    const failure = actionFailure(action, error)
+    const failure = actionFailure(uiLanguage, action, error)
     setBanner(failure.banner)
     setStatus(null)
     setErrorsShown((n) => n + 1)
     return failure
-  }, [])
+  }, [uiLanguage])
 
   /** Save the draft; resolves to a new test's id once it is created. */
   const save = useCallback(async (): Promise<string | null> => {
@@ -154,7 +157,7 @@ export function useTestEditor(address: EditorAddress) {
     setAttempted(true)
     setServerMark(null)
     if (fieldProblems(sent).length > 0) {
-      setBanner(NOT_SAVED_SEE_BELOW)
+      setBanner(notSavedSeeBelow(uiLanguage))
       setStatus(null)
       setErrorsShown((n) => n + 1)
       return null
@@ -171,7 +174,7 @@ export function useTestEditor(address: EditorAddress) {
       setSaved(answer)
       setLanguage(answer.language)
       setDraft((current) => draftAfterSave(current, sent, answer))
-      setStatus(creating ? TEXTS.created : TEXTS.saved)
+      setStatus(creating ? texts.created : texts.saved)
       return creating ? answer.id : null
     } catch (error) {
       const failure = fail('save', error)
@@ -183,7 +186,7 @@ export function useTestEditor(address: EditorAddress) {
     } finally {
       setBusy(null)
     }
-  }, [saved, nodeId, fail])
+  }, [saved, nodeId, fail, uiLanguage, texts])
 
   const check = useCallback(async () => {
     if (saved === null) return
@@ -194,14 +197,14 @@ export function useTestEditor(address: EditorAddress) {
       const answer = await testsApi.check(saved.id)
       setSaved((current) => current && { ...current, check: answer })
       setStatus(
-        answer.state === 'ready' ? TEXTS.checkAlreadyReady : TEXTS.checkOrdered,
+        answer.state === 'ready' ? texts.checkAlreadyReady : texts.checkOrdered,
       )
     } catch (error) {
       fail('check', error)
     } finally {
       setBusy(null)
     }
-  }, [saved, fail])
+  }, [saved, fail, texts])
 
   const publish = useCallback(async () => {
     if (saved === null) return
@@ -219,17 +222,17 @@ export function useTestEditor(address: EditorAddress) {
       }
       setStatus(
         !answer.created
-          ? TEXTS.alreadyPublished
+          ? texts.alreadyPublished
           : fresh.check.state === 'ready'
-            ? TEXTS.publishedNow
-            : `${TEXTS.publishedNow} ${TEXTS.explanationsComing}`,
+            ? texts.publishedNow
+            : `${texts.publishedNow} ${texts.explanationsComing}`,
       )
     } catch (error) {
       fail('publish', error)
     } finally {
       setBusy(null)
     }
-  }, [saved, fail])
+  }, [saved, fail, texts])
 
   /** The saved draft as a YAML file, named by the test. */
   const exportYaml = useCallback(async () => {
@@ -265,14 +268,14 @@ export function useTestEditor(address: EditorAddress) {
         const answer = await testsApi.replaceWithYaml(saved.id, file)
         setSaved(answer)
         setDraft(draftFromServer(answer))
-        setStatus(TEXTS.replacedFromFile)
+        setStatus(texts.replacedFromFile)
       } catch (error) {
         fail('replace', error)
       } finally {
         setBusy(null)
       }
     },
-    [saved, fail],
+    [saved, fail, texts],
   )
 
   /** Hide the test; resolves to true once it is hidden. */
@@ -314,22 +317,24 @@ export function useTestEditor(address: EditorAddress) {
         // Nor once that action is done, if it began after this answer was asked.
         if (actionsRef.current !== actionsBefore) return false
         setSaved(fresh)
-        setBanner((current) => (current === POLLING_FAILED ? null : current))
+        setBanner((current) =>
+          current === pollingFailed(uiLanguage) ? null : current,
+        )
         if (fresh.check.state === 'ready') {
           setStatus(
             hasDoubts(fresh.check)
-              ? `${TEXTS.checkReady} ${TEXTS.checkReadyDoubts}`
-              : TEXTS.checkReady,
+              ? `${texts.checkReady} ${texts.checkReadyDoubts}`
+              : texts.checkReady,
           )
           return true
         }
         if (fresh.check.state === 'failed') {
-          setStatus(TEXTS.checkFailedTryAgain)
+          setStatus(texts.checkFailedTryAgain)
           return true
         }
         return fresh.check.state !== 'in_progress'
       } catch {
-        setBanner(POLLING_FAILED)
+        setBanner(pollingFailed(uiLanguage))
         return false
       }
     },

@@ -1,4 +1,4 @@
-import { SUPPORT_ADDRESS } from '../../utils/contactAdmin'
+import { SUPPORT_ADDRESS } from '../../utils/supportAddress'
 import { SITE_TEXT_LINK_CLASS } from '../../components/site/siteLinks'
 
 /**

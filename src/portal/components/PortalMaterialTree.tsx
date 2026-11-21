@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useT } from '../../i18n/LanguageContext'
 import {
   ChevronDown,
   ChevronRight,
@@ -101,9 +102,10 @@ export function PortalMaterialTree({
   root: PortalMaterialTreeNode
   onSelect: (item: PortalMaterialItem) => void
 }) {
+  const t = useT()
   const empty = root.documents.length === 0 && root.children.length === 0
   if (empty) {
-    return <p className="text-ink-muted px-2 py-4">Матеріалів ще немає.</p>
+    return <p className="text-ink-muted px-2 py-4">{t('portal.tree.empty')}</p>
   }
   return (
     <div>
