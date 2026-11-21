@@ -1,5 +1,6 @@
 import type { JobListItemResponse } from '../../types/api'
 import { ActivityStripRow } from './ActivityStripRow'
+import { useT } from '../../i18n/LanguageContext'
 
 // Detailed floor (§2): a panel opening from the collapsed floor, over the page.
 // Shows the loaded live + last-three-days rows; it scrolls inside itself — no
@@ -14,6 +15,7 @@ export function ActivityStripPanel({
   now: number
   onClose: () => void
 }) {
+  const t = useT()
   return (
     <>
       {/* Transparent click-away backdrop below the panel; above page content but
@@ -21,7 +23,7 @@ export function ActivityStripPanel({
       <div className="fixed inset-0 z-30" onClick={onClose} aria-hidden />
       <div
         role="dialog"
-        aria-label="Останні роботи"
+        aria-label={t('panel.activity.recentWorks')}
         // Д5: below `sm` the header is compact and the strip sits near the left
         // edge, so centering the panel on the strip pushed its left off-screen
         // (measured left −76 at 320). Below `sm` only, re-anchor the same

@@ -265,7 +265,7 @@ export function actionFailure(
     }
     if (action === 'replace') {
       if (refusal.code === 'SECURITY_REJECTED') {
-        return only(ingestErrorMessage(refusal.category))
+        return only(ingestErrorMessage(language, refusal.category))
       }
       const words = yamlFileRefusalWords(language, refusal)
       if (words !== null) return only(words)

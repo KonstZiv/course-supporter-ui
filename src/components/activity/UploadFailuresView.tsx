@@ -1,6 +1,7 @@
 import { AlertCircle, X } from 'lucide-react'
 import { ContactAdmin } from '../ui/ContactAdmin'
 import type { LetterContext } from '../../utils/contactAdmin'
+import { useT } from '../../i18n/LanguageContext'
 
 // What did not arrive, and why — the author's own surface (step Г2 §2.5,
 // closing DD-2.2-AG).
@@ -29,6 +30,7 @@ export function UploadFailuresView({
   onDismiss: () => void
   context?: LetterContext
 }) {
+  const t = useT()
   if (failures.length === 0) return null
   return (
     <div
@@ -38,9 +40,7 @@ export function UploadFailuresView({
       <AlertCircle size={16} className="text-coral shrink-0 mt-0.5" />
       <div className="min-w-0 flex-1 space-y-1.5">
         <p className="text-sm font-medium text-coral">
-          {failures.length === 1
-            ? 'Файл не завантажено'
-            : 'Деякі файли не завантажено'}
+          {t('panel.upload.failures.heading', { count: failures.length })}
         </p>
         <ul className="space-y-1">
           {failures.map((message, i) => (
@@ -67,7 +67,7 @@ export function UploadFailuresView({
       </div>
       <button
         onClick={onDismiss}
-        aria-label="Закрити"
+        aria-label={t('panel.upload.failures.close')}
         className="shrink-0 p-1 rounded-lg text-coral hover:bg-coral/10
                    transition-colors cursor-pointer self-start"
       >

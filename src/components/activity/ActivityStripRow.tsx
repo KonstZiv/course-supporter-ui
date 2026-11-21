@@ -52,7 +52,7 @@ export function ActivityStripRow({
             <>
               <Trash2 size={12} className="shrink-0 text-ink-muted" />
               <span className="truncate text-ink-muted">
-                {deletedMaterialLabelShort()}
+                {deletedMaterialLabelShort(language)}
               </span>
             </>
           ) : (

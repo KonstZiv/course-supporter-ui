@@ -283,7 +283,7 @@ describe('testRefusals', () => {
           details: 'zero_width U+200B at index 4',
         }),
       ).banner,
-    ).toBe(ingestErrorMessage('suspicious_unicode'))
+    ).toBe(ingestErrorMessage('uk', 'suspicious_unicode'))
     expect(yamlFileRefusalWords('uk', coded('GENERATION_IN_PROGRESS'))).toBeNull()
   })
 })

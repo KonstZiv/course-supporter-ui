@@ -177,7 +177,7 @@ describe('MaterialHistoryRow — every kind has its own icon (task 07c)', () => 
       </table>,
     )
     for (const kind of KINDS) {
-      const icon = screen.getByRole('img', { name: sourceTypeMeta(kind).label })
+      const icon = screen.getByRole('img', { name: sourceTypeMeta('uk', kind).label })
       expect(icon, kind).not.toHaveClass('lucide-file')
     }
   })

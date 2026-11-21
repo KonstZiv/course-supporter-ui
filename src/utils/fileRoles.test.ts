@@ -2,27 +2,27 @@ import { describe, it, expect } from 'vitest'
 import type { FileRoleDecision, FileRoleProposal } from '../types/api'
 import {
   KNOWN_REASON_TOKENS,
-  ROLE_LABELS,
   ROLE_TOKENS,
   basename,
   groupByFolder,
   initialRoles,
   reasonLabel,
+  roleLabels,
 } from './fileRoles'
 
 describe('reasonLabel (Р15)', () => {
   it('maps every known token to a non-raw Ukrainian phrase', () => {
     for (const token of KNOWN_REASON_TOKENS) {
-      expect(reasonLabel(token)).not.toBe(token)
+      expect(reasonLabel('uk', token)).not.toBe(token)
     }
   })
 
   it('maps on the token when the reason carries a detail', () => {
-    expect(reasonLabel('build_config: angular.json')).toBe(reasonLabel('build_config'))
+    expect(reasonLabel('uk', 'build_config: angular.json')).toBe(reasonLabel('uk', 'build_config'))
   })
 
   it('falls back to the raw string for an unknown token (no crash)', () => {
-    expect(reasonLabel('brand_new_backend_reason')).toBe('brand_new_backend_reason')
+    expect(reasonLabel('uk', 'brand_new_backend_reason')).toBe('brand_new_backend_reason')
   })
 
   it('covers exactly the backend reason vocabulary (drift-lock)', () => {
@@ -47,20 +47,21 @@ describe('reasonLabel (Р15)', () => {
   })
 })
 
-describe('ROLE_LABELS', () => {
+describe('roleLabels', () => {
   it('labels every role token', () => {
-    for (const t of ROLE_TOKENS) expect(ROLE_LABELS[t]).toBeTruthy()
+    const labels = roleLabels('uk')
+    for (const t of ROLE_TOKENS) expect(labels[t]).toBeTruthy()
   })
 
   it('renders the third role as «Несуттєвий для теми» (A-UI-1 rename)', () => {
     // Display string only — the token stays ``structure_only``.
-    expect(ROLE_LABELS.structure_only).toBe('Несуттєвий для теми')
+    expect(roleLabels('uk').structure_only).toBe('Несуттєвий для теми')
   })
 })
 
 describe('reasonLabel — renamed author-structure-only wording (A-UI-1)', () => {
   it('phrases the author-demoted reason with the new label', () => {
-    expect(reasonLabel('author_structure_only')).toBe(
+    expect(reasonLabel('uk', 'author_structure_only')).toBe(
       'рішення автора: несуттєвий для теми',
     )
   })

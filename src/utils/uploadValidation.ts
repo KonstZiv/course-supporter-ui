@@ -1,5 +1,7 @@
 import { formatAudioDuration } from '../components/ui/uploadConfirmMeta'
 import { VIDEO_EXTENSIONS } from './uploadRouting'
+import type { Language } from '../i18n/languages'
+import { translate } from '../i18n/translate'
 
 // Client-side pre-send mirrors of the backend author policy, shared by both
 // file surfaces (Е2). A fast courtesy only — the server's synchronous rejection
@@ -95,6 +97,7 @@ export interface UploadValidationResult {
  * the message. Whoever renders it has to preserve them.
  */
 export async function validateUploadFiles(
+  language: Language,
   files: File[],
 ): Promise<UploadValidationResult> {
   const accepted: File[] = []
@@ -110,14 +113,20 @@ export async function validateUploadFiles(
       PRESENTATION_EXTENSIONS.has(ext) &&
       file.size > MAX_PRESENTATION_SIZE_BYTES
     ) {
-      oversized.push(`${file.name} перевищує ліміт 50 МБ для презентацій`)
+      oversized.push(
+        translate(language, 'panel.upload.validation.presentationTooLarge', {
+          name: file.name,
+        }),
+      )
       continue
     }
     if (VIDEO_EXTENSIONS.includes(ext)) {
       // Е10 — size first (no byte flies for an over-limit video), then duration.
       if (file.size > MAX_VIDEO_UPLOAD_BYTES) {
         tooBigVideo.push(
-          `${file.name}: відео завелике для надсилання з браузера — до 1 ГБ`,
+          translate(language, 'panel.upload.validation.videoTooLarge', {
+            name: file.name,
+          }),
         )
         continue
       }
@@ -146,16 +155,16 @@ export async function validateUploadFiles(
   if (tooBigVideo.length > 0) blocks.push(tooBigVideo.join('\n'))
   if (tooLongAudio.length > 0) {
     blocks.push(
-      'Система зараз обробляє аудіо до 150 хвилин. ' +
-        'Будь ласка, розділіть на коротші частини:\n\n' +
-        tooLongAudio.join('\n'),
+      translate(language, 'panel.upload.validation.audioTooLong', {
+        list: tooLongAudio.join('\n'),
+      }),
     )
   }
   if (tooLongVideo.length > 0) {
     blocks.push(
-      'Система зараз обробляє відео до 150 хвилин. ' +
-        'Будь ласка, розділіть на коротші частини:\n\n' +
-        tooLongVideo.join('\n'),
+      translate(language, 'panel.upload.validation.videoTooLong', {
+        list: tooLongVideo.join('\n'),
+      }),
     )
   }
 

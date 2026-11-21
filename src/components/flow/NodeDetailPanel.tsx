@@ -168,7 +168,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
     async (files: File[]) => {
       if (files.length === 0) return
       const { accepted, durations, rejectionMessage } =
-        await validateUploadFiles(files)
+        await validateUploadFiles(language, files)
       // Always called, with an empty list when nothing was refused: a new drop
       // is a new answer, and a previous gesture's notice must not read as this
       // one's.
@@ -178,7 +178,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
         setPendingFileDurations(durations)
       }
     },
-    [reportFailures],
+    [language, reportFailures],
   )
 
   // Link add → show confirmation
@@ -543,7 +543,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
           </p>
         ) : (
           node.authored_documents.map((mat) => {
-            const meta = sourceTypeMeta(mat.source_type)
+            const meta = sourceTypeMeta(language, mat.source_type)
             const Icon = iconMap[meta.icon] || FileIcon
             const isMethodological = mat.material_role === 'methodological'
             // A test is written, never processed: no phase to show, nothing
@@ -627,7 +627,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                     mat.error_category === INSUFFICIENT_UNITS_CATEGORY && (
                       <>
                         <p className="text-xs text-coral mt-1">
-                          {ingestErrorMessage(mat.error_category)}
+                          {ingestErrorMessage(language, mat.error_category)}
                         </p>
                         {/* Beside the card's own retry: the purchase, in a new
                             tab; the retry stays as it is. */}
@@ -641,10 +641,10 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                     (mat.error_category || mat.error_message) && (
                     <>
                       <p className="text-xs text-coral mt-1 line-clamp-2">
-                        {ingestErrorMessage(mat.error_category)}
+                        {ingestErrorMessage(language, mat.error_category)}
                       </p>
                       <ContactAdmin
-                        message={ingestErrorMessage(mat.error_category)}
+                        message={ingestErrorMessage(language, mat.error_category)}
                         context={{
                           course: tree?.title ?? null,
                           section: node.title ?? null,

@@ -2,6 +2,8 @@ import { useCallback, useState } from 'react'
 import { ApiError } from '../api/client'
 import type { UploadProgress } from '../api/upload'
 import { authoredRejectionMessage } from '../utils/apiError'
+import { useLanguage } from '../i18n/LanguageContext'
+import { translate } from '../i18n/translate'
 
 // The ONE upload cycle both file surfaces use (Е2, invariant #3): sequential
 // send (one request per file, no concurrency), a file counter, the current
@@ -56,6 +58,7 @@ export interface UploadBatchHooks {
 }
 
 export function useUploadBatch() {
+  const language = useLanguage()
   const [state, setState] = useState<UploadBatchState>(IDLE)
   const [failures, setFailures] = useState<string[]>([])
 
@@ -103,9 +106,10 @@ export function useUploadBatch() {
           } catch (err) {
             batchFailures.push(
               authoredRejectionMessage(err, task.label) ??
-                `${task.label}: не вдалося надіслати файл (код ${
-                  err instanceof ApiError ? err.status : 'unknown'
-                })`,
+                translate(language, 'panel.upload.sendFailed', {
+                  label: task.label,
+                  code: err instanceof ApiError ? err.status : 'unknown',
+                }),
             )
           }
         }
@@ -120,7 +124,7 @@ export function useUploadBatch() {
         setFailures((prev) => [...prev, ...batchFailures])
       }
     },
-    [],
+    [language],
   )
 
   return { state, run, failures, reportFailures, dismissFailures }

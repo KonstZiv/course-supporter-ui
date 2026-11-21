@@ -1,56 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { literalsOf } from './sourceScan'
+import { importGraph, literalsOf } from './sourceScan'
 
-// розширюється з кожним пакетом; після останнього — весь граф імпорту src/main.tsx
-export const MIGRATED_PANEL_FILES = [
-  '/src/components/layout/Header.tsx',
-  '/src/pages/LoginPage.tsx',
-  '/src/pages/RouteErrorPage.tsx',
-  '/src/pages/BillingPage.tsx',
-  '/src/pages/CostPage.tsx',
-  '/src/pages/HomeworkCostPage.tsx',
-  '/src/pages/HistoryPage.tsx',
-  '/src/pages/StudentsPage.tsx',
-  '/src/components/billing/ReturnToWork.tsx',
-  '/src/components/billing/PackagesSection.tsx',
-  '/src/components/billing/OutlookReminders.tsx',
-  '/src/components/billing/CheckoutNotice.tsx',
-  '/src/components/cost/MonthPicker.tsx',
-  '/src/components/history/MaterialHistoryRowExpandable.tsx',
-  '/src/components/history/MaterialHistoryRow.tsx',
-  '/src/components/students/StudentRow.tsx',
-  '/src/components/students/ProvisionStudentModal.tsx',
-  '/src/components/students/studentErrors.ts',
-  '/src/components/students/ResetPasswordModal.tsx',
-  '/src/components/students/CoursePickerModal.tsx',
-  '/src/components/students/StudentStatusBadge.tsx',
-  '/src/components/ui/ContactAdmin.tsx',
-  '/src/utils/authorBillingTexts.ts',
-  '/src/utils/priceEstimate.ts',
-  '/src/utils/contactAdmin.ts',
-  '/src/utils/stateVocabulary.ts',
-  '/src/utils/relativeTime.ts',
-  '/src/utils/formatDuration.ts',
-  '/src/utils/formatBytes.ts',
-  '/src/components/flow/SummaryModal.tsx',
-  '/src/components/flow/NodeDetailPanel.tsx',
-  '/src/components/flow/FlowContextMenu.tsx',
-  '/src/components/flow/BaseManifestView.tsx',
-  '/src/components/flow/ProjectBaseSection.tsx',
-  '/src/components/flow/RejectionNotice.tsx',
-  '/src/components/flow/baseErrors.ts',
-  '/src/components/flow/SummaryBadge.tsx',
-  '/src/components/flow/RunStatePanel.tsx',
-  '/src/components/flow/ProjectBaseBadge.tsx',
-  '/src/components/flow/DocumentStructureBlock.tsx',
-  '/src/components/flow/nodes/CourseRootNode.tsx',
-  '/src/components/flow/nodes/SectionNode.tsx',
-  '/src/components/testEditor/editorTexts.ts',
-  '/src/utils/testRefusals.ts',
-  '/src/utils/testLetters.ts',
-]
+const files = importGraph('/src/main.tsx')
 
 const ALLOWED: Record<string, Record<string, string>> = {
+  '/src/i18n/languages.ts': {
+    'Українська': 'the name of the language in that language — never translated',
+  },
   '/src/utils/testLetters.ts': {
     'абвгдеєжзиіїклмнопрстуфхцчшщюя':
       'the option letters of a course in Ukrainian — course data mirroring the backend, not interface text',
@@ -61,7 +17,7 @@ const CYRILLIC = /[Ѐ-ӿ]/
 
 describe('the author panel migrated files have no Cyrillic', () => {
   it('no literal in migrated files contains Cyrillic characters', () => {
-    const found = MIGRATED_PANEL_FILES.flatMap((file) =>
+    const found = files.flatMap((file) =>
       literalsOf(file)
         .filter((text) => CYRILLIC.test(text) && !(text in (ALLOWED[file] ?? {})))
         .map((text) => `${file}: ${text}`),
@@ -71,7 +27,7 @@ describe('the author panel migrated files have no Cyrillic', () => {
 
   it('the allowed list holds nothing stale', () => {
     for (const [file, allowed] of Object.entries(ALLOWED)) {
-      expect(MIGRATED_PANEL_FILES).toContain(file)
+      expect(files).toContain(file)
       const literals = literalsOf(file)
       for (const text of Object.keys(allowed)) expect(literals).toContain(text)
     }

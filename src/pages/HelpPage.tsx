@@ -1,7 +1,8 @@
 import { ContactAdmin } from '../components/ui/ContactAdmin'
 import { docsUrl } from '../components/site/siteLinks'
-import { useLanguage } from '../i18n/LanguageContext'
+import { useLanguage, useT } from '../i18n/LanguageContext'
 import type { Language } from '../i18n/languages'
+import { translate, translateRich } from '../i18n/translate'
 
 // Help page: brief author path with links to the documentation site,
 // and direct contact affordance for the platform administrator.
@@ -19,124 +20,121 @@ function getAuthorSteps(language: Language): StepItem[] {
   return [
     {
       parts: [
-        { text: 'Увійдіть у програму автора ключем доступу — ' },
+        { text: translate(language, 'panel.help.steps.step1.part1') },
         {
-          text: 'Вхід і перший курс',
+          text: translate(language, 'panel.help.steps.step1.link'),
           href: docsUrl(language, 'authors/first-course/'),
         },
-        { text: '.' },
+        { text: translate(language, 'panel.help.steps.dot') },
       ],
     },
     {
       parts: [
-        { text: 'Створіть курс і вкажіть його мову — ' },
+        { text: translate(language, 'panel.help.steps.step2.part1') },
         {
-          text: 'там само',
+          text: translate(language, 'panel.help.steps.samePlace'),
           href: docsUrl(language, 'authors/first-course/'),
         },
-        { text: '.' },
+        { text: translate(language, 'panel.help.steps.dot') },
       ],
     },
     {
       parts: [
         {
-          text: 'Створіть розділи курсу — одразу в тому порядку, у якому їх має бачити студент: ',
+          text: translate(language, 'panel.help.steps.step3.part1'),
         },
         {
-          text: 'Структура курсу',
+          text: translate(language, 'panel.help.steps.step3.link'),
           href: docsUrl(language, 'authors/structure/'),
         },
-        { text: '.' },
+        { text: translate(language, 'panel.help.steps.dot') },
       ],
     },
     {
       parts: [
         {
-          text: 'Завантажте в кожен розділ матеріали: навчальні — для студентів, методичні — для помічників платформи: ',
+          text: translate(language, 'panel.help.steps.step4.part1'),
         },
         {
-          text: 'Матеріали',
+          text: translate(language, 'panel.help.steps.step4.link'),
           href: docsUrl(language, 'authors/materials/'),
         },
-        { text: '.' },
+        { text: translate(language, 'panel.help.steps.dot') },
       ],
     },
     {
       parts: [
-        { text: 'Додайте завдання й тести: ' },
+        { text: translate(language, 'panel.help.steps.step5.part1') },
         {
-          text: 'Завдання',
+          text: translate(language, 'panel.help.steps.step5.link1'),
           href: docsUrl(language, 'authors/tasks/'),
         },
-        { text: ', ' },
+        { text: translate(language, 'panel.help.steps.comma') },
         {
-          text: 'Тести',
+          text: translate(language, 'panel.help.steps.step5.link2'),
           href: docsUrl(language, 'authors/tests/'),
         },
-        { text: '.' },
+        { text: translate(language, 'panel.help.steps.dot') },
       ],
     },
     {
       parts: [
-        { text: 'Коли залито все, запустіть Методиста для всього курсу — ' },
+        { text: translate(language, 'panel.help.steps.step6.part1') },
         {
-          text: 'Описи розділів: Методист',
+          text: translate(language, 'panel.help.steps.step6.link'),
           href: docsUrl(language, 'authors/methodist/#when'),
         },
-        { text: '.' },
+        { text: translate(language, 'panel.help.steps.dot') },
       ],
     },
     {
       parts: [
         {
-          text: 'Перегляньте описи розділів, виправте, що треба, і затвердьте — ',
+          text: translate(language, 'panel.help.steps.step7.part1'),
         },
         {
-          text: 'там само',
+          text: translate(language, 'panel.help.steps.samePlace'),
           href: docsUrl(language, 'authors/methodist/#edit'),
         },
-        { text: '.' },
+        { text: translate(language, 'panel.help.steps.dot') },
       ],
     },
     {
-      parts: [{ text: 'Додайте студентів і зарахуйте їх на курс.' }],
+      parts: [{ text: translate(language, 'panel.help.steps.step8') }],
     },
     {
       parts: [
-        { text: 'Стежте за витратами — ' },
+        { text: translate(language, 'panel.help.steps.step9.part1') },
         {
-          text: 'Витрати й історія',
+          text: translate(language, 'panel.help.steps.step9.link'),
           href: docsUrl(language, 'authors/costs-history/'),
         },
-        { text: '.' },
+        { text: translate(language, 'panel.help.steps.dot') },
       ],
     },
   ]
 }
 
-// прибрати, коли на сайті з'явиться сторінка про студентів
-export const STEPS_IN_PROGRESS_NOTE = 'Сторінка про крок 8 ще готується.'
-
 export function HelpPage() {
   const language = useLanguage()
+  const t = useT()
   const authorSteps = getAuthorSteps(language)
 
   return (
     <div className="max-w-[1600px] mx-auto px-6 py-8">
       <div className="max-w-3xl space-y-8">
         <div>
-          <h1 className="page-title">Довідка</h1>
-          <p className="page-subtitle">Шлях автора за кроками й допомога</p>
+          <h1 className="page-title">{t('panel.help.title')}</h1>
+          <p className="page-subtitle">{t('panel.help.subtitle')}</p>
         </div>
 
         {/* Розділ 1 — Шлях автора за кроками */}
         <section className="space-y-4">
           <h2 className="font-display text-xl text-ink">
-            Шлях автора за кроками
+            {t('panel.help.section1.title')}
           </h2>
           <p className="text-ink">
-            Це короткий шлях автора курсу. Докладні пояснення — на сайті
-            документації; сторінки відкриваються в новій вкладці.
+            {t('panel.help.section1.intro')}
           </p>
 
           <ol className="list-decimal list-inside space-y-2 text-ink">
@@ -162,27 +160,27 @@ export function HelpPage() {
           </ol>
 
           <div className="pt-2 space-y-2 text-ink">
-            <p>{STEPS_IN_PROGRESS_NOTE}</p>
+            <p>{t('panel.help.stepsInProgressNote')}</p>
             <p>
-              Хто з помічників що читає —{' '}
+              {t('panel.help.helpersNote.part1')}
               <a
                 href={docsUrl(language, 'authors/how-it-works/')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-navy underline underline-offset-2 hover:text-navy-light"
               >
-                Як платформа розуміє ваш курс
+                {t('panel.help.helpersNote.link1')}
               </a>
-              . Усі сторінки для авторів —{' '}
+              {t('panel.help.helpersNote.part2')}
               <a
                 href={docsUrl(language, 'authors/')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-navy underline underline-offset-2 hover:text-navy-light"
               >
-                на сайті документації
+                {t('panel.help.helpersNote.link2')}
               </a>
-              .
+              {t('panel.help.steps.dot')}
             </p>
           </div>
         </section>
@@ -190,34 +188,32 @@ export function HelpPage() {
         {/* Розділ 2 — Як написати адміністраторові платформи */}
         <section className="space-y-4">
           <h2 className="font-display text-xl text-ink">
-            Як написати адміністраторові платформи
+            {t('panel.help.section2.title')}
           </h2>
 
           <p className="text-ink">
-            Якщо щось не виходить або потрібна допомога — наприклад, новий ключ
-            доступу, — пишіть адміністраторові платформи.
+            {t('panel.help.section2.intro')}
           </p>
 
           <p className="text-ink">
-            Натисніть кнопку — відкриється готовий лист: адреса й тема вже є.
-            Допишіть, що ви робили перед цим, і додайте кадр екрана, якщо він
-            допоможе.
+            {t('panel.help.section2.instruction')}
           </p>
 
           <ContactAdmin fallback="always" />
 
-          <p className="text-ink font-medium pt-2">Що добре мати в листі:</p>
+          <p className="text-ink font-medium pt-2">{t('panel.help.section2.checklistTitle')}</p>
           <ul className="list-disc list-inside space-y-1 text-ink">
-            <li>назва курсу й розділу;</li>
-            <li>назва матеріалу чи тесту, якщо йдеться про нього;</li>
-            <li>коли це сталося — дата й приблизний час;</li>
-            <li>дослівний текст повідомлення, яке ви побачили;</li>
-            <li>кадр екрана.</li>
+            <li>{t('panel.help.section2.item1')}</li>
+            <li>{t('panel.help.section2.item2')}</li>
+            <li>{t('panel.help.section2.item3')}</li>
+            <li>{t('panel.help.section2.item4')}</li>
+            <li>{t('panel.help.section2.item5')}</li>
           </ul>
 
           <p className="text-ink pt-1">
-            <strong>Важливо.</strong> Ключа доступу не надсилайте ніколи — ні в
-            листі, ні на кадрі екрана.
+            {translateRich(language, 'panel.help.section2.importantNotice', {
+              b: (chunks) => <strong>{chunks}</strong>,
+            })}
           </p>
         </section>
       </div>

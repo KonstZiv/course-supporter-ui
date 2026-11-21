@@ -297,7 +297,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
       if (!input.files?.length) return
       // Same pre-send checks as the side panel (Е2 parity — the canvas ran none).
       const { accepted, durations, rejectionMessage } =
-        await validateUploadFiles(Array.from(input.files))
+        await validateUploadFiles(language, Array.from(input.files))
       // Always called, empty list included — see the panel's onDrop.
       reportFailures(rejectionMessage ? [rejectionMessage] : [])
       if (accepted.length > 0) {
@@ -306,7 +306,7 @@ export function FlowContextMenu({ position, onClose, onGenerate }: Props) {
       }
     }
     input.click()
-  }, [reportFailures])
+  }, [reportFailures, language])
 
   const handleConfirmUpload = useCallback(
     async (

@@ -6,7 +6,7 @@ import { jobStateLabel, jobStateWordClass } from '../../utils/stateVocabulary'
 import { deletedMaterialLabelShort } from '../../utils/materialLabel'
 import { deriveFloors } from '../../utils/activityFloors'
 import { ActivityStripPanel } from './ActivityStripPanel'
-import { useLanguage } from '../../i18n/LanguageContext'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 
 // Collapsed floor (§2 / В4): pinned in the header. At `xl`+ it shows the window
 // compressed to one headline — the newest live job, else the newest finished in
@@ -25,6 +25,7 @@ import { useLanguage } from '../../i18n/LanguageContext'
 export function ActivityStrip({ items }: { items: JobListItemResponse[] }) {
   const [open, setOpen] = useState(false)
   const language = useLanguage()
+  const t = useT()
   const now = Date.now()
   const { headline, moreCount, detailed } = deriveFloors(items)
 
@@ -44,8 +45,8 @@ export function ActivityStrip({ items }: { items: JobListItemResponse[] }) {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        aria-label="Останні роботи"
-        title="Показати останні роботи"
+        aria-label={t('panel.activity.recentWorks')}
+        title={t('panel.activity.showRecentWorks')}
         className="flex items-center gap-2 min-w-0 max-w-full px-2 xl:px-3 py-1.5
                    rounded-xl hover:bg-canvas-dark/60 transition-colors text-sm"
       >
@@ -68,7 +69,7 @@ export function ActivityStrip({ items }: { items: JobListItemResponse[] }) {
               <>
                 <Trash2 size={12} className="shrink-0 text-ink-muted" />
                 <span className="truncate min-w-0 text-ink-muted">
-                  {deletedMaterialLabelShort()}
+                  {deletedMaterialLabelShort(language)}
                 </span>
               </>
             ) : (
@@ -79,7 +80,7 @@ export function ActivityStrip({ items }: { items: JobListItemResponse[] }) {
           </span>
           {moreCount > 0 && (
             <span className="shrink-0 text-xs text-ink-muted">
-              і ще {moreCount}
+              {t('panel.activity.moreCount', { count: moreCount })}
             </span>
           )}
           <ChevronDown
