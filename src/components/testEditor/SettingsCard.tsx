@@ -1,8 +1,9 @@
 import { useId, useRef } from 'react'
 import { clsx } from 'clsx'
 import { Download, EyeOff, Loader2, Upload } from 'lucide-react'
+import { useLanguage } from '../../i18n/LanguageContext'
 import type { TestAction } from '../../utils/testRefusals'
-import { TEXTS } from './editorTexts'
+import { editorTexts } from './editorTexts'
 import { FieldError } from './fields'
 import { describedBy } from './formParts'
 
@@ -41,6 +42,8 @@ export function SettingsCard({
   onChooseFile: (file: File) => void
   onHide: () => void
 }) {
+  const language = useLanguage()
+  const texts = editorTexts(language)
   const id = useId()
   const file = useRef<HTMLInputElement>(null)
   const reason = fileBlocked ?? exportBlocked
@@ -52,7 +55,7 @@ export function SettingsCard({
           htmlFor={`${id}-title`}
           className="block text-sm font-medium text-ink mb-1.5"
         >
-          {TEXTS.title}
+          {texts.title}
         </label>
         <input
           id={`${id}-title`}
@@ -68,7 +71,7 @@ export function SettingsCard({
         />
         {titleError && <FieldError id={`${id}-title-error`} words={titleError} />}
         <p id={`${id}-title-hint`} className="text-xs text-ink-muted mt-1">
-          {TEXTS.titleHint}
+          {texts.titleHint}
         </p>
       </div>
 
@@ -77,7 +80,7 @@ export function SettingsCard({
           htmlFor={`${id}-pass`}
           className="block text-sm font-medium text-ink mb-1.5"
         >
-          {TEXTS.passThreshold}
+          {texts.passThreshold}
         </label>
         <div className="flex items-center gap-2">
           <input
@@ -104,7 +107,7 @@ export function SettingsCard({
           <FieldError id={`${id}-pass-error`} words={passThresholdError} />
         )}
         <p id={`${id}-pass-hint`} className="text-xs text-ink-muted mt-1">
-          {TEXTS.passThresholdHint}
+          {texts.passThresholdHint}
         </p>
       </div>
 
@@ -122,7 +125,7 @@ export function SettingsCard({
             ) : (
               <Download size={14} />
             )}
-            {TEXTS.exportYaml}
+            {texts.exportYaml}
           </button>
           <button
             type="button"
@@ -136,7 +139,7 @@ export function SettingsCard({
             ) : (
               <Upload size={14} />
             )}
-            {TEXTS.replaceYaml}
+            {texts.replaceYaml}
           </button>
           <button
             type="button"
@@ -146,7 +149,7 @@ export function SettingsCard({
             aria-describedby={fileBlocked !== null ? `${id}-file-hint` : undefined}
           >
             <EyeOff size={14} />
-            {TEXTS.hide}
+            {texts.hide}
           </button>
         </div>
         {reason !== null && (

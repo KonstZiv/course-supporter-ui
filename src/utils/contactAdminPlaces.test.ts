@@ -22,8 +22,9 @@ describe('contactAdminPlaces', () => {
     const EXPECTED_COUNTS: Record<string, number> = {
       'panel.flow.detail.startProcessingFailed': 1,
       'panel.flow.contextMenu.renameFailed': 1,
+      'panel.testRefusals.screenedText.promptInjection': 1,
+      'panel.testRefusals.screenedText.other': 1,
       'ingestErrors.ts': 2,
-      'testRefusals.ts': 2,
       'panel.routeError.description': 1,
       'panel.billing.loadFailed': 1,
       'panel.billing.providerUnavailable': 1,
