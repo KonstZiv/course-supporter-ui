@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import type { ProcessingPhase, JobState, AuthorJobType, TestState } from '../types/api'
-import { TEXTS } from '../components/testEditor/editorTexts'
+import { editorTexts } from '../components/testEditor/editorTexts'
 import type { Tone } from '../components/testEditor/Chip'
 import type { Language } from '../i18n/languages'
 import { localeOf } from '../i18n/languages'
@@ -32,22 +32,11 @@ const PHASE_METADATA: Record<ProcessingPhase, { tone: PhaseTone; pulse: boolean 
 
 export const UNKNOWN_PHASE: PhaseVocabEntry = { label: '—', tone: 'muted', pulse: false }
 
-export const PHASE_VOCAB: Record<ProcessingPhase, PhaseVocabEntry> = {
-  queued: { label: translate('uk', 'panel.state.phase.queued'), tone: 'busy', pulse: false },
-  processing: { label: translate('uk', 'panel.state.phase.processing'), tone: 'busy', pulse: true },
-  awaiting_author: { label: translate('uk', 'panel.state.phase.awaitingAuthor'), tone: 'awaiting', pulse: false },
-  ready: { label: translate('uk', 'panel.state.phase.ready'), tone: 'ready', pulse: false },
-  error: { label: translate('uk', 'panel.state.phase.error'), tone: 'error', pulse: false },
-}
-
 /** Total lookup: a known phase → its entry, anything else → the muted fallback. */
 export function phaseVocab(language: Language, phase: ProcessingPhase): PhaseVocabEntry {
   const meta = PHASE_METADATA[phase]
   const key = PHASE_LABEL_KEYS[phase]
   if (!meta || !key) return UNKNOWN_PHASE
-  if (language === 'uk') {
-    return PHASE_VOCAB[phase]
-  }
   return {
     label: translate(language, key),
     tone: meta.tone,
@@ -66,36 +55,48 @@ export interface TestStateVocabEntry {
   pillTone: PhaseTone
 }
 
-export const TEST_STATE_VOCAB: Record<TestState, TestStateVocabEntry> = {
-  draft: { label: TEXTS.notPublished, chipTone: 'neutral', pillTone: 'muted' },
-  published: {
-    label: TEXTS.published,
-    hint: TEXTS.publishedHint,
-    chipTone: 'forest',
-    pillTone: 'ready',
-  },
-  changed: {
-    label: TEXTS.unpublishedChanges,
-    hint: TEXTS.unpublishedChangesHint,
-    chipTone: 'navy',
-    pillTone: 'awaiting',
-  },
+function buildTestStateVocab(language: Language): Record<TestState, TestStateVocabEntry> {
+  const texts = editorTexts(language)
+  return {
+    draft: { label: texts.notPublished, chipTone: 'neutral', pillTone: 'muted' },
+    published: {
+      label: texts.published,
+      hint: texts.publishedHint,
+      chipTone: 'forest',
+      pillTone: 'ready',
+    },
+    changed: {
+      label: texts.unpublishedChanges,
+      hint: texts.unpublishedChangesHint,
+      chipTone: 'navy',
+      pillTone: 'awaiting',
+    },
+  }
 }
 
 /** A test's state entry, or ``null`` when the tree does not say (absent/null/unknown). */
-export function testStateVocab(state: TestState | null | undefined): TestStateVocabEntry | null {
-  return (state && TEST_STATE_VOCAB[state]) || null
+export function testStateVocab(
+  language: Language,
+  state: TestState | null | undefined,
+): TestStateVocabEntry | null {
+  return (state && buildTestStateVocab(language)[state]) || null
 }
 
-const TEST_STATE_CHIPS: Record<TestState, TestStateVocabEntry[]> = {
-  draft: [TEST_STATE_VOCAB.draft],
-  published: [TEST_STATE_VOCAB.published],
-  changed: [TEST_STATE_VOCAB.published, TEST_STATE_VOCAB.changed],
+function buildTestStateChips(language: Language): Record<TestState, TestStateVocabEntry[]> {
+  const vocab = buildTestStateVocab(language)
+  return {
+    draft: [vocab.draft],
+    published: [vocab.published],
+    changed: [vocab.published, vocab.changed],
+  }
 }
 
 /** The editor's chips for a test's state, in its order; none when the tree does not say. */
-export function testStateChips(state: TestState | null | undefined): TestStateVocabEntry[] {
-  return (state && TEST_STATE_CHIPS[state]) || []
+export function testStateChips(
+  language: Language,
+  state: TestState | null | undefined,
+): TestStateVocabEntry[] {
+  return (state && buildTestStateChips(language)[state]) || []
 }
 
 /** A canvas pill's word and tone: a test's publication state, any other material's phase. */
@@ -108,7 +109,7 @@ export function pillVocab(
   },
 ): PhaseVocabEntry {
   if (document.source_type !== 'test_object') return phaseVocab(language, document.processing_phase)
-  const state = testStateVocab(document.test_state)
+  const state = testStateVocab(language, document.test_state)
   return state === null
     ? { label: translate(language, 'panel.state.test'), tone: 'muted', pulse: false }
     : { label: state.label, tone: state.pillTone, pulse: false }
@@ -128,15 +129,6 @@ export function jobStateLabel(language: Language, state: JobState): string {
   return key ? translate(language, key) : state
 }
 
-export const JOB_STATE_LABEL: Record<JobState, string> = {
-  queued: jobStateLabel('uk', 'queued'),
-  processing: jobStateLabel('uk', 'processing'),
-  ready: jobStateLabel('uk', 'ready'),
-  error: jobStateLabel('uk', 'error'),
-  cancelled: jobStateLabel('uk', 'cancelled'),
-  obsolete: jobStateLabel('uk', 'obsolete'),
-}
-
 const JOB_KIND_KEYS: Record<AuthorJobType, MessageKey> = {
   document_processing: 'panel.state.kind.documentProcessing',
   document_preparation: 'panel.state.kind.documentPreparation',
@@ -147,13 +139,6 @@ const JOB_KIND_KEYS: Record<AuthorJobType, MessageKey> = {
 export function jobKindLabel(language: Language, kind: AuthorJobType): string {
   const key = JOB_KIND_KEYS[kind]
   return key ? translate(language, key) : kind
-}
-
-export const JOB_KIND_LABEL: Record<AuthorJobType, string> = {
-  document_processing: jobKindLabel('uk', 'document_processing'),
-  document_preparation: jobKindLabel('uk', 'document_preparation'),
-  base_normalize: jobKindLabel('uk', 'base_normalize'),
-  node_summary_regeneration: jobKindLabel('uk', 'node_summary_regeneration'),
 }
 
 const PHASE_BADGE_TONE: Record<PhaseTone, string> = {

@@ -148,8 +148,6 @@ export function editorTexts(language: Language) {
   }
 }
 
-export const TEXTS = editorTexts('uk')
-
 export function questionHeading(language: Language, number: number): string {
   return translate(language, 'panel.testEditor.questionHeading', { number })
 }
