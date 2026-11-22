@@ -71,7 +71,7 @@ export function availableLine(
   reviewsLeft: number | null,
 ): string {
   const units = formatUnits(language, available)
-  return reviewsLeft === null
+  return reviewsLeft === null || reviewsLeft === 0
     ? translate(language, 'portal.units.available', { units })
     : translate(language, 'portal.units.availableWithReviews', {
         units,

@@ -3,6 +3,7 @@ import { useRouteError } from 'react-router-dom'
 import { AlertTriangle } from 'lucide-react'
 import { ContactAdmin } from '../components/ui/ContactAdmin'
 import { EmptyState } from '../components/ui/EmptyState'
+import { SiteFooter } from '../components/site/SiteFooter'
 import { useCourseStore } from '../stores/course'
 import { useT } from '../i18n/LanguageContext'
 
@@ -22,28 +23,31 @@ export function RouteErrorPage() {
   const routeErrorMessage = t('panel.routeError.description')
 
   return (
-    <div className="min-h-screen bg-canvas flex items-center justify-center">
-      <EmptyState
-        icon={AlertTriangle}
-        title={t('panel.routeError.title')}
-        description={routeErrorMessage}
-        action={
-          <div className="flex flex-col items-center gap-3">
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => window.location.reload()}
-            >
-              {t('panel.routeError.reloadButton')}
-            </button>
-            <ContactAdmin
-              message={routeErrorMessage}
-              context={{ course: courseTitle }}
-              fallback="after-click"
-            />
-          </div>
-        }
-      />
+    <div className="min-h-screen bg-canvas flex flex-col">
+      <div className="flex-1 flex items-center justify-center">
+        <EmptyState
+          icon={AlertTriangle}
+          title={t('panel.routeError.title')}
+          description={routeErrorMessage}
+          action={
+            <div className="flex flex-col items-center gap-3">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => window.location.reload()}
+              >
+                {t('panel.routeError.reloadButton')}
+              </button>
+              <ContactAdmin
+                message={routeErrorMessage}
+                context={{ course: courseTitle }}
+                fallback="after-click"
+              />
+            </div>
+          }
+        />
+      </div>
+      <SiteFooter />
     </div>
   )
 }

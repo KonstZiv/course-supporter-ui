@@ -36,7 +36,7 @@ const AUTHOR_HELD: PortalPresentation = {
 }
 const OWN_HELD: PortalPresentation = { state: 'awaiting_funds', reason_code: 'awaiting_funds' }
 
-const AUTHOR_TEXT = 'Роботу прийнято. Перевірка почнеться, коли автор курсу поповнить юніти.'
+const AUTHOR_TEXT = 'Роботу прийнято. Перевірка почнеться, коли автор курсу купить юніти.'
 const OWN_TEXT =
   'Перевірку призупинено: на початок перевірки не вистачило юнітів. ' +
   'Після купівлі перевірка продовжиться сама — надсилати роботу знову не потрібно.'
