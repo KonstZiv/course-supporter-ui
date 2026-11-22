@@ -50,13 +50,13 @@ describe('authoredRejectionMessage', () => {
     })
 
   it('maps a SECURITY_REJECTED to the human dictionary by category', () => {
-    expect(authoredRejectionMessage(security('suspicious_unicode'))).toBe(
+    expect(authoredRejectionMessage('uk', security('suspicious_unicode'))).toBe(
       ingestErrorMessage('uk', 'suspicious_unicode'),
     )
   })
 
   it('degrades an unknown security category to the generic phrase, never raw', () => {
-    const msg = authoredRejectionMessage(security('brand_new_category'))
+    const msg = authoredRejectionMessage('uk', security('brand_new_category'))
     expect(msg).toBe(ingestErrorMessage('uk', null))
     expect(msg).not.toContain('raw stage-1 text')
   })
@@ -70,7 +70,7 @@ describe('authoredRejectionMessage', () => {
           'Система обробляє відео тривалістю до 150 хвилин; це відео — 180 хв.',
       },
     })
-    expect(authoredRejectionMessage(err)).toBe(
+    expect(authoredRejectionMessage('uk', err)).toBe(
       'Система обробляє відео тривалістю до 150 хвилин; це відео — 180 хв.',
     )
   })
@@ -82,7 +82,7 @@ describe('authoredRejectionMessage', () => {
         details: 'archive uploads are accepted only as source_type=code',
       },
     })
-    const msg = authoredRejectionMessage(err)
+    const msg = authoredRejectionMessage('uk', err)
     expect(msg).toBe(ingestErrorMessage('uk', null))
     expect(msg).not.toContain('archive uploads')
   })
@@ -96,7 +96,7 @@ describe('authoredRejectionMessage', () => {
         place: { line: 9, column: 9, question: 1, option: 2 },
       },
     })
-    const msg = authoredRejectionMessage(err, 'змінні.yaml')
+    const msg = authoredRejectionMessage('uk', err, 'змінні.yaml')
     expect(msg).toBe(
       'змінні.yaml: тест не прочитано — одне поле записано двічі — лишіть ' +
         'один запис — рядок 9, стовпчик 9 (питання 1, варіант 2)',
@@ -109,21 +109,22 @@ describe('authoredRejectionMessage', () => {
         details: "source_type 'test_object' is not for a client to name",
       },
     })
-    expect(authoredRejectionMessage(reserved)).toBe(ingestErrorMessage('uk', null))
+    expect(authoredRejectionMessage('uk', reserved)).toBe(ingestErrorMessage('uk', null))
   })
 
   it('returns null for a code-less envelope (the caller fallback takes over)', () => {
     expect(
       authoredRejectionMessage(
+        'uk',
         new ApiError(400, 'x', { detail: { details: 'x' } }),
       ),
     ).toBeNull()
   })
 
   it('returns null for non-server errors', () => {
-    expect(authoredRejectionMessage(new ApiError(500, 'x', null))).toBeNull()
-    expect(authoredRejectionMessage(new Error('net'))).toBeNull()
-    expect(authoredRejectionMessage(null)).toBeNull()
+    expect(authoredRejectionMessage('uk', new ApiError(500, 'x', null))).toBeNull()
+    expect(authoredRejectionMessage('uk', new Error('net'))).toBeNull()
+    expect(authoredRejectionMessage('uk', null)).toBeNull()
   })
 })
 

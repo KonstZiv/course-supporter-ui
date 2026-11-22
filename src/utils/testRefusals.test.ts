@@ -7,7 +7,7 @@ import {
   actionFailure,
   fieldProblemWords,
   incompleteWords,
-  NOT_SAVED_SEE_BELOW,
+  notSavedSeeBelow,
   openingFailure,
   placeInDraft,
   yamlFileProblemWords,
@@ -102,7 +102,7 @@ describe('testRefusals', () => {
         formatBody('TEST_FIELD_INVALID', { ...NOWHERE, question: 2 }),
       ),
     )
-    expect(at.banner).toBe(NOT_SAVED_SEE_BELOW)
+    expect(at.banner).toBe(notSavedSeeBelow('uk'))
     ownWords(at.at?.words, 'TEST_FIELD_INVALID')
     const tooMany = actionFailure(
       'uk',

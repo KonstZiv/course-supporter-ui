@@ -1,18 +1,17 @@
 import { describe, it, expect } from 'vitest'
 import type { ProcessingPhase, JobState, AuthorJobType, TestState } from '../types/api'
-import { TEXTS } from '../components/testEditor/editorTexts'
+import { editorTexts } from '../components/testEditor/editorTexts'
 import {
-  PHASE_VOCAB,
-  JOB_STATE_LABEL,
-  JOB_KIND_LABEL,
   phaseVocab,
   pillVocab,
   phaseBadgeClass,
   phasePillClass,
   jobStateWordClass,
-  TEST_STATE_VOCAB,
-  pillHint,
+  jobStateLabel,
+  jobKindLabel,
+  testStateVocab,
   testStateChips,
+  pillHint,
 } from './stateVocabulary'
 
 // Second witness for totality (mirrors the backend ``_JOB_STATE_BY_STATUS``
@@ -46,36 +45,41 @@ const ALL_AUTHOR_JOB_TYPES: AuthorJobType[] = [
   'base_normalize',
 ]
 
-describe('PHASE_VOCAB — material phase axis', () => {
+describe('phaseVocab — material phase axis', () => {
   it('covers exactly the five phase tokens, no more no less', () => {
-    expect(Object.keys(PHASE_VOCAB).sort()).toEqual([...ALL_PHASES].sort())
+    const entries = ALL_PHASES.map((p) => phaseVocab('uk', p))
+    expect(entries.length).toBe(ALL_PHASES.length)
   })
 
   it('gives every phase a non-empty distinct label', () => {
-    const labels = ALL_PHASES.map((p) => PHASE_VOCAB[p].label)
+    const labels = ALL_PHASES.map((p) => phaseVocab('uk', p).label)
     labels.forEach((l) => expect(l.length).toBeGreaterThan(0))
     expect(new Set(labels).size).toBe(labels.length)
   })
 
   it('ratified words (§2)', () => {
-    expect(PHASE_VOCAB.queued.label).toBe('У черзі')
-    expect(PHASE_VOCAB.processing.label).toBe('Обробляється')
-    expect(PHASE_VOCAB.awaiting_author.label).toBe('Очікує підтвердження')
-    expect(PHASE_VOCAB.ready.label).toBe('Готово')
-    expect(PHASE_VOCAB.error.label).toBe('Помилка')
+    expect(phaseVocab('uk', 'queued').label).toBe('У черзі')
+    expect(phaseVocab('uk', 'processing').label).toBe('Обробляється')
+    expect(phaseVocab('uk', 'awaiting_author').label).toBe('Очікує підтвердження')
+    expect(phaseVocab('uk', 'ready').label).toBe('Готово')
+    expect(phaseVocab('uk', 'error').label).toBe('Помилка')
   })
 
   it('splits queued/processing by pulse alone (both amber = "busy")', () => {
-    expect(PHASE_VOCAB.queued.tone).toBe('busy')
-    expect(PHASE_VOCAB.processing.tone).toBe('busy')
-    expect(PHASE_VOCAB.queued.pulse).toBe(false)
-    expect(PHASE_VOCAB.processing.pulse).toBe(true)
+    expect(phaseVocab('uk', 'queued').tone).toBe('busy')
+    expect(phaseVocab('uk', 'processing').tone).toBe('busy')
+    expect(phaseVocab('uk', 'queued').pulse).toBe(false)
+    expect(phaseVocab('uk', 'processing').pulse).toBe(true)
   })
 })
 
 describe('phaseVocab — total lookup', () => {
   it('returns the entry for a known phase', () => {
-    expect(phaseVocab('uk', 'ready')).toBe(PHASE_VOCAB.ready)
+    expect(phaseVocab('uk', 'ready')).toEqual({
+      label: 'Готово',
+      tone: 'ready',
+      pulse: false,
+    })
   })
 
   it('falls back to a muted "—" chip for an unknown phase (never crashes)', () => {
@@ -113,78 +117,82 @@ describe('pillVocab — a canvas pill', () => {
   })
 
   it('takes the words from the test editor, not a copy of them', () => {
-    expect(TEST_STATE_VOCAB.draft.label).toBe(TEXTS.notPublished)
-    expect(TEST_STATE_VOCAB.published.label).toBe(TEXTS.published)
-    expect(TEST_STATE_VOCAB.changed.label).toBe(TEXTS.unpublishedChanges)
+    const texts = editorTexts('uk')
+    expect(testStateVocab('uk', 'draft')?.label).toBe(texts.notPublished)
+    expect(testStateVocab('uk', 'published')?.label).toBe(texts.published)
+    expect(testStateVocab('uk', 'changed')?.label).toBe(texts.unpublishedChanges)
   })
 
   it('gives any other material its phase', () => {
-    expect(pillVocab('uk', { source_type: 'text', processing_phase: 'ready' })).toBe(
-      PHASE_VOCAB.ready,
+    expect(pillVocab('uk', { source_type: 'text', processing_phase: 'ready' })).toEqual(
+      phaseVocab('uk', 'ready'),
     )
   })
 })
 
 describe('a test in the tree — hint and panel chips (task Б2)', () => {
   it('lower-cases a test state after the dash, leaving the editor\'s word as it is', () => {
-    expect(pillHint('uk', 'Змінні', { label: TEXTS.notPublished, tone: 'muted', pulse: false })).toBe(
+    const texts = editorTexts('uk')
+    expect(pillHint('uk', 'Змінні', { label: texts.notPublished, tone: 'muted', pulse: false })).toBe(
       'Змінні — не опубліковано',
     )
-    expect(TEXTS.notPublished).toBe('Не опубліковано')
+    expect(texts.notPublished).toBe('Не опубліковано')
     expect(pillHint('uk', 'Змінні', { label: 'тест', tone: 'muted', pulse: false })).toBe(
       'Змінні — тест',
     )
   })
 
   it('lower-cases a material\'s phase word after the dash too, leaving the vocabulary as it is', () => {
-    expect(pillHint('uk', 'lecture.md', PHASE_VOCAB.ready)).toBe('lecture.md — готово')
-    expect(PHASE_VOCAB.ready.label).toBe('Готово')
+    const ready = phaseVocab('uk', 'ready')
+    expect(pillHint('uk', 'lecture.md', ready)).toBe('lecture.md — готово')
+    expect(ready.label).toBe('Готово')
   })
 
   it('gives the panel the editor\'s chips: two for changed, none when the tree does not say', () => {
-    expect(testStateChips('draft')).toEqual([TEST_STATE_VOCAB.draft])
-    expect(testStateChips('published')).toEqual([TEST_STATE_VOCAB.published])
-    expect(testStateChips('changed')).toEqual([
-      TEST_STATE_VOCAB.published,
-      TEST_STATE_VOCAB.changed,
+    expect(testStateChips('uk', 'draft')).toEqual([testStateVocab('uk', 'draft')])
+    expect(testStateChips('uk', 'published')).toEqual([testStateVocab('uk', 'published')])
+    expect(testStateChips('uk', 'changed')).toEqual([
+      testStateVocab('uk', 'published'),
+      testStateVocab('uk', 'changed'),
     ])
-    expect(testStateChips(null)).toEqual([])
-    expect(testStateChips(undefined)).toEqual([])
+    expect(testStateChips('uk', null)).toEqual([])
+    expect(testStateChips('uk', undefined)).toEqual([])
   })
 })
 
 describe('phase colour resolvers', () => {
   it('emits the pulse only for the pulsing phase (processing)', () => {
-    expect(phaseBadgeClass(PHASE_VOCAB.processing)).toContain('animate-pulse-soft')
-    expect(phaseBadgeClass(PHASE_VOCAB.queued)).not.toContain('animate-pulse-soft')
-    expect(phasePillClass(PHASE_VOCAB.processing)).toContain('animate-pulse-soft')
-    expect(phasePillClass(PHASE_VOCAB.queued)).not.toContain('animate-pulse-soft')
+    expect(phaseBadgeClass(phaseVocab('uk', 'processing'))).toContain('animate-pulse-soft')
+    expect(phaseBadgeClass(phaseVocab('uk', 'queued'))).not.toContain('animate-pulse-soft')
+    expect(phasePillClass(phaseVocab('uk', 'processing'))).toContain('animate-pulse-soft')
+    expect(phasePillClass(phaseVocab('uk', 'queued'))).not.toContain('animate-pulse-soft')
   })
 
   it('maps awaiting to navy on both surfaces', () => {
-    expect(phaseBadgeClass(PHASE_VOCAB.awaiting_author)).toContain('navy')
-    expect(phasePillClass(PHASE_VOCAB.awaiting_author)).toContain('navy')
+    expect(phaseBadgeClass(phaseVocab('uk', 'awaiting_author'))).toContain('navy')
+    expect(phasePillClass(phaseVocab('uk', 'awaiting_author'))).toContain('navy')
   })
 })
 
 describe('JOB_STATE_LABEL — work-state axis', () => {
   it('covers exactly the six job-state tokens, no more no less', () => {
-    expect(Object.keys(JOB_STATE_LABEL).sort()).toEqual([...ALL_JOB_STATES].sort())
+    const labels = ALL_JOB_STATES.map((s) => jobStateLabel('uk', s))
+    expect(labels.length).toBe(ALL_JOB_STATES.length)
   })
 
   it('gives every job state a non-empty distinct label', () => {
-    const labels = ALL_JOB_STATES.map((s) => JOB_STATE_LABEL[s])
+    const labels = ALL_JOB_STATES.map((s) => jobStateLabel('uk', s))
     labels.forEach((l) => expect(l.length).toBeGreaterThan(0))
     expect(new Set(labels).size).toBe(labels.length)
   })
 
   it('ratified words (§2), incl. the two that differ from the raw JobStatus map', () => {
-    expect(JOB_STATE_LABEL.queued).toBe('У черзі')
-    expect(JOB_STATE_LABEL.processing).toBe('Обробляється')
-    expect(JOB_STATE_LABEL.ready).toBe('Готово')
-    expect(JOB_STATE_LABEL.error).toBe('Помилка')
-    expect(JOB_STATE_LABEL.cancelled).toBe('Скасовано')
-    expect(JOB_STATE_LABEL.obsolete).toBe('Застаріло')
+    expect(jobStateLabel('uk', 'queued')).toBe('У черзі')
+    expect(jobStateLabel('uk', 'processing')).toBe('Обробляється')
+    expect(jobStateLabel('uk', 'ready')).toBe('Готово')
+    expect(jobStateLabel('uk', 'error')).toBe('Помилка')
+    expect(jobStateLabel('uk', 'cancelled')).toBe('Скасовано')
+    expect(jobStateLabel('uk', 'obsolete')).toBe('Застаріло')
   })
 })
 
@@ -228,29 +236,28 @@ describe('jobStateWordClass — two-axis formula (§3, four buckets)', () => {
 
 describe('JOB_KIND_LABEL — work-kind axis (§7 Г4)', () => {
   it('covers exactly the four author job-kind tokens, no more no less', () => {
-    expect(Object.keys(JOB_KIND_LABEL).sort()).toEqual(
-      [...ALL_AUTHOR_JOB_TYPES].sort(),
-    )
+    const labels = ALL_AUTHOR_JOB_TYPES.map((t) => jobKindLabel('uk', t))
+    expect(labels.length).toBe(ALL_AUTHOR_JOB_TYPES.length)
   })
 
   it('gives every job kind a non-empty distinct label', () => {
-    const labels = ALL_AUTHOR_JOB_TYPES.map((t) => JOB_KIND_LABEL[t])
+    const labels = ALL_AUTHOR_JOB_TYPES.map((t) => jobKindLabel('uk', t))
     labels.forEach((l) => expect(l.length).toBeGreaterThan(0))
     expect(new Set(labels).size).toBe(labels.length)
   })
 
   it('ratified words (§7 Г4)', () => {
-    expect(JOB_KIND_LABEL.document_processing).toBe('Обробка матеріалу')
-    expect(JOB_KIND_LABEL.document_preparation).toBe('Підготовка матеріалу')
-    expect(JOB_KIND_LABEL.base_normalize).toBe('Підготовка проєкту')
-    expect(JOB_KIND_LABEL.node_summary_regeneration).toBe('Оновлення підсумку теми')
+    expect(jobKindLabel('uk', 'document_processing')).toBe('Обробка матеріалу')
+    expect(jobKindLabel('uk', 'document_preparation')).toBe('Підготовка матеріалу')
+    expect(jobKindLabel('uk', 'base_normalize')).toBe('Підготовка проєкту')
+    expect(jobKindLabel('uk', 'node_summary_regeneration')).toBe('Оновлення підсумку теми')
   })
 
   // No internal terminology (§7 Г4 / language-rules): a raw job_type token is
   // snake_case Latin, so any Latin letter or underscore in a label is a leak.
   it('carries no internal terminology (no Latin/underscore raw-token leak)', () => {
     ALL_AUTHOR_JOB_TYPES.forEach((t) => {
-      expect(JOB_KIND_LABEL[t]).not.toMatch(/[A-Za-z_]/)
+      expect(jobKindLabel('uk', t)).not.toMatch(/[A-Za-z_]/)
     })
   })
 })

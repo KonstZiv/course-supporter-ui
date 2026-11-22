@@ -1,5 +1,6 @@
 import { ApiError } from '../api/client'
 import { testRefusal } from '../api/tests'
+import type { Language } from '../i18n/languages'
 import { ingestErrorMessage } from './ingestErrors'
 import { yamlFileRefusalWords } from './testRefusals'
 
@@ -49,6 +50,7 @@ export function rejectionDetail(err: unknown): string | null {
  * therefore the sole door for rejection TEXTS; it never returns raw.
  */
 export function authoredRejectionMessage(
+  language: Language,
   err: unknown,
   fileName?: string,
 ): string | null {
@@ -60,21 +62,21 @@ export function authoredRejectionMessage(
   if (code === 'SECURITY_REJECTED') {
     const category =
       'category' in detail ? (detail as { category?: unknown }).category : null
-    return ingestErrorMessage('uk', typeof category === 'string' ? category : null)
+    return ingestErrorMessage(language, typeof category === 'string' ? category : null)
   }
   if (code.startsWith('INTAKE_')) {
     const details =
       'details' in detail ? (detail as { details?: unknown }).details : null
-    return typeof details === 'string' ? details : ingestErrorMessage('uk', null)
+    return typeof details === 'string' ? details : ingestErrorMessage(language, null)
   }
   if (code.startsWith('TEST_')) {
     const refusal = testRefusal(err.body)
-    const words = refusal && yamlFileRefusalWords('uk', refusal, fileName)
+    const words = refusal && yamlFileRefusalWords(language, refusal, fileName)
     if (words) return words
   }
   // A recognised envelope with a code we have no specific text for degrades to
   // the generic phrase — never the raw ``details``.
-  return ingestErrorMessage('uk', null)
+  return ingestErrorMessage(language, null)
 }
 
 /**

@@ -259,7 +259,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
           // surface as a file refusal (§2.5): one place to look, whichever door
           // the material came through.
           reportFailures([
-            authoredRejectionMessage(err) ??
+            authoredRejectionMessage(language, err) ??
               t('panel.flow.detail.addLinkFailed'),
           ])
         } finally {
@@ -276,6 +276,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
       runUpload,
       reportFailures,
       t,
+      language,
     ],
   )
 
@@ -552,7 +553,7 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
             // Б2: whether students see it — the editor's own chips, as its
             // toolbar shows them (``changed`` is two); none when the tree does
             // not say (an older backend, an unread state).
-            const testChips = isTest ? testStateChips(mat.test_state) : []
+            const testChips = isTest ? testStateChips(language, mat.test_state) : []
             // Д1: the live job of THIS material from the shared store (anchor =
             // material_id). Its movement/duration is the same the strip shows.
             const liveJob = workItems.find(

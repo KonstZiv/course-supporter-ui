@@ -43,11 +43,6 @@ export function noNodeForNewTest(language: Language): string {
   return translate(language, 'panel.testRefusals.noNodeForNewTest')
 }
 
-export const NOT_SAVED_SEE_BELOW = notSavedSeeBelow('uk')
-export const BACK_TO_COURSES = backToCourses('uk')
-export const POLLING_FAILED = pollingFailed('uk')
-export const NO_NODE_FOR_NEW_TEST = noNodeForNewTest('uk')
-
 const FAILED_KEY: Record<
   TestAction,
   | 'panel.testRefusals.failed.save'
