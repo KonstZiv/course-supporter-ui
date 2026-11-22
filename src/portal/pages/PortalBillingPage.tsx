@@ -63,7 +63,9 @@ function OutlookLines({ outlook }: { outlook: PortalBillingOutlook | null }) {
     <UnitsReminders
       outlook={outlook}
       lead={
-        outlook.reviews_left === null ? null : reviewsLeftLine(language, outlook.reviews_left)
+        outlook.reviews_left === null || outlook.reviews_left === 0
+          ? null
+          : reviewsLeftLine(language, outlook.reviews_left)
       }
       buy={
         <button type="button" className={SITE_TEXT_LINK_CLASS} onClick={scrollToPackages}>

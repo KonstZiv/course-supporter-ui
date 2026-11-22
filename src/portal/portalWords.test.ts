@@ -58,6 +58,7 @@ const SENTENCES = [
   pricedShort('uk', 12, 5, 7),
   reviewsLeftLine('uk', 8),
   availableLine('uk', 120, 8),
+  availableLine('uk', 120, 0),
   availableLine('uk', 120, null),
   lowReminder('uk', 2),
   expiringReminder('uk', 500, '2026-12-01'),
@@ -77,5 +78,9 @@ describe('the words of stage 2b keep the language rules', () => {
     for (const s of SENTENCES.filter((x) => x !== TEST_NEEDS_PACKAGE)) {
       expect(s).not.toMatch(/тест/i)
     }
+  })
+
+  it('availableLine with 0 reviews left shows only available units', () => {
+    expect(availableLine('uk', 120, 0)).toBe('Доступно 120 юнітів.')
   })
 })

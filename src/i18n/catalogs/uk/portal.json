@@ -115,7 +115,7 @@
   "portal.reason.pathState.processingFailed.action": "Надішліть її ще раз.",
   "portal.reason.pathState.awaitingFunds.what": "Перевірку призупинено: на початок перевірки не вистачило юнітів.",
   "portal.reason.pathState.awaitingFunds.action": "Після купівлі перевірка продовжиться сама — надсилати роботу знову не потрібно.",
-  "portal.reason.pathState.awaitingAuthorFunds.what": "Роботу прийнято. Перевірка почнеться, коли автор курсу поповнить юніти.",
+  "portal.reason.pathState.awaitingAuthorFunds.what": "Роботу прийнято. Перевірка почнеться, коли автор курсу купить юніти.",
   "portal.reason.inArchive.mayContainSecrets.what": "Файл не відкривали: такі файли зазвичай містять секрети — ключі чи паролі.",
   "portal.reason.inArchive.mayContainSecrets.action": "Не додавайте їх до роботи; якщо потрібен приклад, покладіть файл .env.example без справжніх значень.",
   "portal.reason.documentInArchive.what": "Документи всередині архіву не читаються.",
