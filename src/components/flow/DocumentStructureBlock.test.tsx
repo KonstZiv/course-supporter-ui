@@ -182,7 +182,7 @@ describe('DocumentStructureBlock — розкритий вміст', () => {
     // The heading counts ROWS, not the files a row stands for: one line to
     // read, 201 files behind it.
     await open('1 файл не прочитано')
-    expect(screen.getByText(/201 файлів/)).toBeInTheDocument()
+    expect(screen.getByText(/· 201 файл$/)).toBeInTheDocument()
   })
 
   it('a single-file row shows no count', async () => {
@@ -193,7 +193,7 @@ describe('DocumentStructureBlock — розкритий вміст', () => {
     render(<DocumentStructureBlock documentId="d1" />)
     await open('1 файл не прочитано')
     expect(screen.getByText(/Службовий файл/)).toBeInTheDocument()
-    expect(screen.queryByText(/· 1 файлів/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/· 1 файл/)).not.toBeInTheDocument()
   })
 
   it('reads the oversize numbers into the phrase, in a human measure', async () => {
