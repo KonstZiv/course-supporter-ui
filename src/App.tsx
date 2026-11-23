@@ -12,6 +12,7 @@ import { HistoryPage } from './pages/HistoryPage'
 import { HelpPage } from './pages/HelpPage'
 import { BillingPage } from './pages/BillingPage'
 import { TestEditorPage } from './pages/TestEditorPage'
+import { CriteriaEditorPage } from './pages/CriteriaEditorPage'
 import { AppLayout } from './components/layout/AppLayout'
 import { getLanguages } from './utils/languages'
 
@@ -92,6 +93,7 @@ export default function App() {
             moves it to its own address without a remount (task 07c). */}
         <Route path="test/new" element={<TestEditorPage />} />
         <Route path="test/:documentId/edit" element={<TestEditorPage />} />
+        <Route path="task/:documentId/criteria" element={<CriteriaEditorPage />} />
         <Route path="help" element={<HelpPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
