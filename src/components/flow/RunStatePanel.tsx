@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react'
 import { AlertTriangle, Info, X } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { JobListItemResponse, NodeSummaryRunError } from '../../types/api'
+import { jobsApi } from '../../api/jobs'
 import { jobStateLabel, jobStateWordClass } from '../../utils/stateVocabulary'
 import { workProgressBar } from '../../utils/workProgress'
 import { ProgressMeter } from '../activity/ProgressMeter'
@@ -21,13 +23,6 @@ function vertexIdOf(sp: Record<string, unknown> | null): string | null {
 }
 function errorsOf(sp: Record<string, unknown> | null): NodeSummaryRunError[] {
   return sp && Array.isArray(sp.errors) ? (sp.errors as NodeSummaryRunError[]) : []
-}
-function errorCategoryOf(job: JobListItemResponse): string | null {
-  const direct = (job as { error_category?: unknown }).error_category
-  if (typeof direct === 'string') return direct
-  const sp = job.stage_progress
-  if (sp && typeof sp.error_category === 'string') return sp.error_category
-  return null
 }
 
 interface Props {
@@ -61,7 +56,30 @@ export function RunStatePanel({ job, nodeTitle, onDismiss }: Props) {
 
   const bar = workProgressBar(job)
   const errors = errorsOf(sp)
-  const errorCategory = errorCategoryOf(job)
+
+  const [errorCategory, setErrorCategory] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (state !== 'error') {
+      setErrorCategory(null)
+      return
+    }
+    let cancelled = false
+    jobsApi
+      .get(job.id)
+      .then((res) => {
+        if (!cancelled) {
+          setErrorCategory(res.error_category ?? null)
+        }
+      })
+      .catch(() => {
+        // failed request -> show nothing extra
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [state, job.id])
+
   const isInsufficientUnits =
     state === 'error' && errorCategory === INSUFFICIENT_UNITS_CATEGORY
 
