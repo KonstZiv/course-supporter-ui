@@ -6,6 +6,11 @@ import { workProgressBar } from '../../utils/workProgress'
 import { ProgressMeter } from '../activity/ProgressMeter'
 import { useLanguage, useT } from '../../i18n/LanguageContext'
 import { Message } from '../../i18n/Message'
+import {
+  buyUnitsText,
+  INSUFFICIENT_UNITS_CATEGORY,
+} from '../../utils/authorBillingTexts'
+import { NewTabLink } from '../billing/NewTabLink'
 
 // The card reads a work-list row (Д1/В2 fold), whose stage_progress is the
 // untyped run-state JSONB. Narrow only the two pieces this card needs — the run
@@ -16,6 +21,13 @@ function vertexIdOf(sp: Record<string, unknown> | null): string | null {
 }
 function errorsOf(sp: Record<string, unknown> | null): NodeSummaryRunError[] {
   return sp && Array.isArray(sp.errors) ? (sp.errors as NodeSummaryRunError[]) : []
+}
+function errorCategoryOf(job: JobListItemResponse): string | null {
+  const direct = (job as { error_category?: unknown }).error_category
+  if (typeof direct === 'string') return direct
+  const sp = job.stage_progress
+  if (sp && typeof sp.error_category === 'string') return sp.error_category
+  return null
 }
 
 interface Props {
@@ -49,6 +61,9 @@ export function RunStatePanel({ job, nodeTitle, onDismiss }: Props) {
 
   const bar = workProgressBar(job)
   const errors = errorsOf(sp)
+  const errorCategory = errorCategoryOf(job)
+  const isInsufficientUnits =
+    state === 'error' && errorCategory === INSUFFICIENT_UNITS_CATEGORY
 
   return (
     // `max-w-[90vw]` bounds the fixed 360px to a window share, mirroring
@@ -85,6 +100,17 @@ export function RunStatePanel({ job, nodeTitle, onDismiss }: Props) {
       {/* Body */}
       <div className="p-4 space-y-2">
         {bar && <ProgressMeter {...bar} />}
+
+        {isInsufficientUnits && (
+          <>
+            <p className="text-xs text-coral">
+              {t('panel.flow.runState.insufficientUnits')}
+            </p>
+            <p className="text-xs">
+              <NewTabLink href="/billing">{buyUnitsText(language)}</NewTabLink>
+            </p>
+          </>
+        )}
 
         {errors.length > 0 && (
           <ul className="space-y-1.5">

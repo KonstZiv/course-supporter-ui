@@ -205,4 +205,54 @@ describe('RunStatePanel', () => {
     )
     expect(screen.getByText(/«abcd1234»/)).toBeInTheDocument()
   })
+
+  it('renders insufficientUnits message and /billing link when error_category is insufficient_units', () => {
+    const job = {
+      ...makeJob('error', makeRunState()),
+      error_category: 'insufficient_units',
+    }
+    render(<RunStatePanel job={job} nodeTitle="Розділ 1" onDismiss={vi.fn()} />)
+
+    const text = screen.getByText(
+      'Описи розділів не складено: на це не вистачило юнітів. Після купівлі юнітів запустіть Методиста ще раз.',
+    )
+    expect(text).toBeInTheDocument()
+    expect(text.className).toContain('text-coral')
+
+    const link = screen.getByRole('link', { name: 'Купити юніти' })
+    expect(link).toBeInTheDocument()
+    expect(link).toHaveAttribute('href', '/billing')
+    expect(link).toHaveAttribute('target', '_blank')
+  })
+
+  it('renders insufficientUnits when error_category is inside stage_progress', () => {
+    const job = makeJob('error', null, {
+      stage_progress: { error_category: 'insufficient_units' },
+    })
+    render(<RunStatePanel job={job} nodeTitle="Розділ 1" onDismiss={vi.fn()} />)
+
+    expect(
+      screen.getByText(
+        'Описи розділів не складено: на це не вистачило юнітів. Після купівлі юнітів запустіть Методиста ще раз.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('does not render insufficientUnits on other errors', () => {
+    const job = {
+      ...makeJob('error', makeRunState({
+        errors: [makeError('ERROR', { reason: 'Some other failure' })],
+      })),
+      error_category: 'pipeline_failure',
+    }
+    render(<RunStatePanel job={job} nodeTitle="Розділ 1" onDismiss={vi.fn()} />)
+
+    expect(
+      screen.queryByText(
+        'Описи розділів не складено: на це не вистачило юнітів. Після купівлі юнітів запустіть Методиста ще раз.',
+      ),
+    ).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Купити юніти' })).toBeNull()
+    expect(screen.getByText('Some other failure')).toBeInTheDocument()
+  })
 })
