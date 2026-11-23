@@ -5,6 +5,11 @@ import type {
   FeedbackTouch,
   FeedbackValue,
   ForgotPasswordRequest,
+  JoinChangeLoginRequest,
+  JoinConfirmResponse,
+  JoinCourseCard,
+  JoinSignupRequest,
+  JoinSignupResponse,
   PortalBaseDownload,
   PortalBillingBalance,
   PortalBillingCheckout,
@@ -16,8 +21,13 @@ import type {
   PortalBillingPackages,
   PortalBillingStatement,
   PortalBillingTerms,
+  PortalCourseJoinRequest,
+  PortalCourseJoinResponse,
   PortalCourseListItem,
   PortalDoorRefusal,
+  PortalEmailLoginChoiceResponse,
+  PortalEmailLoginRequest,
+  PortalEmailLoginResponse,
   PortalInterfaceLanguage,
   PortalInterfaceLanguageRequest,
   PortalLanguagesResponse,
@@ -58,6 +68,8 @@ export class PortalApiError extends Error {
     public status: number,
     message: string,
     public body?: unknown,
+    // A 429's ``Retry-After``, in seconds; null when the answer had none.
+    public retryAfter: number | null = null,
   ) {
     super(message)
     this.name = 'PortalApiError'
@@ -83,9 +95,16 @@ function redirectToLogin(tenantId: string | null): void {
 // Lines on one page of the student's statement, as on the author's.
 const STATEMENT_PAGE_SIZE = 50
 
+// ``Retry-After`` in seconds (the server sends a whole number), or null.
+function retryAfterOf(res: Response): number | null {
+  const raw = res.headers?.get('Retry-After')
+  if (raw === null || raw === undefined || !/^\d+$/.test(raw.trim())) return null
+  return Number(raw.trim())
+}
+
 async function parseError(res: Response): Promise<PortalApiError> {
   const body = await res.json().catch(() => null)
-  return new PortalApiError(res.status, `portal api ${res.status}`, body)
+  return new PortalApiError(res.status, `portal api ${res.status}`, body, retryAfterOf(res))
 }
 
 // The door's refusal a failed call carried, or null when it carried none: a
@@ -130,6 +149,28 @@ async function postPublicJson(path: string, body: unknown): Promise<void> {
   if (!res.ok) {
     throw await parseError(res)
   }
+}
+
+// Unauthenticated JSON request that answers with a body (open courses, O-1):
+// the course card, the signup and its resend, the confirm, the login by email.
+// No bearer, no 401 redirect — the caller renders every failure inline. A 204
+// answers ``undefined``.
+async function publicJson<T>(path: string, body?: unknown): Promise<T> {
+  const res = await fetch(
+    `${BASE_URL}${path}`,
+    body === undefined
+      ? undefined
+      : {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        },
+  )
+  if (!res.ok) {
+    throw await parseError(res)
+  }
+  if (res.status === 204) return undefined as T
+  return res.json() as Promise<T>
 }
 
 // Authenticated GET. Attaches the bearer; on 401 clears the session and
@@ -299,6 +340,35 @@ export const portalApi = {
   // re-POSTing burns the old confirm token and mails a fresh link).
   setRecoveryEmail: (req: RecoveryEmailRequest) =>
     postAuthJson<RecoveryEmailResponse>('/api/v1/portal/recovery-email', req),
+  // Open courses (O-1). Public: the course of a link, the signup, a new link,
+  // the confirm, another login for a request whose login was taken, the login
+  // by email. With the session: a student with a login joins a course. Every
+  // refusal is coded — read it with ``doorRefusal``; a 429 carries
+  // ``retryAfter``.
+  joinCard: (tenantId: string, key: string) =>
+    publicJson<JoinCourseCard>(
+      `/api/v1/portal/join/${tenantId}/${encodeURIComponent(key)}`,
+    ),
+  joinSignup: (tenantId: string, key: string, req: JoinSignupRequest) =>
+    publicJson<JoinSignupResponse>(
+      `/api/v1/portal/join/${tenantId}/${encodeURIComponent(key)}/signup`,
+      req,
+    ),
+  joinResend: (signupId: string) =>
+    publicJson<JoinSignupResponse>('/api/v1/portal/join/resend', {
+      signup_id: signupId,
+    }),
+  joinConfirm: (token: string) =>
+    publicJson<JoinConfirmResponse>('/api/v1/portal/join/confirm', { token }),
+  joinChangeLogin: (signupId: string, req: JoinChangeLoginRequest) =>
+    publicJson<void>(`/api/v1/portal/join/${signupId}/login`, req),
+  loginByEmail: (req: PortalEmailLoginRequest) =>
+    publicJson<PortalEmailLoginResponse | PortalEmailLoginChoiceResponse>(
+      '/api/v1/portal/login-by-email',
+      req,
+    ),
+  joinCourse: (req: PortalCourseJoinRequest) =>
+    postAuthJson<PortalCourseJoinResponse>('/api/v1/portal/courses/join', req),
   // Units of the student's account (BIL-A, BIL-PAY, BIL-E): the terms and the
   // consent, packages and checkout, the checkout's state, balance, statement,
   // and the outlook. A refusal carries its reason — read it with
@@ -332,6 +402,16 @@ export const portalApi = {
   // Without ``course_id``: only a payment rule for the student counts.
   billingOutlook: () =>
     authGet<PortalBillingOutlook>('/api/v1/portal/billing/outlook'),
+}
+
+// The request a ``login_taken`` refusal of the confirm names
+// (``detail.signup_id``) — another login is sent for it — or null.
+export function refusedSignupId(err: unknown): string | null {
+  if (!(err instanceof PortalApiError)) return null
+  const detail = (err.body as { detail?: unknown } | null)?.detail
+  if (detail === null || typeof detail !== 'object') return null
+  const { signup_id } = detail as { signup_id?: unknown }
+  return typeof signup_id === 'string' ? signup_id : null
 }
 
 // The reason code of a billing refusal (``detail.code``), or null.

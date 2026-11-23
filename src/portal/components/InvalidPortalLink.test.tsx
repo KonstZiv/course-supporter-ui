@@ -5,8 +5,9 @@ import { PortalApp } from '../App'
 import { siteUrl } from '../../components/site/siteLinks'
 
 // The portal's neutral page: what a stranger — a payment provider's reviewer
-// among them — sees at the portal's root or at any address that is not a
-// portal page. It explains, in the site's look, and asks nothing of the server.
+// among them — sees at any address that is not a portal page (the portal's
+// root leads to the sign-in by email, O-1). It explains, in the site's look,
+// and asks nothing of the server.
 
 function renderAt(path: string) {
   render(
@@ -21,7 +22,7 @@ afterEach(() => {
 })
 
 describe('InvalidPortalLink — the neutral page', () => {
-  it.each(['/', '/not-a-uuid', '/not-a-uuid/home', '/019eda80-67ea-7060-b4c4-9dc85761690e/nope'])(
+  it.each(['/nothing-here', '/not-a-uuid', '/not-a-uuid/home', '/019eda80-67ea-7060-b4c4-9dc85761690e/nope'])(
     'at %s: the texts of the page, word for word',
     (path) => {
       renderAt(path)
@@ -46,7 +47,7 @@ describe('InvalidPortalLink — the neutral page', () => {
   )
 
   it('links "Як стати студентом" to the address of one constant', () => {
-    renderAt('/')
+    renderAt('/nothing-here')
     const expected = siteUrl('uk', 'become-student')
     expect(expected).toBe('https://pythoncourse.me/uk/become-student/')
     expect(screen.getByRole('link', { name: 'Як стати студентом' })).toHaveAttribute(
@@ -56,7 +57,7 @@ describe('InvalidPortalLink — the neutral page', () => {
   })
 
   it('has the site header (prices, documentation) and footer', () => {
-    renderAt('/')
+    renderAt('/nothing-here')
     const header = screen.getByRole('navigation', { name: 'Основна навігація' })
     expect(within(header).getByRole('link', { name: 'Ціни' })).toHaveAttribute(
       'href',
@@ -70,7 +71,7 @@ describe('InvalidPortalLink — the neutral page', () => {
   })
 
   it('never names a teacher, nor any avoided word', () => {
-    renderAt('/')
+    renderAt('/nothing-here')
     const text = document.body.textContent!.toLowerCase()
     for (const word of ['викладач', 'напишіть нам', 'тест', 'баланс', 'поповнення', 'різниц', 'борг', 'provider']) {
       expect(text, word).not.toContain(word)
