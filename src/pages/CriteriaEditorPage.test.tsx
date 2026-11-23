@@ -311,10 +311,10 @@ describe('CriteriaEditorPage (spec §3, A2)', () => {
       expect(screen.getByText('Критерій 1')).toBeInTheDocument()
       expect(screen.getByText('Критерій 2')).toBeInTheDocument()
 
-      // Neither showModel nor reset buttons exist
+      // Neither showModel nor reset buttons exist, but edit button does (A3)
       expect(screen.queryByRole('button', { name: 'Показати перелік системи' })).toBeNull()
       expect(screen.queryByRole('button', { name: 'Повернути перелік системи' })).toBeNull()
-      expect(screen.queryByRole('button', { name: 'Правити перелік' })).toBeNull()
+      expect(screen.getByRole('button', { name: 'Правити перелік' })).toBeInTheDocument()
     })
   })
 
@@ -611,6 +611,16 @@ describe('CriteriaEditorPage (spec §3, A2)', () => {
       expect(
         await screen.findByText(/Перелік критеріїв буде складено/),
       ).toBeInTheDocument()
+    })
+
+    it('loading error card has no close message button (A2 fix)', async () => {
+      vi.mocked(criteriaApi.read).mockRejectedValue(new TypeError('Failed to fetch'))
+      renderPage()
+
+      expect(
+        await screen.findByText(/Не вдалося завантажити перелік критеріїв/),
+      ).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Закрити повідомлення' })).toBeNull()
     })
   })
 })

@@ -1,5 +1,6 @@
 import type {
   CriteriaInForce,
+  CriteriaLayer,
   CriteriaOverrideRequest,
   CriteriaWeight,
   Criterion,
@@ -41,8 +42,16 @@ export type PassRuleResult =
       hasModelMusts: boolean
     }
 
+export type PassRuleInput = {
+  layer: CriteriaLayer
+  criteria: Array<{
+    weight: CriteriaWeight
+    must_by_author?: boolean | null
+  }>
+}
+
 /**
- * Evaluates the pass rule for a given in_force criteria state.
+ * Evaluates the pass rule for a given in_force criteria state or form state.
  *
  * - author layer with at least one `must_by_author: true` criterion:
  *   'strict' pass rule: every author-mandatory must must be met AND score >= 70.
@@ -51,7 +60,9 @@ export type PassRuleResult =
  *   `hasModelMusts` is true if the list contains any criterion with weight 'must'
  *   without author-mandatory flag (in model layer, or author layer where must_by_author is not true).
  */
-export function passRule(inForce: CriteriaInForce | null | undefined): PassRuleResult {
+export function passRule(
+  inForce: CriteriaInForce | PassRuleInput | null | undefined,
+): PassRuleResult {
   if (!inForce || !Array.isArray(inForce.criteria)) {
     return {
       kind: 'score',
