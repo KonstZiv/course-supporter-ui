@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { criteriaApi, criteriaRefusal, type CriteriaFieldValidationRefusal } from '../../api/criteria'
 import { ApiError } from '../../api/client'
 import { useLeaveGuard } from '../../hooks/useLeaveGuard'
@@ -104,10 +104,19 @@ export function useCriteriaEditor({
 
   const [items, setItems] = useState<CriterionFormItem[]>(initialItems)
   const [saving, setSaving] = useState(false)
+  const [rateLimited, setRateLimited] = useState(false)
   const [serverError, setServerError] = useState<RefusalBanner | null>(null)
   const [serverFieldErrors, setServerFieldErrors] = useState<
     CriteriaFieldValidationRefusal[]
   >([])
+
+  useEffect(() => {
+    if (!rateLimited) return
+    const timer = setTimeout(() => {
+      setRateLimited(false)
+    }, 60000)
+    return () => clearTimeout(timer)
+  }, [rateLimited])
 
   // Dirty state: differs from initialItems
   const unsaved = useMemo(() => {
@@ -224,7 +233,7 @@ export function useCriteriaEditor({
   )
 
   const save = useCallback(async () => {
-    if (!isValid || saving) return
+    if (!isValid || saving || rateLimited) return
 
     setSaving(true)
     setServerError(null)
@@ -285,6 +294,7 @@ export function useCriteriaEditor({
           setServerError({ kind: 'noAccess' })
         } else if (err.status === 429) {
           setServerError({ kind: 'tooManyRequests' })
+          setRateLimited(true)
         } else if (err.status >= 500) {
           setServerError({ kind: 'failedSave', is5xx: true })
         } else {
@@ -307,6 +317,7 @@ export function useCriteriaEditor({
     allowNextMove,
     savedCriteriaIds,
     saving,
+    rateLimited,
   ])
 
   const clearServerError = useCallback(() => {
@@ -318,6 +329,7 @@ export function useCriteriaEditor({
     unsaved,
     isValid,
     saving,
+    rateLimited,
     serverError,
     serverFieldErrors,
     blocker,
