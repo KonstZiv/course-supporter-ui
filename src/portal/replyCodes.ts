@@ -32,6 +32,16 @@ const CODE_KEYS: Record<ReplyCode, MessageKey> = {
   comment_rejected: 'portal.replies.error.rejected',
 }
 
+function resolveNumericCount(val: unknown, fallback: number): number {
+  if (typeof val === 'number' && Number.isInteger(val) && val >= 0) {
+    return val
+  }
+  if (typeof val === 'string' && /^\d+$/.test(val)) {
+    return Number(val)
+  }
+  return fallback
+}
+
 export function replyCodePhrase(
   code: string,
   details?: Record<string, unknown> | null,
@@ -42,30 +52,14 @@ export function replyCodePhrase(
     return translate(language, 'portal.replies.error.generic')
   }
 
-  const max = details?.max
-
   if (code === 'comment_limit_reached') {
-    const limit =
-      typeof max === 'number'
-        ? formatCount(max)
-        : typeof max === 'string' && /^\d+$/.test(max)
-          ? formatCount(Number(max))
-          : max != null
-            ? String(max)
-            : String(DEFAULT_COMMENT_LIMIT)
-    return translate(language, key, { limit })
+    const count = resolveNumericCount(details?.max, DEFAULT_COMMENT_LIMIT)
+    return translate(language, key, { count, n: formatCount(count) })
   }
 
   if (code === 'comment_too_long') {
-    const limit =
-      typeof max === 'number'
-        ? formatCount(max)
-        : typeof max === 'string' && /^\d+$/.test(max)
-          ? formatCount(Number(max))
-          : max != null
-            ? String(max)
-            : formatCount(DEFAULT_COMMENT_MAX_CHARS)
-    return translate(language, key, { limit })
+    const count = resolveNumericCount(details?.max, DEFAULT_COMMENT_MAX_CHARS)
+    return translate(language, key, { count, n: formatCount(count) })
   }
 
   return translate(language, key)

@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   ALL_REPLY_CODES,
-  DEFAULT_COMMENT_LIMIT,
-  DEFAULT_COMMENT_MAX_CHARS,
   replyCodePhrase,
   replyErrorMessage,
   REPLY_GENERIC_ERROR,
@@ -10,7 +8,6 @@ import {
   REPLY_OFFLINE_ERROR,
 } from './replyCodes'
 import { PortalApiError } from './api/portalClient'
-import { formatCount } from './studentNote'
 
 describe('replyCodes — dictionary completeness', () => {
   it('covers all seven refusal codes with unique, student-facing uk phrases', () => {
@@ -50,28 +47,63 @@ describe('replyCodes — dictionary completeness', () => {
     expect(replyCodePhrase(code)).toBe(expected)
   })
 
-  it('formats comment_limit_reached using details.max or fallback of 5', () => {
-    expect(replyCodePhrase('comment_limit_reached')).toBe(
-      `До цього зауваження вже є ${DEFAULT_COMMENT_LIMIT} ваших реплік. Наступні можна буде написати до рецензії наступної подачі.`,
-    )
-    expect(replyCodePhrase('comment_limit_reached', { max: 3 })).toBe(
-      'До цього зауваження вже є 3 ваших реплік. Наступні можна буде написати до рецензії наступної подачі.',
-    )
-    expect(replyCodePhrase('comment_limit_reached', { max: '10' })).toBe(
-      'До цього зауваження вже є 10 ваших реплік. Наступні можна буде написати до рецензії наступної подачі.',
+  it.each([
+    [undefined, '5 ваших реплік'],
+    [{ max: 1 }, '1 ваша репліка'],
+    [{ max: 2 }, '2 ваші репліки'],
+    [{ max: 3 }, '3 ваші репліки'],
+    [{ max: 4 }, '4 ваші репліки'],
+    [{ max: 5 }, '5 ваших реплік'],
+    [{ max: 11 }, '11 ваших реплік'],
+    [{ max: 21 }, '21 ваша репліка'],
+    [{ max: 22 }, '22 ваші репліки'],
+    [{ max: '10' }, '10 ваших реплік'],
+    [{ max: 'abc' }, '5 ваших реплік'],
+  ])('formats comment_limit_reached (uk) for details %j as phrase "%s"', (details, phrase) => {
+    expect(replyCodePhrase('comment_limit_reached', details)).toBe(
+      `До цього зауваження вже є ${phrase}. Наступні можна буде написати до рецензії наступної подачі.`,
     )
   })
 
-  it('formats comment_too_long using details.max or fallback of 2 000', () => {
-    expect(replyCodePhrase('comment_too_long')).toBe(
-      `Репліка задовга — максимум ${formatCount(DEFAULT_COMMENT_MAX_CHARS)} знаків. Скоротіть її й надішліть знову.`,
+  it.each([
+    [undefined, '2\u00a0000 знаків'],
+    [{ max: 1 }, '1 знак'],
+    [{ max: 2 }, '2 знаки'],
+    [{ max: 5 }, '5 знаків'],
+    [{ max: 21 }, '21 знак'],
+    [{ max: 1500 }, '1\u00a0500 знаків'],
+    [{ max: 2001 }, '2\u00a0001 знак'],
+    [{ max: '2000' }, '2\u00a0000 знаків'],
+    [{ max: 'abc' }, '2\u00a0000 знаків'],
+  ])('formats comment_too_long (uk) for details %j as phrase "%s"', (details, phrase) => {
+    expect(replyCodePhrase('comment_too_long', details)).toBe(
+      `Репліка задовга — максимум ${phrase}. Скоротіть її й надішліть знову.`,
     )
-    expect(replyCodePhrase('comment_too_long', { max: 1500 })).toBe(
-      `Репліка задовга — максимум ${formatCount(1500)} знаків. Скоротіть її й надішліть знову.`,
-    )
-    expect(replyCodePhrase('comment_too_long', { max: '2000' })).toBe(
-      `Репліка задовга — максимум ${formatCount(2000)} знаків. Скоротіть її й надішліть знову.`,
-    )
+  })
+
+  it.each([
+    [
+      'comment_limit_reached',
+      { max: 1 },
+      'You already have 1 reply to this remark. You will be able to write more with the review of your next submission.',
+    ],
+    [
+      'comment_limit_reached',
+      { max: 3 },
+      'You already have 3 replies to this remark. You will be able to write more with the review of your next submission.',
+    ],
+    [
+      'comment_too_long',
+      { max: 1 },
+      'The reply is too long — 1 character at most. Shorten it and send again.',
+    ],
+    [
+      'comment_too_long',
+      undefined,
+      'The reply is too long — 2\u00a0000 characters at most. Shorten it and send again.',
+    ],
+  ])('formats English phrases for %s with details %j', (code, details, expected) => {
+    expect(replyCodePhrase(code, details, 'en')).toBe(expected)
   })
 })
 

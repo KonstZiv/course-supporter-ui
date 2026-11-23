@@ -200,7 +200,7 @@ describe('RemarkThreads — display and nesting', () => {
     })
 
     // Section badges
-    expect(screen.getByText('Нове')).toBeInTheDocument()
+    expect(screen.getByText('Нові зауваження')).toBeInTheDocument()
     expect(screen.getByText('Лишилося відкритим')).toBeInTheDocument()
 
     // Remark snippet - first sentence only
@@ -450,7 +450,7 @@ describe('RemarkThreads — display and nesting', () => {
       expect(screen.getByText('Replies to remarks')).toBeInTheDocument()
     })
 
-    expect(screen.getByText('New')).toBeInTheDocument()
+    expect(screen.getByText('New remarks')).toBeInTheDocument()
     expect(screen.getByText('Still open')).toBeInTheDocument()
     expect(screen.getByText('You')).toBeInTheDocument()
     expect(screen.getByText('Question')).toBeInTheDocument()
@@ -511,7 +511,7 @@ describe('RemarkThreads — reply submission and refusals', () => {
 
     // Type text
     const textarea = screen.getByPlaceholderText(
-      'Напишіть, із чим не згодні або що незрозуміло',
+      'Напишіть, із чим не згодні, що незрозуміло або що хочете додати',
     )
     fireEvent.change(textarea, { target: { value: 'Я не згоден з цим.' } })
 
@@ -556,7 +556,7 @@ describe('RemarkThreads — reply submission and refusals', () => {
     // Form closed
     expect(
       screen.queryByPlaceholderText(
-        'Напишіть, із чим не згодні або що незрозуміло',
+        'Напишіть, із чим не згодні, що незрозуміло або що хочете додати',
       ),
     ).not.toBeInTheDocument()
   })
@@ -599,7 +599,7 @@ describe('RemarkThreads — reply submission and refusals', () => {
     fireEvent.click(mentorReplyBtn)
 
     const textarea = screen.getByPlaceholderText(
-      'Напишіть, із чим не згодні або що незрозуміло',
+      'Напишіть, із чим не згодні, що незрозуміло або що хочете додати',
     )
     fireEvent.change(textarea, { target: { value: 'Уточнення до відповіді.' } })
 
@@ -721,7 +721,7 @@ describe('RemarkThreads — reply submission and refusals', () => {
       fireEvent.click(screen.getByRole('button', { name: /відповісти/i }))
 
       const textarea = screen.getByPlaceholderText(
-        'Напишіть, із чим не згодні або що незрозуміло',
+        'Напишіть, із чим не згодні, що незрозуміло або що хочете додати',
       )
       fireEvent.change(textarea, { target: { value: 'Мій набраний текст' } })
 
@@ -774,7 +774,7 @@ describe('RemarkThreads — reply submission and refusals', () => {
     fireEvent.click(screen.getByRole('button', { name: /відповісти/i }))
 
     const textarea = screen.getByPlaceholderText(
-      'Напишіть, із чим не згодні або що незрозуміло',
+      'Напишіть, із чим не згодні, що незрозуміло або що хочете додати',
     )
     fireEvent.change(textarea, { target: { value: 'Мій набраний текст' } })
 
@@ -838,7 +838,7 @@ describe('RemarkThreads — reply submission and refusals', () => {
     fireEvent.click(screen.getByRole('button', { name: /відповісти/i }))
 
     const textarea = screen.getByPlaceholderText(
-      'Напишіть, із чим не згодні або що незрозуміло',
+      'Напишіть, із чим не згодні, що незрозуміло або що хочете додати',
     )
 
     // Before error: only counter in aria-describedby
