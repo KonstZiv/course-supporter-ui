@@ -60,6 +60,7 @@ function CriteriaEditorForm({
     unsaved,
     isValid,
     saving,
+    rateLimited,
     serverError,
     serverFieldErrors,
     blocker,
@@ -258,6 +259,7 @@ function CriteriaEditorForm({
         formCriteria={items}
         saving={saving}
         hasErrors={!isValid}
+        saveDisabled={rateLimited}
         onSave={() => void save()}
         onCancel={handleCancelClick}
       />
@@ -299,7 +301,25 @@ export function CriteriaEditorPage() {
   const [error, setError] = useState<PageError | null>(null)
   const [showModelList, setShowModelList] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
-  const [savedBanner, setSavedBanner] = useState(false)
+  const [successBanner, setSuccessBanner] = useState<{
+    kind: 'saved' | 'savedWaiting' | 'resetDone'
+    works?: number
+  } | null>(null)
+  const [resetting, setResetting] = useState(false)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [resetError, setResetError] = useState<{
+    kind: 'failedReset' | 'tooManyRequests' | 'taskNotReady' | 'noAccess'
+    is5xx?: boolean
+  } | null>(null)
+  const [resetRateLimited, setResetRateLimited] = useState(false)
+
+  useEffect(() => {
+    if (!resetRateLimited) return
+    const timer = setTimeout(() => {
+      setResetRateLimited(false)
+    }, 60000)
+    return () => clearTimeout(timer)
+  }, [resetRateLimited])
 
   const load = useCallback(async () => {
     if (!documentId) return
@@ -380,8 +400,58 @@ export function CriteriaEditorPage() {
   const handleSaved = useCallback((updatedView: CriteriaView) => {
     setCriteria(updatedView)
     setIsEditing(false)
-    setSavedBanner(true)
+    setResetError(null)
+    const waiting = updatedView.waiting_submissions ?? 0
+    if (waiting > 0) {
+      setSuccessBanner({ kind: 'savedWaiting', works: waiting })
+    } else {
+      setSuccessBanner({ kind: 'saved' })
+    }
   }, [])
+
+  const handleReset = useCallback(async () => {
+    if (!documentId || resetting || resetRateLimited) return
+    setResetting(true)
+    setResetError(null)
+
+    try {
+      const updatedView = await criteriaApi.reset(documentId)
+      setShowResetConfirm(false)
+      setCriteria(updatedView)
+      setIsEditing(false)
+      const waiting = updatedView.waiting_submissions ?? 0
+      if (waiting > 0) {
+        setSuccessBanner({ kind: 'savedWaiting', works: waiting })
+      } else {
+        setSuccessBanner({ kind: 'resetDone' })
+      }
+    } catch (err) {
+      setShowResetConfirm(false)
+      if (err instanceof ApiError) {
+        if (err.status === 422) {
+          const refusal = criteriaRefusal(err.body)
+          if (refusal?.kind === 'coded' && refusal.code === 'TASK_NOT_READY') {
+            setResetError({ kind: 'taskNotReady' })
+          } else {
+            setResetError({ kind: 'failedReset' })
+          }
+        } else if (err.status === 403) {
+          setResetError({ kind: 'noAccess' })
+        } else if (err.status === 429) {
+          setResetError({ kind: 'tooManyRequests' })
+          setResetRateLimited(true)
+        } else if (err.status >= 500) {
+          setResetError({ kind: 'failedReset', is5xx: true })
+        } else {
+          setResetError({ kind: 'failedReset' })
+        }
+      } else {
+        setResetError({ kind: 'failedReset' })
+      }
+    } finally {
+      setResetting(false)
+    }
+  }, [documentId, resetting, resetRateLimited])
 
   const backPath = doc?.course_root_id
     ? `/course/${doc.course_root_id}${doc.course_node_id ? `?selected=${doc.course_node_id}` : ''}`
@@ -523,18 +593,101 @@ export function CriteriaEditorPage() {
             />
           ) : (
             <div className="space-y-6">
-              {/* Success banner after save (spec 3.К8) */}
-              {savedBanner && (
+              {/* Reset refusal banner over the list (spec 3.К10) */}
+              {resetError && (
+                <div className="card p-4 border border-coral bg-coral-pale/40 text-ink space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <AlertCircle size={20} className="text-coral shrink-0 mt-0.5" />
+                      <div className="space-y-2 min-w-0 flex-1">
+                        {resetError.kind === 'taskNotReady' && (
+                          <p className="text-sm">
+                            {t('panel.criteria.refusal.taskNotReady')}
+                          </p>
+                        )}
+                        {resetError.kind === 'noAccess' && (
+                          <p className="text-sm">
+                            {t('panel.criteria.refusal.noAccess')}
+                          </p>
+                        )}
+                        {resetError.kind === 'tooManyRequests' && (
+                          <p className="text-sm">
+                            {t('panel.criteria.refusal.tooManyRequests')}
+                          </p>
+                        )}
+                        {resetError.kind === 'failedReset' && (
+                          <p className="text-sm">
+                            {t('panel.criteria.failed.reset')}
+                          </p>
+                        )}
+
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          {resetError.kind === 'taskNotReady' && (
+                            <button
+                              type="button"
+                              onClick={() => void load()}
+                              className="btn-secondary text-xs px-3 py-1.5"
+                            >
+                              {t('panel.criteria.refresh')}
+                            </button>
+                          )}
+                          {resetError.kind === 'failedReset' && (
+                            <>
+                              <button
+                                type="button"
+                                disabled={resetting || resetRateLimited}
+                                onClick={() => void handleReset()}
+                                className="btn-secondary text-xs px-3 py-1.5"
+                              >
+                                {t('panel.criteria.retry')}
+                              </button>
+                              {resetError.is5xx && (
+                                <ContactAdmin
+                                  fallback="after-click"
+                                  context={{
+                                    course: tree?.title ?? null,
+                                    material: docTitle || null,
+                                  }}
+                                />
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setResetError(null)}
+                      aria-label={t('panel.criteria.closeMessage')}
+                      title={t('panel.criteria.closeMessage')}
+                      className="text-ink-muted hover:text-ink p-1 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-navy/30 shrink-0"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Success banner after save / reset (spec 3.К8, 3.К9) */}
+              {successBanner && (
                 <div className="card p-4 border border-forest bg-forest-pale/40 text-ink flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 size={18} className="text-forest shrink-0" />
                     <p className="text-sm font-medium">
-                      {t('panel.criteria.saved')}
+                      {successBanner.kind === 'saved' &&
+                        t('panel.criteria.saved')}
+                      {successBanner.kind === 'resetDone' &&
+                        t('panel.criteria.resetDone')}
+                      {successBanner.kind === 'savedWaiting' &&
+                        t('panel.criteria.savedWaiting', {
+                          works: successBanner.works ?? 0,
+                        })}
                     </p>
                   </div>
                   <button
                     type="button"
-                    onClick={() => setSavedBanner(false)}
+                    onClick={() => setSuccessBanner(null)}
                     aria-label={t('panel.criteria.closeMessage')}
                     title={t('panel.criteria.closeMessage')}
                     className="text-ink-muted hover:text-ink p-1 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-navy/30 shrink-0"
@@ -544,7 +697,7 @@ export function CriteriaEditorPage() {
                 </div>
               )}
 
-              {/* Layer label, count and Edit button above the list (spec 3.К3, 3.К4) */}
+              {/* Layer label, count and Edit / Reset buttons above the list (spec 3.К3, 3.К4) */}
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <span
@@ -566,16 +719,29 @@ export function CriteriaEditorPage() {
                   </span>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSavedBanner(false)
-                    setIsEditing(true)
-                  }}
-                  className="btn-primary text-sm px-4 py-2"
-                >
-                  {t('panel.criteria.edit')}
-                </button>
+                <div className="flex items-center gap-3">
+                  {criteria.in_force.layer === 'author' && (
+                    <button
+                      type="button"
+                      disabled={resetting || resetRateLimited}
+                      onClick={() => setShowResetConfirm(true)}
+                      className="btn-secondary text-sm px-4 py-2"
+                    >
+                      {t('panel.criteria.reset')}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSuccessBanner(null)
+                      setResetError(null)
+                      setIsEditing(true)
+                    }}
+                    className="btn-primary text-sm px-4 py-2"
+                  >
+                    {t('panel.criteria.edit')}
+                  </button>
+                </div>
               </div>
 
               <PassRule inForce={criteria.in_force} />
@@ -629,6 +795,22 @@ export function CriteriaEditorPage() {
                   contradictions={criteria.contradictions}
                 />
               )}
+
+              {/* Confirm dialog for resetting to system list (spec 3.К9) */}
+              <ConfirmDialog
+                open={showResetConfirm}
+                title={t('panel.criteria.resetTitle')}
+                cancelLabel={t('panel.criteria.cancel')}
+                confirmLabel={t('panel.criteria.resetConfirm')}
+                confirmClass="btn-danger"
+                busy={resetting}
+                onCancel={() => {
+                  if (!resetting) setShowResetConfirm(false)
+                }}
+                onConfirm={() => void handleReset()}
+              >
+                <p>{t('panel.criteria.resetText')}</p>
+              </ConfirmDialog>
             </div>
           )
         ) : null}

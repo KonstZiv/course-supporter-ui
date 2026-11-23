@@ -8,6 +8,7 @@ export interface EditorBarProps {
   formCriteria: CriterionFormItem[]
   saving: boolean
   hasErrors: boolean
+  saveDisabled?: boolean
   onSave: () => void
   onCancel: () => void
 }
@@ -21,6 +22,7 @@ export function EditorBar({
   formCriteria,
   saving,
   hasErrors,
+  saveDisabled = false,
   onSave,
   onCancel,
 }: EditorBarProps) {
@@ -32,7 +34,7 @@ export function EditorBar({
     criteria: formCriteria,
   })
 
-  const saveDisabled = saving || !unsaved || hasErrors
+  const isSaveDisabled = saveDisabled || saving || !unsaved || hasErrors
   const saveTooltip = hasErrors ? t('panel.criteria.finishFirst') : undefined
 
   return (
@@ -79,12 +81,12 @@ export function EditorBar({
 
           <button
             type="button"
-            disabled={saveDisabled}
+            disabled={isSaveDisabled}
             title={saveTooltip}
             onClick={onSave}
             className={clsx(
               'btn-primary text-sm px-4 py-2 flex items-center gap-2',
-              saveDisabled && 'opacity-50 cursor-not-allowed',
+              isSaveDisabled && 'opacity-50 cursor-not-allowed',
             )}
           >
             {saving && <Loader2 size={16} className="animate-spin" />}
