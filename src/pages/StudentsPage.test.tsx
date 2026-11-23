@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { StudentsPage } from './StudentsPage'
 import { studentsApi } from '../api/students'
 
@@ -41,6 +41,7 @@ const ROSTER = {
       display_name: 'Alice',
       is_active: true,
       enrollment_count: 2,
+      source: 'author' as const,
     },
     {
       student_id: 's2',
@@ -49,6 +50,7 @@ const ROSTER = {
       display_name: null,
       is_active: false,
       enrollment_count: 0,
+      source: 'self' as const,
     },
     {
       student_id: 's3',
@@ -57,6 +59,7 @@ const ROSTER = {
       display_name: null,
       is_active: null,
       enrollment_count: 1,
+      source: 'author' as const,
     },
   ],
 }
@@ -114,5 +117,30 @@ describe('StudentsPage', () => {
       'title',
       expect.stringContaining('VITE_PORTAL_ORIGIN'),
     )
+  })
+
+  // O-3: the mark sits by students who enrolled themselves, and only them.
+  it('marks a student who enrolled by the course link', async () => {
+    render(<StudentsPage />)
+    await screen.findByText('Alice')
+    expect(screen.getAllByText('записався сам')).toHaveLength(1)
+    const bobRow = screen.getAllByText('bob')[0]!.closest('tr')!
+    expect(within(bobRow).getByText('записався сам')).toBeInTheDocument()
+  })
+
+  it('marks the self-made enrolment of the student in the list of their courses', async () => {
+    vi.mocked(studentsApi.enrollments).mockResolvedValueOnce({
+      student_id: 's1',
+      items: [
+        { course_node_id: 'c-self', enrolled_at: '2026-11-23T10:00:00Z', source: 'self' },
+        { course_node_id: 'c-author', enrolled_at: '2026-11-22T10:00:00Z', source: 'author' },
+      ],
+    })
+    render(<StudentsPage />)
+    fireEvent.click(await screen.findByRole('button', { name: /Alice/ }))
+    const selfItem = (await screen.findByText(/c-self/)).closest('li')!
+    const authorItem = screen.getByText(/c-author/).closest('li')!
+    expect(within(selfItem).getByText('записався сам')).toBeInTheDocument()
+    expect(within(authorItem).queryByText('записався сам')).toBeNull()
   })
 })

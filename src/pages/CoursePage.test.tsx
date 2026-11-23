@@ -10,6 +10,11 @@ import { CoursePage } from './CoursePage'
 // presence == "detail panel open". The real course + work-list stores drive it.
 const { getDetailMock } = vi.hoisted(() => ({ getDetailMock: vi.fn() }))
 vi.mock('../api/nodes', () => ({ nodesApi: { getDetail: getDetailMock } }))
+vi.mock('../api/enrollment-link', () => ({
+  enrollmentLinkApi: {
+    get: vi.fn(() => Promise.resolve({ open: false, key: null, url: null })),
+  },
+}))
 vi.mock('../components/flow/CourseCanvas', () => ({ CourseCanvas: () => null }))
 vi.mock('../components/flow/NodeDetailPanel', () => ({
   NodeDetailPanel: () => <div data-testid="node-detail-panel" />,

@@ -1,5 +1,6 @@
 import { api } from './client'
 import type {
+  EnrollmentBound,
   EnrollmentRequest,
   ProvisionStudentRequest,
   ProvisionStudentResponse,
@@ -51,10 +52,7 @@ export const studentsApi = {
   },
 
   bind: (body: EnrollmentRequest) =>
-    api.post<{ student_id: string; course_node_id: string }>(
-      '/api/v1/students/enrollments',
-      body,
-    ),
+    api.post<EnrollmentBound>('/api/v1/students/enrollments', body),
 
   // DELETE carries no body — student/course go in the query string.
   unbind: (studentId: string, courseNodeId: string) =>

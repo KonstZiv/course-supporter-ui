@@ -901,6 +901,10 @@ export interface HomeworkTaskCostResponse {
 // against the OpenAPI snapshot from backend main. Course roots for the bind
 // picker reuse the existing NodeResponse / NodeListResponse (nodesApi).
 
+// O-1: who made an enrollment — the author, or the student by the course link.
+// On a roster row it is the source of the student's first enrollment.
+export type EnrollmentSource = 'author' | 'self'
+
 export interface StudentRosterItem {
   student_id: string
   external_id: string
@@ -911,6 +915,7 @@ export interface StudentRosterItem {
   display_name: string | null
   is_active: boolean | null
   enrollment_count: number
+  source: EnrollmentSource
 }
 
 export interface StudentRosterResponse {
@@ -927,6 +932,7 @@ export interface StudentRosterResponse {
 export interface StudentEnrollmentItem {
   course_node_id: string
   enrolled_at: string
+  source: EnrollmentSource
 }
 
 export interface StudentEnrollmentsResponse {
@@ -964,6 +970,21 @@ export interface SetStudentPasswordRequest {
 export interface EnrollmentRequest {
   student_id: string
   course_node_id: string
+}
+
+// POST /students/enrollments (201): always 'author' — a grant by the author.
+export interface EnrollmentBound {
+  student_id: string
+  course_node_id: string
+  source: EnrollmentSource
+}
+
+// O-3: the course's open enrolment link (GET and POST open|rotate|close of
+// /nodes/{course_id}/enrollment-link). While closed, key and url are null.
+export interface EnrollmentLink {
+  open: boolean
+  key: string | null
+  url: string | null
 }
 
 // ─── Units of the author's account (BIL-A, BIL-PAY) ───
