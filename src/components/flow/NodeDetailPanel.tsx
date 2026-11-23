@@ -17,6 +17,7 @@ import { ProjectBaseSection } from './ProjectBaseSection'
 import { sourceTypeMeta } from '../../utils/sourceTypeIcon'
 import { documentLabel } from '../../utils/documentLabel'
 import { newTestPath, testEditorPath } from '../../utils/testAddress'
+import { criteriaEditorPath } from '../../utils/criteriaAddress'
 import { authoredRejectionMessage } from '../../utils/apiError'
 import { validateUploadFiles } from '../../utils/uploadValidation'
 import { useUploadBatch, type UploadTask } from '../../hooks/useUploadBatch'
@@ -550,6 +551,10 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
             // A test is written, never processed: no phase to show, nothing
             // to reprocess, and its role is fixed (decisions 13 and 19).
             const isTest = mat.source_type === 'test_object'
+            const isTextTask =
+              mat.task_type === 'short_task' ||
+              mat.task_type === 'task' ||
+              mat.task_type === 'project'
             // Б2: whether students see it — the editor's own chips, as its
             // toolbar shows them (``changed`` is two); none when the tree does
             // not say (an older backend, an unread state).
@@ -608,6 +613,18 @@ export function NodeDetailPanel({ onOpenSummary }: NodeDetailPanelProps = {}) {
                         title={t('panel.flow.detail.openTestHint')}
                       >
                         {t('panel.flow.detail.openTest')}
+                      </button>
+                    )}
+                    {isTextTask && (
+                      <button
+                        type="button"
+                        onClick={() => navigate(criteriaEditorPath(mat.id))}
+                        className="text-[10px] px-1.5 py-0.5 rounded font-medium
+                                   bg-navy text-white hover:bg-navy-light
+                                   transition-colors cursor-pointer"
+                        title={t('panel.criteria.openHint')}
+                      >
+                        {t('panel.criteria.open')}
                       </button>
                     )}
                     {mat.processing_phase === 'awaiting_author' && (

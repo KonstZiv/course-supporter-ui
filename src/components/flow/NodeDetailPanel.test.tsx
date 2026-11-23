@@ -619,4 +619,69 @@ describe('NodeDetailPanel — a test written in the system (task 07c)', () => {
     expect(screen.getByText('Змінні')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).toBeNull()
   })
+
+  describe('NodeDetailPanel — criteria button (spec A2)', () => {
+    it('shows criteria button for task and navigates on click', () => {
+      seed(
+        makeNode({
+          authored_documents: [
+            makeDoc({ id: 'doc-task', task_type: 'task', title: 'Task 1' }),
+          ],
+        }),
+      )
+      render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
+
+      const btn = screen.getByRole('button', { name: 'Критерії' })
+      expect(btn).toBeInTheDocument()
+      fireEvent.click(btn)
+      expect(navigateMock).toHaveBeenCalledWith('/task/doc-task/criteria')
+    })
+
+    it('shows criteria button for project', () => {
+      seed(
+        makeNode({
+          authored_documents: [
+            makeDoc({ id: 'doc-proj', task_type: 'project', title: 'Project 1' }),
+          ],
+        }),
+      )
+      render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
+
+      expect(screen.getByRole('button', { name: 'Критерії' })).toBeInTheDocument()
+    })
+
+    it('shows criteria button for short_task', () => {
+      seed(
+        makeNode({
+          authored_documents: [
+            makeDoc({ id: 'doc-short', task_type: 'short_task', title: 'Short task' }),
+          ],
+        }),
+      )
+      render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
+
+      expect(screen.getByRole('button', { name: 'Критерії' })).toBeInTheDocument()
+    })
+
+    it('does not show criteria button for test', () => {
+      seed(makeNode({ authored_documents: [makeTest()] }))
+      render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
+
+      expect(screen.queryByRole('button', { name: 'Критерії' })).toBeNull()
+      expect(screen.getByRole('button', { name: 'Відкрити тест' })).toBeInTheDocument()
+    })
+
+    it('does not show criteria button for educational material without task_type', () => {
+      seed(
+        makeNode({
+          authored_documents: [
+            makeDoc({ id: 'doc-edu', task_type: null, material_role: 'educational' }),
+          ],
+        }),
+      )
+      render(<NodeDetailPanel onOpenSummary={vi.fn()} />)
+
+      expect(screen.queryByRole('button', { name: 'Критерії' })).toBeNull()
+    })
+  })
 })
