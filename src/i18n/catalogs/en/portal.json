@@ -290,5 +290,6 @@
   "portal.replies.error.limitReached": "You already have {count, plural, one {{n} reply} other {{n} replies}} to this remark. You will be able to write more with the review of your next submission.",
   "portal.replies.error.empty": "The reply is empty. Enter some text and send again.",
   "portal.replies.error.tooLong": "The reply is too long — {count, plural, one {{n} character} other {{n} characters}} at most. Shorten it and send again.",
-  "portal.replies.error.rejected": "The reply was not accepted: it contains hidden or substituted characters. Such characters often come with text copied from another program, and with some emoji. Remove them and send again."
+  "portal.replies.error.rejected": "The reply was not accepted: it contains hidden or substituted characters. Such characters often come with text copied from another program, and with some emoji. Remove them and send again.",
+  "portal.login.error.updating": "We are installing an update to the service, so signing in is not possible just now — it usually takes up to 10 minutes. Your password is fine. We apologise for the inconvenience!"
 }

@@ -823,5 +823,6 @@
   "panel.criteria.problem.tooManyPoints": "No more than {max} points.",
   "panel.criteria.problem.tooManyConcepts": "No more than {max} concepts.",
   "panel.criteria.problem.noCriteria": "The list must have at least one criterion. To return to the system’s list, use “Return to the system’s list”.",
-  "panel.criteria.problem.tooManyCriteria": "The list can have no more than {max} criteria."
+  "panel.criteria.problem.tooManyCriteria": "The list can have no more than {max} criteria.",
+  "panel.login.error.updating": "We are installing an update to the service, so signing in is not possible just now — it usually takes up to 10 minutes. Your access key is fine. We apologise for the inconvenience!"
 }
