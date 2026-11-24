@@ -682,7 +682,7 @@
   "panel.confirmRoles.proposalMissing": "Пропозиція ролей відсутня.",
   "panel.confirmRoles.title": "Ролі файлів матеріалу",
   "panel.confirmRoles.whyThis": "Навіщо це?",
-  "panel.confirmRoles.removedLine": "Система вилучила {count} файл(ів) (безпека або службові теки) — їх подано лише у структурі проєкту; повернути їх не можна.",
+  "panel.confirmRoles.removedLine": "Система вилучила {count, plural, one {# файл} few {# файли} many {# файлів} other {# файла}} (безпека або службові теки) — їх подано лише у структурі проєкту; повернути їх не можна.",
   "panel.confirmRoles.setFolderRoleLabel": "Задати всій теці:",
   "panel.confirmRoles.folderAriaLabel": "Роль для теки {folder}",
   "panel.confirmRoles.fileAriaLabel": "Роль файла {path}",
