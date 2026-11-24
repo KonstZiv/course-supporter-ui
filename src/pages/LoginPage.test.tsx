@@ -230,5 +230,18 @@ describe('LoginPage', () => {
       expect(await screen.findByRole('heading', { name: 'page: courses' })).toBeInTheDocument()
       expect(router.state.location.pathname).toBe('/')
     })
+
+    it('shows the updating message on 503 with service_updating detail', async () => {
+      fetchMock.mockResolvedValue(
+        new Response(JSON.stringify({ detail: 'service_updating' }), { status: 503 }),
+      )
+      renderLogin()
+      signIn()
+      expect(
+        await screen.findByText(
+          'Ми саме встановлюємо оновлення сервісу, тому увійти поки не вийде — зазвичай це триває до 10 хвилин. З вашим ключем доступу все гаразд. Просимо вибачення за незручності!',
+        ),
+      ).toBeInTheDocument()
+    })
   })
 })

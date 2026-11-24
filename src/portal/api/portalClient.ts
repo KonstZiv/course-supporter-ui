@@ -1,5 +1,10 @@
 import { usePortalSession } from '../stores/session'
 import { loginAddress } from '../signInReturn'
+import {
+  reportHttpFailure,
+  reportNetworkError,
+  useServiceStatus,
+} from '../../serviceStatus/store'
 import type {
   ConfirmRecoveryEmailRequest,
   CreateRemarkComment,
@@ -155,26 +160,47 @@ async function postPublicJson(path: string, body: unknown): Promise<void> {
   }
 }
 
-// Authenticated GET. Attaches the bearer; on 401 clears the session and
-// redirects to login (the contract c2/c3 inherit for every bearer call).
-async function authGet<T>(path: string): Promise<T> {
+async function authFetch<T>(
+  path: string,
+  init: Omit<RequestInit, 'headers'> & { headers?: Record<string, string> } = {},
+): Promise<T> {
   const { token, tenantId } = usePortalSession.getState()
   if (!token) {
     redirectToLogin(tenantId)
     throw new PortalApiError(401, 'No portal session')
   }
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  let res: Response
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      ...init,
+      headers: { ...init.headers, Authorization: `Bearer ${token}` },
+    })
+  } catch (err) {
+    reportNetworkError(err)
+    throw err
+  }
   if (res.status === 401) {
     usePortalSession.getState().clear()
     redirectToLogin(tenantId)
     throw new PortalApiError(401, 'Portal session expired')
   }
   if (!res.ok) {
-    throw await parseError(res)
+    const apiError = await parseError(res)
+    reportHttpFailure(
+      res.status,
+      apiError.body,
+      res.headers?.get?.('Retry-After'),
+    )
+    throw apiError
   }
+  useServiceStatus.getState().recover()
   return res.json() as Promise<T>
+}
+
+// Authenticated GET. Attaches the bearer; on 401 clears the session and
+// redirects to login (the contract c2/c3 inherit for every bearer call).
+function authGet<T>(path: string): Promise<T> {
+  return authFetch<T>(path)
 }
 
 // Authenticated multipart POST (c3a). Sends FormData WITHOUT a Content-Type
@@ -182,26 +208,8 @@ async function authGet<T>(path: string): Promise<T> {
 // Same bearer + 401-clear-redirect contract as authGet; non-401 errors (422
 // validation, 409 readiness, network) throw a PortalApiError the caller renders
 // inline.
-async function authPost<T>(path: string, body: FormData): Promise<T> {
-  const { token, tenantId } = usePortalSession.getState()
-  if (!token) {
-    redirectToLogin(tenantId)
-    throw new PortalApiError(401, 'No portal session')
-  }
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body,
-  })
-  if (res.status === 401) {
-    usePortalSession.getState().clear()
-    redirectToLogin(tenantId)
-    throw new PortalApiError(401, 'Portal session expired')
-  }
-  if (!res.ok) {
-    throw await parseError(res)
-  }
-  return res.json() as Promise<T>
+function authPost<T>(path: string, body: FormData): Promise<T> {
+  return authFetch<T>(path, { method: 'POST', body })
 }
 
 // Authenticated JSON request (R3): the recovery-email set/change, the
@@ -209,29 +217,16 @@ async function authPost<T>(path: string, body: FormData): Promise<T> {
 // authGet/authPost, but a JSON body (authPost is multipart-only for file
 // submission). Returns the parsed 200 body; non-401 errors (422 validation)
 // throw for inline rendering.
-async function sendAuthJson<T>(method: 'POST' | 'PUT', path: string, body: unknown): Promise<T> {
-  const { token, tenantId } = usePortalSession.getState()
-  if (!token) {
-    redirectToLogin(tenantId)
-    throw new PortalApiError(401, 'No portal session')
-  }
-  const res = await fetch(`${BASE_URL}${path}`, {
+function sendAuthJson<T>(
+  method: 'POST' | 'PUT',
+  path: string,
+  body: unknown,
+): Promise<T> {
+  return authFetch<T>(path, {
     method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (res.status === 401) {
-    usePortalSession.getState().clear()
-    redirectToLogin(tenantId)
-    throw new PortalApiError(401, 'Portal session expired')
-  }
-  if (!res.ok) {
-    throw await parseError(res)
-  }
-  return res.json() as Promise<T>
 }
 
 const postAuthJson = <T>(path: string, body: unknown) => sendAuthJson<T>('POST', path, body)

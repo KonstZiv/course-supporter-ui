@@ -30,6 +30,7 @@ describe('contactAdminPlaces', () => {
       'panel.billing.loadFailed': 1,
       'panel.billing.providerUnavailable': 1,
       'panel.billing.actionFailed': 1,
+      'shared.serviceStatus.longWait': 1,
     }
 
     const actualCounts: Record<string, number> = {}
