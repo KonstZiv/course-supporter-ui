@@ -17,6 +17,7 @@ export interface CriterionFormProps {
   taskType: string | null
   disabled?: boolean
   serverFieldErrors?: string[]
+  saveAttempted?: boolean
   onChange: (patch: Partial<CriterionFormItem>) => void
   onMove: (direction: 'up' | 'down') => void
   onRemove: () => void
@@ -35,12 +36,15 @@ export function CriterionForm({
   taskType,
   disabled = false,
   serverFieldErrors = [],
+  saveAttempted = false,
   onChange,
   onMove,
   onRemove,
 }: CriterionFormProps) {
   const t = useT()
   const [pendingMethod, setPendingMethod] = useState<CriteriaCheckMethod | null>(null)
+  const [textTouched, setTextTouched] = useState(false)
+  const [evidenceTouched, setEvidenceTouched] = useState(false)
 
   const isNew = criterion.isNew || !criterion.id
   const title = isNew
@@ -69,6 +73,14 @@ export function CriterionForm({
   const hasServerEvidenceError = serverFieldErrors.includes('evidence')
   const hasServerMethodError = serverFieldErrors.includes('check_method')
   const hasServerWeightError = serverFieldErrors.includes('weight')
+
+  const isSaveAttempted = Boolean(saveAttempted)
+
+  const showTextError =
+    Boolean(textError) && (textTouched || isSaveAttempted || hasServerTextError)
+  const showEvidenceError =
+    Boolean(evidenceError) &&
+    (evidenceTouched || isSaveAttempted || hasServerEvidenceError)
 
   const handleWeightChange = (newWeight: CriteriaWeight) => {
     if (disabled || newWeight === criterion.weight) return
@@ -194,15 +206,19 @@ export function CriterionForm({
           rows={3}
           disabled={disabled}
           value={criterion.text}
-          onChange={(e) => onChange({ text: e.target.value })}
-          aria-invalid={textError || hasServerTextError ? true : undefined}
+          onBlur={() => setTextTouched(true)}
+          onChange={(e) => {
+            setTextTouched(true)
+            onChange({ text: e.target.value })
+          }}
+          aria-invalid={showTextError || hasServerTextError ? true : undefined}
           className={clsx(
             'w-full text-sm bg-canvas border rounded-lg px-3 py-2 text-ink placeholder:text-ink-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-navy/30',
-            textError || hasServerTextError ? 'border-coral' : 'border-canvas-dark',
+            showTextError || hasServerTextError ? 'border-coral' : 'border-canvas-dark',
             disabled && 'opacity-60 cursor-not-allowed',
           )}
         />
-        {textError && <p className="text-xs text-coral">{textError}</p>}
+        {showTextError && <p className="text-xs text-coral">{textError}</p>}
       </div>
 
       {/* Field: Evidence of completion */}
@@ -218,15 +234,19 @@ export function CriterionForm({
           rows={3}
           disabled={disabled}
           value={criterion.evidence}
-          onChange={(e) => onChange({ evidence: e.target.value })}
-          aria-invalid={evidenceError || hasServerEvidenceError ? true : undefined}
+          onBlur={() => setEvidenceTouched(true)}
+          onChange={(e) => {
+            setEvidenceTouched(true)
+            onChange({ evidence: e.target.value })
+          }}
+          aria-invalid={showEvidenceError || hasServerEvidenceError ? true : undefined}
           className={clsx(
             'w-full text-sm bg-canvas border rounded-lg px-3 py-2 text-ink placeholder:text-ink-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-navy/30',
-            evidenceError || hasServerEvidenceError ? 'border-coral' : 'border-canvas-dark',
+            showEvidenceError || hasServerEvidenceError ? 'border-coral' : 'border-canvas-dark',
             disabled && 'opacity-60 cursor-not-allowed',
           )}
         />
-        {evidenceError && <p className="text-xs text-coral">{evidenceError}</p>}
+        {showEvidenceError && <p className="text-xs text-coral">{evidenceError}</p>}
       </div>
 
       {/* Field: Weight */}

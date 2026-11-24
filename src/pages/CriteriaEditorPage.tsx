@@ -64,6 +64,8 @@ function CriteriaEditorForm({
     serverError,
     serverFieldErrors,
     blocker,
+    saveAttempted,
+    revealErrors,
     updateCriterion,
     addCriterion,
     removeCriterion,
@@ -223,6 +225,7 @@ function CriteriaEditorForm({
             availableConcepts={criteria.concepts ?? []}
             taskType={doc?.task_type ?? null}
             disabled={saving}
+            saveAttempted={saveAttempted}
             serverFieldErrors={serverFieldErrors
               .filter((e) => e.index === idx)
               .map((e) => e.field)}
@@ -261,6 +264,7 @@ function CriteriaEditorForm({
         hasErrors={!isValid}
         saveDisabled={rateLimited}
         onSave={() => void save()}
+        onRevealErrors={revealErrors}
         onCancel={handleCancelClick}
       />
 

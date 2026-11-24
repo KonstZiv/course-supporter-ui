@@ -10,6 +10,7 @@ export interface EditorBarProps {
   hasErrors: boolean
   saveDisabled?: boolean
   onSave: () => void
+  onRevealErrors?: () => void
   onCancel: () => void
 }
 
@@ -24,6 +25,7 @@ export function EditorBar({
   hasErrors,
   saveDisabled = false,
   onSave,
+  onRevealErrors,
   onCancel,
 }: EditorBarProps) {
   const t = useT()
@@ -34,8 +36,18 @@ export function EditorBar({
     criteria: formCriteria,
   })
 
-  const isSaveDisabled = saveDisabled || saving || !unsaved || hasErrors
+  const isHardDisabled = saving || saveDisabled || !unsaved
+  const isSaveDisabled = isHardDisabled || hasErrors
   const saveTooltip = hasErrors ? t('panel.criteria.finishFirst') : undefined
+
+  const handleSaveClick = () => {
+    if (isHardDisabled) return
+    if (hasErrors) {
+      onRevealErrors?.()
+      return
+    }
+    onSave()
+  }
 
   return (
     <div className="sticky bottom-0 z-30 bg-white/95 backdrop-blur-md border-t border-canvas-dark/40 shadow-lg py-3 px-6 mt-8">
@@ -56,7 +68,7 @@ export function EditorBar({
             </span>
           </div>
 
-          <p className="text-xs text-ink-muted truncate">
+          <p className="text-xs text-ink-muted">
             {rule.kind === 'strict'
               ? t('panel.criteria.pass.strict', {
                   count: rule.count,
@@ -81,9 +93,10 @@ export function EditorBar({
 
           <button
             type="button"
-            disabled={isSaveDisabled}
+            disabled={isHardDisabled}
+            aria-disabled={isSaveDisabled ? 'true' : undefined}
             title={saveTooltip}
-            onClick={onSave}
+            onClick={handleSaveClick}
             className={clsx(
               'btn-primary text-sm px-4 py-2 flex items-center gap-2',
               isSaveDisabled && 'opacity-50 cursor-not-allowed',
