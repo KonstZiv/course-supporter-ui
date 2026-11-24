@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   AlertCircle,
   ChevronDown,
@@ -125,6 +126,12 @@ export function StudentRow({ student, titleOf, onChanged }: Props) {
         <td className="px-4 py-3">
           <div className="flex items-center justify-end gap-2">
             {actionBusy && <Loader2 size={14} className="animate-spin text-ink-muted" />}
+            <Link
+              to={`/students/${encodeURIComponent(student.student_id)}`}
+              className="btn-ghost btn-sm"
+            >
+              {t('panel.students.action.submissions')}
+            </Link>
             {student.is_active === true && (
               <button
                 className="btn-ghost btn-sm text-coral"

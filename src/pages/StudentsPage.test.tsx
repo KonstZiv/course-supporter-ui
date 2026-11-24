@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { StudentsPage } from './StudentsPage'
 import { studentsApi } from '../api/students'
 
@@ -65,9 +66,17 @@ beforeEach(() => {
   vi.mocked(studentsApi.list).mockResolvedValue(ROSTER)
 })
 
+function renderPage() {
+  return render(
+    <MemoryRouter>
+      <StudentsPage />
+    </MemoryRouter>,
+  )
+}
+
 describe('StudentsPage', () => {
   it('renders the tenant roster with name fallback', async () => {
-    render(<StudentsPage />)
+    renderPage()
     expect(await screen.findByText('Alice')).toBeInTheDocument()
     // display_name null → login shown as the name (so 'bob' renders in both
     // the name and login cells); login+display_name null → external_id.
@@ -76,7 +85,7 @@ describe('StudentsPage', () => {
   })
 
   it('shows the is_active triplet and never "видалено"', async () => {
-    render(<StudentsPage />)
+    renderPage()
     expect(await screen.findByText('Активний')).toBeInTheDocument()
     expect(screen.getByText('Відкликано')).toBeInTheDocument()
     expect(screen.getByText('Немає доступу до порталу')).toBeInTheDocument()
@@ -84,14 +93,14 @@ describe('StudentsPage', () => {
   })
 
   it('shows a single-page counter with disabled pagination', async () => {
-    render(<StudentsPage />)
+    renderPage()
     expect(await screen.findByText('Показано 1–3 з 3')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Назад' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Далі' })).toBeDisabled()
   })
 
   it('opens the provision modal with author-language mode labels', async () => {
-    render(<StudentsPage />)
+    renderPage()
     await screen.findByText('Alice')
     fireEvent.click(screen.getByRole('button', { name: /Додати студента/ }))
     expect(screen.getByText('Новий студент')).toBeInTheDocument()
@@ -104,7 +113,7 @@ describe('StudentsPage', () => {
   // disabled with a hint (the dev/empty-origin branch). The happy copy path is
   // covered by live-acceptance.
   it('disables the portal-link button with a hint when origin is unset', async () => {
-    render(<StudentsPage />)
+    renderPage()
     await screen.findByText('Alice')
     const btn = screen.getByRole('button', {
       name: /Скопіювати посилання порталу/,
@@ -114,5 +123,15 @@ describe('StudentsPage', () => {
       'title',
       expect.stringContaining('VITE_PORTAL_ORIGIN'),
     )
+  })
+
+  it('links each student row to their submissions page', async () => {
+    renderPage()
+    await screen.findByText('Alice')
+    const links = screen.getAllByRole('link', { name: 'Здачі' })
+    expect(links).toHaveLength(3)
+    expect(links[0]).toHaveAttribute('href', '/students/s1')
+    expect(links[1]).toHaveAttribute('href', '/students/s2')
+    expect(links[2]).toHaveAttribute('href', '/students/s3')
   })
 })
