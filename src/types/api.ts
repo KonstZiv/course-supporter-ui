@@ -1320,3 +1320,20 @@ export interface CriteriaOverrideRequest {
   criteria: CriterionEdit[]
 }
 
+// ── Author interface language (№724) ──
+
+/**
+ * Response for GET and PUT /api/v1/author/interface-language.
+ * Canonical ISO 639-3 code ("ukr", "eng") or null when never chosen.
+ */
+export interface AuthorInterfaceLanguageResponse {
+  interface_language: string | null
+}
+
+/**
+ * Request body for PUT /api/v1/author/interface-language.
+ */
+export interface AuthorInterfaceLanguageRequest {
+  language: string
+}
+

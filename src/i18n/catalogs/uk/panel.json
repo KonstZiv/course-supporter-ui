@@ -7,6 +7,7 @@
   "panel.header.nav.materialHistory": "Історія матеріалів",
   "panel.header.nav.help": "Довідка",
   "panel.header.logout": "Вийти",
+  "panel.language.label": "Мова",
   "panel.login.title": "Вхід для авторів курсів",
   "panel.login.description": "Програма автора — місце, де автор готує свій курс на платформі Course Supporter: завантажує матеріали, налаштовує завдання й тести, додає студентів.",
   "panel.login.enterKeyPrompt": "Щоб увійти, введіть ключ доступу, який вам надіслав адміністратор платформи.",

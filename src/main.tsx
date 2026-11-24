@@ -2,15 +2,15 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router-dom'
 import { createAppRouter } from './router'
-import { LanguageProvider } from './i18n/LanguageProvider'
+import { PanelLanguageProvider } from './components/layout/PanelLanguageProvider'
 import './fonts'
 import './index.css'
 import './author.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <LanguageProvider>
+    <PanelLanguageProvider>
       <RouterProvider router={createAppRouter()} />
-    </LanguageProvider>
+    </PanelLanguageProvider>
   </StrictMode>,
 )

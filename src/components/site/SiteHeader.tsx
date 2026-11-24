@@ -1,9 +1,12 @@
+import type { ReactNode } from 'react'
 import { useLanguage, useT } from '../../i18n/LanguageContext'
 import { siteUrl, SITE_NAV_LINK_CLASS, type SiteLink } from './siteLinks'
 
 interface SiteHeaderProps {
   /** Links on the right, in order; each page passes its own. */
   links: SiteLink[]
+  /** Optional control placed beside the links (e.g. the panel language switcher). */
+  afterLinks?: ReactNode
 }
 
 /**
@@ -11,7 +14,7 @@ interface SiteHeaderProps {
  * leading to the site and the links the page passes. Plain <a> links and no
  * app state, so the portal can use it too.
  */
-export function SiteHeader({ links }: SiteHeaderProps) {
+export function SiteHeader({ links, afterLinks }: SiteHeaderProps) {
   const language = useLanguage()
   const t = useT()
   return (
@@ -23,18 +26,23 @@ export function SiteHeader({ links }: SiteHeaderProps) {
         >
           Course Supporter
         </a>
-        {links.length > 0 && (
-          <nav aria-label={t('shared.site.mainNav')}>
-            <ul className="flex flex-wrap items-center gap-x-5 gap-y-2">
-              {links.map(({ label, href }) => (
-                <li key={href}>
-                  <a href={href} className={SITE_NAV_LINK_CLASS}>
-                    {label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
+        {(links.length > 0 || afterLinks) && (
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            {links.length > 0 && (
+              <nav aria-label={t('shared.site.mainNav')}>
+                <ul className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                  {links.map(({ label, href }) => (
+                    <li key={href}>
+                      <a href={href} className={SITE_NAV_LINK_CLASS}>
+                        {label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+            )}
+            {afterLinks}
+          </div>
         )}
       </div>
     </header>

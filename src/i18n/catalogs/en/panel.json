@@ -7,6 +7,7 @@
   "panel.header.nav.materialHistory": "Material history",
   "panel.header.nav.help": "Help",
   "panel.header.logout": "Sign out",
+  "panel.language.label": "Language",
   "panel.login.title": "Sign in for course authors",
   "panel.login.description": "The author app is where an author prepares their course on the Course Supporter platform: uploads materials, sets up assignments and tests, adds students.",
   "panel.login.enterKeyPrompt": "To sign in, enter the access key the platform administrator sent you.",

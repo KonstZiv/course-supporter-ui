@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
 import { useAuthStore } from './stores/auth'
+import { syncServerPanelLanguage } from './stores/panelLanguage'
 import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { CoursePage } from './pages/CoursePage'
@@ -28,6 +29,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       void getLanguages().catch((err) => {
         console.error('Failed to prefetch language list', err)
       })
+      syncServerPanelLanguage(apiKey)
     }
   }, [apiKey])
   // The sign-in page sends the author back here once the key is accepted.
