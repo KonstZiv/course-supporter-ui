@@ -499,3 +499,53 @@ describe('portalApi billing (the student units)', () => {
     expect(assign).not.toHaveBeenCalled()
   })
 })
+
+describe('portalApi.estimateTask (G-33 response_language)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    usePortalSession.getState().setSession({
+      token: 'jwt',
+      tenantId: 't',
+      studentId: 's',
+      displayName: null,
+    })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('appends response_language to FormData when provided', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ price_units: 5, available_units: 20, enough: true, missing_units: 0, charging_enabled: true, basis: 'typical', paid_by: 'self' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const file = new File(['hi'], 'a.py', { type: 'text/plain' })
+    await portalApi.estimateTask('task-1', file, 'eng')
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/api/v1/portal/tasks/task-1/estimate')
+    const fd = init.body as FormData
+    expect(fd.get('file')).toBeInstanceOf(File)
+    expect(fd.get('response_language')).toBe('eng')
+  })
+
+  it('omits response_language when not provided or null', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ price_units: 5, available_units: 20, enough: true, missing_units: 0, charging_enabled: true, basis: 'typical', paid_by: 'self' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await portalApi.estimateTask('task-1')
+    await portalApi.estimateTask('task-1', null, null)
+
+    const fd1 = (fetchMock.mock.calls[0]![1] as RequestInit).body as FormData
+    const fd2 = (fetchMock.mock.calls[1]![1] as RequestInit).body as FormData
+    expect(fd1.has('response_language')).toBe(false)
+    expect(fd2.has('response_language')).toBe(false)
+  })
+})

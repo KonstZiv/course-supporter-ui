@@ -253,9 +253,10 @@ export const portalApi = {
   // file — the task's typical price; with one — the price of that file (read
   // by the doors, never stored). A file the doors refuse is a 422 with their
   // code, as the submission would be: read it with ``doorRefusal``.
-  estimateTask: (taskId: string, file?: File | null) => {
+  estimateTask: (taskId: string, file?: File | null, responseLanguage?: string | null) => {
     const body = new FormData()
     if (file) body.append('file', file)
+    if (responseLanguage) body.append('response_language', responseLanguage)
     return authPost<PortalReviewEstimate>(
       `/api/v1/portal/tasks/${taskId}/estimate`,
       body,
