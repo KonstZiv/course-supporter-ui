@@ -88,7 +88,14 @@ export function PortalSubmitForm({
   const t = useT()
   const language =
     chosenLanguage ?? defaultReviewLanguage(iso3Of(uiLanguage), courseLanguage, languages)
-  const estimate = useReviewEstimate(taskId, file)
+  // Every option now sends the code it names. "Мовою курсу" used to send
+  // nothing, which made the server fall back — to the student's STORED
+  // preference first, so a student whose last review was in English got
+  // English again under a label promising the course's language. Measured
+  // 2026-09-04 on a ukr course. The absence of a choice is no longer the way
+  // to ask for the course language; naming it is.
+  const responseLanguage = language || courseLanguage || null
+  const estimate = useReviewEstimate(taskId, file, responseLanguage)
   const cost = costView(uiLanguage, estimate.outcome, estimate.last)
   useUnitsWait(cost.kind === 'panel' ? cost.threshold : null, estimate.askAgain)
   // The answer is on its way and charging is known to be on: no sending yet.
@@ -182,14 +189,7 @@ export function PortalSubmitForm({
     setMessage('')
     const fd = new FormData()
     fd.append('file', file)
-    // Every option now sends the code it names. "Мовою курсу" used to send
-    // nothing, which made the server fall back — to the student's STORED
-    // preference first, so a student whose last review was in English got
-    // English again under a label promising the course's language. Measured
-    // 2026-09-04 on a ukr course. The absence of a choice is no longer the way
-    // to ask for the course language; naming it is.
-    const chosen = language || courseLanguage
-    if (chosen) fd.append('response_language', chosen)
+    if (responseLanguage) fd.append('response_language', responseLanguage)
     if (note.trim()) fd.append('student_note', note.trim())
     // Auto-echo the base snapshot_hash from the descriptor (KD18 P5) — sent ONLY
     // when a READY base is attached (snapshot_hash is null otherwise). The

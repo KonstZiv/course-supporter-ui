@@ -24,15 +24,19 @@ interface EstimateState {
 
 /**
  * The price of a review of ``taskId`` before it is sent: asked when the form
- * opens (no file) and whenever the chosen file changes (that file; none
- * again when it is removed). Only the answer to the LAST request counts — an
- * older one that arrives later is dropped.
+ * opens (no file) and whenever the chosen file or review language changes
+ * (that file and language; no file again when it is removed). Only the answer
+ * to the LAST request counts — an older one that arrives later is dropped.
  *
- * ``askAgain`` asks once more with the same file, once the units the panel
- * waited for have come; ``refused`` takes the server's 402 in place of the
- * estimate.
+ * ``askAgain`` asks once more with the same file and language, once the units
+ * the panel waited for have come; ``refused`` takes the server's 402 in place
+ * of the estimate.
  */
-export function useReviewEstimate(taskId: string, file: File | null) {
+export function useReviewEstimate(
+  taskId: string,
+  file: File | null,
+  responseLanguage: string | null,
+) {
   const [state, setState] = useState<EstimateState>({
     outcome: { status: 'pending' },
     last: null,
@@ -42,10 +46,10 @@ export function useReviewEstimate(taskId: string, file: File | null) {
   const language = useLanguage()
 
   const ask = useCallback(
-    (sent: File | null, afterWait: boolean) => {
+    (sent: File | null, sentLanguage: string | null, afterWait: boolean) => {
       const asked = ++latest.current
       setState((s) => ({ ...s, outcome: { status: 'pending' } }))
-      portalApi.estimateTask(taskId, sent).then(
+      portalApi.estimateTask(taskId, sent, sentLanguage).then(
         (estimate) => {
           if (asked !== latest.current) return
           setState({ outcome: { status: 'ready', estimate, afterWait }, last: estimate })
@@ -61,13 +65,16 @@ export function useReviewEstimate(taskId: string, file: File | null) {
 
   useEffect(() => {
     const requests = latest
-    ask(file, false)
+    ask(file, responseLanguage, false)
     return () => {
-      requests.current++ // the form closed or the file changed: drop the answer
+      requests.current++ // the form closed, or the file or language changed: drop the answer
     }
-  }, [ask, file])
+  }, [ask, file, responseLanguage])
 
-  const askAgain = useCallback(() => ask(file, true), [ask, file])
+  const askAgain = useCallback(
+    () => ask(file, responseLanguage, true),
+    [ask, file, responseLanguage],
+  )
 
   const refused = useCallback((shortfall: PortalUnitsShortfall) => {
     latest.current++ // the server has answered: no estimate in flight is newer
