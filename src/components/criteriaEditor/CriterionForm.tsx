@@ -74,9 +74,7 @@ export function CriterionForm({
   const hasServerMethodError = serverFieldErrors.includes('check_method')
   const hasServerWeightError = serverFieldErrors.includes('weight')
 
-  const isSaveAttempted = Boolean(
-    saveAttempted || (criterion as { saveAttempted?: boolean }).saveAttempted,
-  )
+  const isSaveAttempted = Boolean(saveAttempted)
 
   const showTextError =
     Boolean(textError) && (textTouched || isSaveAttempted || hasServerTextError)

@@ -234,9 +234,15 @@ export function useCriteriaEditor({
     [],
   )
 
-  const save = useCallback(async () => {
+  const revealErrors = useCallback(() => {
     setSaveAttempted(true)
-    if (!isValid || saving || rateLimited) return
+  }, [])
+
+  const save = useCallback(async () => {
+    if (!unsaved || !isValid || saving || rateLimited) {
+      if (!isValid) setSaveAttempted(true)
+      return
+    }
 
     setSaving(true)
     setServerError(null)
@@ -321,24 +327,17 @@ export function useCriteriaEditor({
     savedCriteriaIds,
     saving,
     rateLimited,
+    unsaved,
   ])
 
   const clearServerError = useCallback(() => {
     setServerError(null)
   }, [])
 
-  const itemsWithFlags = useMemo(
-    () =>
-      items.map((item) => ({
-        ...item,
-        saveAttempted,
-      })),
-    [items, saveAttempted],
-  )
-
   return {
-    items: itemsWithFlags,
+    items,
     saveAttempted,
+    revealErrors,
     unsaved,
     isValid,
     saving,

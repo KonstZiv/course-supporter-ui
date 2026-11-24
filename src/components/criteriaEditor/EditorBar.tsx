@@ -10,6 +10,7 @@ export interface EditorBarProps {
   hasErrors: boolean
   saveDisabled?: boolean
   onSave: () => void
+  onRevealErrors?: () => void
   onCancel: () => void
 }
 
@@ -24,6 +25,7 @@ export function EditorBar({
   hasErrors,
   saveDisabled = false,
   onSave,
+  onRevealErrors,
   onCancel,
 }: EditorBarProps) {
   const t = useT()
@@ -34,8 +36,18 @@ export function EditorBar({
     criteria: formCriteria,
   })
 
-  const isSaveDisabled = saveDisabled || saving || !unsaved || hasErrors
+  const isHardDisabled = saving || saveDisabled || !unsaved
+  const isSaveDisabled = isHardDisabled || hasErrors
   const saveTooltip = hasErrors ? t('panel.criteria.finishFirst') : undefined
+
+  const handleSaveClick = () => {
+    if (isHardDisabled) return
+    if (hasErrors) {
+      onRevealErrors?.()
+      return
+    }
+    onSave()
+  }
 
   return (
     <div className="sticky bottom-0 z-30 bg-white/95 backdrop-blur-md border-t border-canvas-dark/40 shadow-lg py-3 px-6 mt-8">
@@ -79,28 +91,20 @@ export function EditorBar({
             {t('panel.criteria.cancel')}
           </button>
 
-          <div
-            className="inline-flex"
-            onClick={() => {
-              if (isSaveDisabled) {
-                onSave()
-              }
-            }}
+          <button
+            type="button"
+            disabled={isHardDisabled}
+            aria-disabled={isSaveDisabled ? 'true' : undefined}
+            title={saveTooltip}
+            onClick={handleSaveClick}
+            className={clsx(
+              'btn-primary text-sm px-4 py-2 flex items-center gap-2',
+              isSaveDisabled && 'opacity-50 cursor-not-allowed',
+            )}
           >
-            <button
-              type="button"
-              disabled={isSaveDisabled}
-              title={saveTooltip}
-              onClick={onSave}
-              className={clsx(
-                'btn-primary text-sm px-4 py-2 flex items-center gap-2',
-                isSaveDisabled && 'opacity-50 cursor-not-allowed',
-              )}
-            >
-              {saving && <Loader2 size={16} className="animate-spin" />}
-              {saving ? t('panel.criteria.saving') : t('panel.criteria.save')}
-            </button>
-          </div>
+            {saving && <Loader2 size={16} className="animate-spin" />}
+            {saving ? t('panel.criteria.saving') : t('panel.criteria.save')}
+          </button>
         </div>
       </div>
     </div>

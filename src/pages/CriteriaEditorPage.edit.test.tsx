@@ -296,7 +296,7 @@ describe('CriteriaEditorPage — A3 Правка й збереження (spec �
       expect(screen.getByText('Задовго: до 600 знаків.')).toBeInTheDocument()
 
       const saveBtn = screen.getByRole('button', { name: 'Зберегти перелік' })
-      expect(saveBtn).toBeDisabled()
+      expect(saveBtn).toHaveAttribute('aria-disabled', 'true')
       expect(saveBtn).toHaveAttribute('title', 'Щоб зберегти перелік, виправте позначені місця.')
     })
   })
@@ -659,6 +659,115 @@ describe('CriteriaEditorPage — A3 Правка й збереження (spec �
       expect(screen.getByText('Впишіть ознаку виконання.')).toBeInTheDocument()
       expect(newCardTextInput).toHaveClass('border-coral')
       expect(newCardEvidenceInput).toHaveClass('border-coral')
+    })
+  })
+
+  describe('Г-29д: Клік по вимкненому «Зберегти» не зберігає', () => {
+    it('(а) режим правки без змін — клік «Зберегти перелік» не викликає replace/PUT', async () => {
+      vi.mocked(criteriaApi.read).mockResolvedValue(makeReadyView([makeCriterion()]))
+      vi.mocked(criteriaApi.replace).mockClear()
+      renderPage()
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Правити перелік' }))
+      const saveBtn = screen.getByRole('button', { name: 'Зберегти перелік' })
+      expect(saveBtn).toBeDisabled()
+
+      fireEvent.click(saveBtn)
+      expect(criteriaApi.replace).not.toHaveBeenCalled()
+    })
+
+    it('(б) нова порожня картка — клік «Зберегти перелік» показує помилки полів і не викликає PUT', async () => {
+      vi.mocked(criteriaApi.read).mockResolvedValue(makeReadyView([makeCriterion()]))
+      vi.mocked(criteriaApi.replace).mockClear()
+      renderPage()
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Правити перелік' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Додати критерій' }))
+
+      // До кліку — помилок немає
+      expect(screen.queryByText('Впишіть, що перевірити.')).toBeNull()
+
+      const saveBtn = screen.getByRole('button', { name: 'Зберегти перелік' })
+      expect(saveBtn).not.toBeDisabled()
+      expect(saveBtn).toHaveAttribute('aria-disabled', 'true')
+
+      fireEvent.click(saveBtn)
+      expect(screen.getByText('Впишіть, що перевірити.')).toBeInTheDocument()
+      expect(screen.getByText('Впишіть ознаку виконання.')).toBeInTheDocument()
+      expect(criteriaApi.replace).not.toHaveBeenCalled()
+    })
+
+    it('(в) чинні зміни — клік викликає PUT один раз', async () => {
+      const c1 = makeCriterion({ id: 'c1' })
+      const savedResponse: CriteriaView = {
+        ...makeReadyView([c1]),
+        in_force: { layer: 'author', criteria: [c1] },
+      }
+      vi.mocked(criteriaApi.read).mockResolvedValue(makeReadyView([c1]))
+      vi.mocked(criteriaApi.replace).mockResolvedValue(savedResponse)
+      vi.mocked(criteriaApi.replace).mockClear()
+      renderPage()
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Правити перелік' }))
+      const textInput = screen.getByDisplayValue('Реалізувати двійковий пошук')
+      fireEvent.change(textInput, { target: { value: 'Оновлений текст критерію' } })
+
+      const saveBtn = screen.getByRole('button', { name: 'Зберегти перелік' })
+      expect(saveBtn).not.toBeDisabled()
+      expect(saveBtn).not.toHaveAttribute('aria-disabled')
+
+      fireEvent.click(saveBtn)
+      expect(criteriaApi.replace).toHaveBeenCalledTimes(1)
+    })
+
+    it('(г) під час збереження і при 429 — клік нічого не робить', async () => {
+      // 1. Під час збереження (saving: true)
+      let resolvePromise!: (val: CriteriaView) => void
+      const pendingPromise = new Promise<CriteriaView>((resolve) => {
+        resolvePromise = resolve
+      })
+      const c1 = makeCriterion({ id: 'c1' })
+      vi.mocked(criteriaApi.read).mockResolvedValue(makeReadyView([c1]))
+      vi.mocked(criteriaApi.replace).mockReturnValue(pendingPromise)
+      renderPage()
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Правити перелік' }))
+      const textInput = screen.getByDisplayValue('Реалізувати двійковий пошук')
+      fireEvent.change(textInput, { target: { value: 'Текст під час збереження' } })
+
+      const saveBtn = screen.getByRole('button', { name: 'Зберегти перелік' })
+      fireEvent.click(saveBtn)
+      expect(criteriaApi.replace).toHaveBeenCalledTimes(1)
+      expect(saveBtn).toBeDisabled()
+
+      // Клік під час збереження не викликає новий PUT
+      fireEvent.click(saveBtn)
+      expect(criteriaApi.replace).toHaveBeenCalledTimes(1)
+
+      // Завершуємо запит
+      resolvePromise(makeReadyView([c1]))
+
+      // 2. При 429 (rateLimited: true)
+      vi.mocked(criteriaApi.replace).mockClear()
+      const error429 = new ApiError(429, 'Too Many Requests', {})
+      vi.mocked(criteriaApi.replace).mockRejectedValueOnce(error429)
+
+      renderPage()
+      fireEvent.click(await screen.findByRole('button', { name: 'Правити перелік' }))
+      const textInput2 = screen.getByDisplayValue('Реалізувати двійковий пошук')
+      fireEvent.change(textInput2, { target: { value: 'Текст для 429' } })
+
+      const saveBtn2 = screen.getByRole('button', { name: 'Зберегти перелік' })
+      expect(saveBtn2).not.toBeDisabled()
+      fireEvent.click(saveBtn2)
+
+      await waitFor(() => {
+        expect(saveBtn2).toBeDisabled()
+      })
+
+      // Клік при 429 не викликає додаткового PUT
+      fireEvent.click(saveBtn2)
+      expect(criteriaApi.replace).toHaveBeenCalledTimes(1)
     })
   })
 })
