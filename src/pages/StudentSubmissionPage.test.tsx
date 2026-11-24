@@ -4,12 +4,13 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { StudentSubmissionPage } from './StudentSubmissionPage'
 import { studentsApi } from '../api/students'
 import { ApiError } from '../api/client'
-import type { AuthorSubmissionDetail } from '../types/api'
+import type { AuthorSubmissionDetail, RemarkThreads } from '../types/api'
 
 vi.mock('../api/students', () => ({
   studentsApi: {
     submission: vi.fn(),
     submissionFile: vi.fn(),
+    submissionComments: vi.fn(),
   },
 }))
 
@@ -106,6 +107,10 @@ function renderPage(initialEntry = '/students/s1/submissions/sub-2') {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.mocked(studentsApi.submissionComments).mockResolvedValue({
+    accepting_replies: false,
+    threads: [],
+  })
 })
 
 describe('StudentSubmissionPage', () => {
@@ -239,5 +244,129 @@ describe('StudentSubmissionPage', () => {
     expect(
       await screen.findByText('Не вдалося завантажити здачу. Спробуйте ще раз.'),
     ).toBeInTheDocument()
+  })
+
+  it('renders conversation threads under review with criterion text, authors, kinds, dates, plain text, and answered_in link', async () => {
+    const threadsResponse: RemarkThreads = {
+      accepting_replies: true,
+      threads: [
+        {
+          item_id: 'c1.p1',
+          comments: [
+            {
+              id: 'cm-1',
+              submission_id: 'sub-2',
+              item_id: 'c1.p1',
+              parent_id: null,
+              author: 'student',
+              kind: 'question',
+              body: 'Line one\nLine two',
+              created_at: '2026-11-12T10:00:00Z',
+              answered_in_submission_id: 'sub-3',
+            },
+            {
+              id: 'cm-2',
+              submission_id: 'sub-3',
+              item_id: 'c1.p1',
+              parent_id: 'cm-1',
+              author: 'mentor',
+              kind: 'answer',
+              body: '## Not a heading\nCheck line 3.',
+              created_at: '2026-11-13T11:00:00Z',
+              answered_in_submission_id: null,
+            },
+          ],
+        },
+        {
+          item_id: 'unknown-item',
+          comments: [
+            {
+              id: 'cm-3',
+              submission_id: 'sub-2',
+              item_id: 'unknown-item',
+              parent_id: null,
+              author: 'student',
+              kind: 'objection',
+              body: 'I handled this in utils.',
+              created_at: '2026-11-14T09:00:00Z',
+              answered_in_submission_id: null,
+            },
+            {
+              id: 'cm-4',
+              submission_id: 'sub-2',
+              item_id: 'unknown-item',
+              parent_id: null,
+              author: 'student',
+              kind: 'comment',
+              body: 'Added a helper.',
+              created_at: '2026-11-15T09:00:00Z',
+              answered_in_submission_id: null,
+            },
+          ],
+        },
+      ],
+    }
+    vi.mocked(studentsApi.submission).mockResolvedValue(makeDetail())
+    vi.mocked(studentsApi.submissionComments).mockResolvedValue(threadsResponse)
+
+    renderPage()
+
+    expect(
+      await screen.findByRole('heading', { name: 'Переписка' }),
+    ).toBeInTheDocument()
+    expect(studentsApi.submissionComments).toHaveBeenCalledWith('s1', 'sub-2')
+
+    expect(screen.getAllByText('Empty list returns []').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getAllByText('Студент')).toHaveLength(3)
+    expect(screen.getByText('Ментор')).toBeInTheDocument()
+    expect(screen.getByText('питання')).toBeInTheDocument()
+    expect(screen.getByText('відповідь')).toBeInTheDocument()
+    expect(screen.getByText('заперечення')).toBeInTheDocument()
+    expect(screen.getByText('коментар')).toBeInTheDocument()
+
+    expect(screen.getByText('12 листопада 2026')).toBeInTheDocument()
+    expect(screen.getByText('13 листопада 2026')).toBeInTheDocument()
+
+    const studentBody = screen.getByText(/Line one/)
+    expect(studentBody).toHaveTextContent('Line one Line two')
+    expect(studentBody).toHaveClass('whitespace-pre-wrap')
+
+    expect(
+      screen.queryByRole('heading', { name: 'Not a heading' }),
+    ).toBeNull()
+    expect(screen.getByText(/## Not a heading/)).toBeInTheDocument()
+
+    expect(
+      screen.getByRole('link', { name: 'Відповідь — у наступній спробі' }),
+    ).toHaveAttribute('href', '/students/s1/submissions/sub-3')
+  })
+
+  it('hides conversation block when threads are empty', async () => {
+    vi.mocked(studentsApi.submission).mockResolvedValue(makeDetail())
+    vi.mocked(studentsApi.submissionComments).mockResolvedValueOnce({
+      accepting_replies: true,
+      threads: [],
+    })
+
+    renderPage()
+
+    await screen.findByRole('heading', { name: 'Loops HW · Python Basics' })
+    expect(screen.queryByRole('heading', { name: 'Переписка' })).toBeNull()
+  })
+
+  it('hides conversation block when request fails while keeping rest of page working', async () => {
+    vi.mocked(studentsApi.submission).mockResolvedValue(makeDetail())
+    vi.mocked(studentsApi.submissionComments).mockRejectedValueOnce(
+      new Error('Comments unavailable'),
+    )
+
+    renderPage('/students/s1/submissions/sub-4')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Loops HW · Python Basics' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Good job' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Переписка' })).toBeNull()
+    expect(screen.queryByText(/Comments unavailable/)).toBeNull()
   })
 })

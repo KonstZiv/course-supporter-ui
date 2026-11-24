@@ -6,6 +6,7 @@ import type {
   EnrollmentRequest,
   ProvisionStudentRequest,
   ProvisionStudentResponse,
+  RemarkThreads,
   SetStudentPasswordRequest,
   StudentEnrollmentsResponse,
   StudentRosterResponse,
@@ -54,6 +55,11 @@ export const studentsApi = {
   submissionFile: (studentId: string, submissionId: string) =>
     api.get<AuthorSubmissionFileLink>(
       `/api/v1/students/${encodeURIComponent(studentId)}/submissions/${encodeURIComponent(submissionId)}/file`,
+    ),
+
+  submissionComments: (studentId: string, submissionId: string) =>
+    api.get<RemarkThreads>(
+      `/api/v1/students/${encodeURIComponent(studentId)}/submissions/${encodeURIComponent(submissionId)}/comments`,
     ),
 
   // Write (T1) ------------------------------------------------------------

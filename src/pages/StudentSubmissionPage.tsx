@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AlertCircle, Download, Loader2 } from 'lucide-react'
 import { ApiError } from '../api/client'
@@ -8,6 +8,9 @@ import type {
   AuthorRemarkState,
   AuthorSubmissionDetail,
   CriteriaWeight,
+  RemarkCommentAuthor,
+  RemarkCommentKind,
+  RemarkThread,
 } from '../types/api'
 import { MarkdownContent } from '../portal/components/MarkdownContent'
 import { presentationStateKey } from '../components/students/submissionHelpers'
@@ -40,37 +43,71 @@ const FEEDBACK_KEYS: Record<string, MessageKey> = {
   not_helped: 'panel.submission.feedback.notHelped',
 }
 
+const COMMENT_AUTHOR_KEYS: Record<RemarkCommentAuthor, MessageKey> = {
+  student: 'panel.submission.comment.student',
+  mentor: 'panel.submission.comment.mentor',
+}
+
+const COMMENT_KIND_KEYS: Record<RemarkCommentKind, MessageKey> = {
+  question: 'panel.submission.comment.kind.question',
+  objection: 'panel.submission.comment.kind.objection',
+  comment: 'panel.submission.comment.kind.comment',
+  answer: 'panel.submission.comment.kind.answer',
+}
+
 export function StudentSubmissionPage() {
   const { studentId = '', submissionId = '' } = useParams()
   const language = useLanguage()
   const t = useT()
 
   const [detail, setDetail] = useState<AuthorSubmissionDetail | null>(null)
+  const [threads, setThreads] = useState<RemarkThread[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState(false)
+  const requestRef = useRef(0)
 
   const load = useCallback(async () => {
     if (!studentId || !submissionId) return
+    const requestId = ++requestRef.current
     setLoading(true)
     setNotFound(false)
     setError(false)
     setDownloadError(false)
+    setThreads([])
     try {
-      const data = await studentsApi.submission(studentId, submissionId)
+      const commentsPromise = Promise.resolve(
+        studentsApi.submissionComments(studentId, submissionId),
+      ).catch(() => null)
+      const [data, commentsData] = await Promise.all([
+        studentsApi.submission(studentId, submissionId),
+        commentsPromise,
+      ])
+      if (requestId !== requestRef.current) return
       setDetail(data)
+      setThreads(
+        commentsData?.threads?.filter((th) => th.comments.length > 0) ?? [],
+      )
     } catch (err) {
+      if (requestId !== requestRef.current) return
       if (err instanceof ApiError && err.status === 404) {
         setNotFound(true)
       } else {
         setError(true)
       }
     } finally {
-      setLoading(false)
+      if (requestId === requestRef.current) {
+        setLoading(false)
+      }
     }
   }, [studentId, submissionId])
+
+  const criteriaTextById = useMemo(
+    () => new Map(detail?.criteria.map((c) => [c.item_id, c.text]) ?? []),
+    [detail?.criteria],
+  )
 
   useEffect(() => {
     void load()
@@ -378,6 +415,60 @@ export function StudentSubmissionPage() {
           </p>
         )}
       </div>
+
+      {threads.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="font-display text-lg font-semibold text-ink">
+            {t('panel.submission.threadsTitle')}
+          </h2>
+          <div className="space-y-3">
+            {threads.map((thread) => {
+              const criterionText = criteriaTextById.get(thread.item_id)
+              return (
+                <div key={thread.item_id} className="card p-5 space-y-3">
+                  {criterionText && (
+                    <p className="text-sm font-medium text-ink border-b border-canvas-dark/40 pb-2 whitespace-pre-wrap">
+                      {criterionText}
+                    </p>
+                  )}
+                  <div className="space-y-3">
+                    {thread.comments.map((comment) => {
+                      const authorKey = COMMENT_AUTHOR_KEYS[comment.author]
+                      const kindKey = COMMENT_KIND_KEYS[comment.kind]
+                      return (
+                        <div key={comment.id} className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-1.5 text-xs text-ink-muted">
+                            <span className="font-semibold text-ink">
+                              {authorKey ? t(authorKey) : comment.author}
+                            </span>
+                            <span>·</span>
+                            <span>{kindKey ? t(kindKey) : comment.kind}</span>
+                            <span>·</span>
+                            <span>{formatDate(language, comment.created_at)}</span>
+                          </div>
+                          <p className="text-sm text-ink whitespace-pre-wrap break-words">
+                            {comment.body}
+                          </p>
+                          {comment.answered_in_submission_id && (
+                            <div>
+                              <Link
+                                to={`/students/${encodeURIComponent(studentId)}/submissions/${encodeURIComponent(comment.answered_in_submission_id)}`}
+                                className="text-xs font-medium text-navy hover:underline"
+                              >
+                                {t('panel.submission.comment.answeredIn')}
+                              </Link>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

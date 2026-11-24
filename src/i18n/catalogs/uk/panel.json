@@ -879,5 +879,13 @@
   "panel.submission.feedback.notHelped": "Студент позначив: рецензія не допомогла.",
   "panel.submission.notFound": "Здачу не знайдено.",
   "panel.submission.loadFailed": "Не вдалося завантажити здачу. Спробуйте ще раз.",
-  "panel.login.error.updating": "Ми саме встановлюємо оновлення сервісу, тому увійти поки не вийде — зазвичай це триває до 10 хвилин. З вашим ключем доступу все гаразд. Просимо вибачення за незручності!"
+  "panel.login.error.updating": "Ми саме встановлюємо оновлення сервісу, тому увійти поки не вийде — зазвичай це триває до 10 хвилин. З вашим ключем доступу все гаразд. Просимо вибачення за незручності!",
+  "panel.submission.threadsTitle": "Переписка",
+  "panel.submission.comment.student": "Студент",
+  "panel.submission.comment.mentor": "Ментор",
+  "panel.submission.comment.kind.question": "питання",
+  "panel.submission.comment.kind.objection": "заперечення",
+  "panel.submission.comment.kind.comment": "коментар",
+  "panel.submission.comment.kind.answer": "відповідь",
+  "panel.submission.comment.answeredIn": "Відповідь — у наступній спробі"
 }

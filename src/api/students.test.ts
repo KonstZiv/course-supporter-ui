@@ -59,5 +59,10 @@ describe('studentsApi submissions routes', () => {
     expect(api.get).toHaveBeenCalledWith(
       '/api/v1/students/s1/submissions/sub1/file',
     )
+
+    await studentsApi.submissionComments('s1', 'sub1')
+    expect(api.get).toHaveBeenCalledWith(
+      '/api/v1/students/s1/submissions/sub1/comments',
+    )
   })
 })

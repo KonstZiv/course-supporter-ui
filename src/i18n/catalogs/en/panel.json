@@ -879,5 +879,13 @@
   "panel.submission.feedback.notHelped": "The student marked: the review did not help.",
   "panel.submission.notFound": "Submission not found.",
   "panel.submission.loadFailed": "Could not load the submission. Please try again.",
-  "panel.login.error.updating": "We are installing an update to the service, so signing in is not possible just now — it usually takes up to 10 minutes. Your access key is fine. We apologise for the inconvenience!"
+  "panel.login.error.updating": "We are installing an update to the service, so signing in is not possible just now — it usually takes up to 10 minutes. Your access key is fine. We apologise for the inconvenience!",
+  "panel.submission.threadsTitle": "Conversation",
+  "panel.submission.comment.student": "Student",
+  "panel.submission.comment.mentor": "Mentor",
+  "panel.submission.comment.kind.question": "question",
+  "panel.submission.comment.kind.objection": "objection",
+  "panel.submission.comment.kind.comment": "comment",
+  "panel.submission.comment.kind.answer": "answer",
+  "panel.submission.comment.answeredIn": "Answered in a later attempt"
 }

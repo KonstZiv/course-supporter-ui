@@ -1471,3 +1471,11 @@ export interface AuthorSubmissionFileLink {
   expires_at: string
 }
 
+export type {
+  RemarkComment,
+  RemarkCommentAuthor,
+  RemarkCommentKind,
+  RemarkThread,
+  RemarkThreads,
+} from '../portal/types'
+
