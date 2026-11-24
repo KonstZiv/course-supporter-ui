@@ -1,4 +1,5 @@
 import { apiErrorFromBody, apiUrl, resolveApiKeyOrThrow } from './client'
+import { reportHttpFailure, useServiceStatus } from '../serviceStatus/store'
 
 export interface UploadProgress {
   /** Bytes sent so far. */
@@ -46,6 +47,7 @@ export function uploadWithProgress<T>(
 
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
+        useServiceStatus.getState().recover()
         if (xhr.status === 204 || !xhr.responseText) {
           resolve(undefined as T)
           return
@@ -58,12 +60,21 @@ export function uploadWithProgress<T>(
         }
         return
       }
-      reject(apiErrorFromBody(xhr.status, xhr.responseText))
+      const apiError = apiErrorFromBody(xhr.status, xhr.responseText)
+      reportHttpFailure(
+        xhr.status,
+        apiError.body,
+        xhr.getResponseHeader?.('Retry-After'),
+      )
+      reject(apiError)
     }
 
     // Network-level failure: reject with a non-ApiError, as fetch rejects with
     // a TypeError — the caller falls back to product-language text.
-    xhr.onerror = () => reject(new Error('Network error while uploading'))
+    xhr.onerror = () => {
+      useServiceStatus.getState().report('unreachable')
+      reject(new Error('Network error while uploading'))
+    }
 
     xhr.send(formData)
   })

@@ -15,6 +15,7 @@ import { PublicPage } from '../components/PublicPage'
 import { afterSignIn, nextOf } from '../signInReturn'
 import { useT } from '../../i18n/LanguageContext'
 import { applySignInLanguage } from '../stores/language'
+import { isServiceUpdatingBody } from '../../serviceStatus/store'
 
 // Student portal login (Phase 6 / T4b, c1). The tenant comes from the URL
 // segment (ratify Q3) and is sent as ``tenant_id`` in the unauthenticated
@@ -75,6 +76,12 @@ export function PortalLoginPage() {
         setError(t('portal.login.wrongCredentials'))
       } else if (err instanceof PortalApiError && err.status === 429) {
         setError(t('portal.login.rateLimited'))
+      } else if (
+        err instanceof PortalApiError &&
+        err.status === 503 &&
+        isServiceUpdatingBody(err.body)
+      ) {
+        setError(t('portal.login.error.updating'))
       } else {
         setError(t('portal.login.network'))
       }

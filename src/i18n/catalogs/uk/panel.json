@@ -823,5 +823,6 @@
   "panel.criteria.problem.tooManyPoints": "Не більше {max} пунктів.",
   "panel.criteria.problem.tooManyConcepts": "Не більше {max} понять.",
   "panel.criteria.problem.noCriteria": "У переліку має бути хоча б один критерій. Щоб повернутися до переліку системи, скористайтеся «Повернути перелік системи».",
-  "panel.criteria.problem.tooManyCriteria": "У переліку може бути не більше {max} критеріїв."
+  "panel.criteria.problem.tooManyCriteria": "У переліку може бути не більше {max} критеріїв.",
+  "panel.login.error.updating": "Ми саме встановлюємо оновлення сервісу, тому увійти поки не вийде — зазвичай це триває до 10 хвилин. З вашим ключем доступу все гаразд. Просимо вибачення за незручності!"
 }
