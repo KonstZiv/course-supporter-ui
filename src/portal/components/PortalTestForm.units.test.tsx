@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { PortalTestForm } from './PortalTestForm'
 import { portalApi, PortalApiError } from '../api/portalClient'
@@ -102,7 +102,52 @@ describe('PortalTestForm — units', () => {
     mockedEstimate.mockResolvedValue(testEstimate())
     renderForm()
     await settle()
-    expect(mockedEstimate).toHaveBeenCalledWith('task-1', null)
+    expect(mockedEstimate).toHaveBeenCalledWith('task-1', null, null)
+  })
+
+  it('passes the same response_language to estimate and submitTest', async () => {
+    vi.mocked(portalApi.languages).mockResolvedValue({
+      items: [
+        { code: 'ukr', name_en: 'Ukrainian', name_native: 'українська' },
+        { code: 'eng', name_en: 'English', name_native: 'English' },
+      ],
+      total: 2,
+    })
+    mockedEstimate.mockResolvedValue(testEstimate())
+    mockedSubmitTest.mockResolvedValue({
+      submission_id: 'sub-1',
+      status: 'received',
+      duplicate: false,
+    })
+
+    render(
+      <MemoryRouter initialEntries={[`/${T}/courses/root-1`]}>
+        <Routes>
+          <Route
+            path="/:tenantId/courses/:rootId"
+            element={
+              <PortalTestForm
+                taskId="task-1"
+                courseLanguage="ukr"
+                onSubmitted={vi.fn()}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await screen.findByRole('option', { name: 'English' })
+    expect(mockedEstimate).toHaveBeenLastCalledWith('task-1', null, 'ukr')
+
+    fireEvent.change(screen.getByLabelText('Мова рецензії'), { target: { value: 'eng' } })
+    await settle()
+    expect(mockedEstimate).toHaveBeenLastCalledWith('task-1', null, 'eng')
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'а) так' }))
+    fireEvent.click(sendBtn()!)
+    await waitFor(() => expect(mockedSubmitTest).toHaveBeenCalledTimes(1))
+    expect(mockedSubmitTest.mock.calls[0]![1].response_language).toBe('eng')
   })
 
   it('nothing left of a package → the panel in place of the button, with the way to buy', async () => {

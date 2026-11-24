@@ -103,6 +103,7 @@ export function useCriteriaEditor({
   )
 
   const [items, setItems] = useState<CriterionFormItem[]>(initialItems)
+  const [saveAttempted, setSaveAttempted] = useState(false)
   const [saving, setSaving] = useState(false)
   const [rateLimited, setRateLimited] = useState(false)
   const [serverError, setServerError] = useState<RefusalBanner | null>(null)
@@ -193,6 +194,7 @@ export function useCriteriaEditor({
   )
 
   const addCriterion = useCallback(() => {
+    setSaveAttempted(false)
     setItems((prev) => {
       if (prev.length >= CRITERIA_LIMITS.maxCriteria) return prev
       const newItem: CriterionFormItem = {
@@ -232,8 +234,15 @@ export function useCriteriaEditor({
     [],
   )
 
+  const revealErrors = useCallback(() => {
+    setSaveAttempted(true)
+  }, [])
+
   const save = useCallback(async () => {
-    if (!isValid || saving || rateLimited) return
+    if (!unsaved || !isValid || saving || rateLimited) {
+      if (!isValid) setSaveAttempted(true)
+      return
+    }
 
     setSaving(true)
     setServerError(null)
@@ -318,6 +327,7 @@ export function useCriteriaEditor({
     savedCriteriaIds,
     saving,
     rateLimited,
+    unsaved,
   ])
 
   const clearServerError = useCallback(() => {
@@ -326,6 +336,8 @@ export function useCriteriaEditor({
 
   return {
     items,
+    saveAttempted,
+    revealErrors,
     unsaved,
     isValid,
     saving,

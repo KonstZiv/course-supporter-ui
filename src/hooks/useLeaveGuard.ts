@@ -5,6 +5,7 @@ import {
   type Blocker,
   type BlockerFunction,
 } from 'react-router-dom'
+import { useServiceStatus } from '../serviceStatus/store'
 
 /**
  * Keep a page with unsaved changes from being left without a question
@@ -53,6 +54,13 @@ export function useLeaveGuard(unsaved: boolean): {
     }
     window.addEventListener('beforeunload', ask)
     return () => window.removeEventListener('beforeunload', ask)
+  }, [unsaved])
+
+  useEffect(() => {
+    useServiceStatus.getState().setUnsaved(unsaved)
+    return () => {
+      useServiceStatus.getState().setUnsaved(false)
+    }
   }, [unsaved])
 
   const allowNextMove = useCallback(() => {

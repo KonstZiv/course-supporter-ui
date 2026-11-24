@@ -110,6 +110,24 @@ describe('PortalLoginPage', () => {
     expect(usePortalSession.getState().token).toBeNull()
   })
 
+  it('shows the updating message on 503 with service_updating detail', async () => {
+    mockedLogin.mockRejectedValue(
+      new PortalApiError(503, 'service updating', { detail: 'service_updating' }),
+    )
+    renderAt(`/${TENANT_A}/login`)
+    fillCredentials()
+    fireEvent.click(screen.getByRole('button', { name: /увійти/i }))
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'Ми саме встановлюємо оновлення сервісу, тому увійти поки не вийде — зазвичай це триває до 10 хвилин. З вашим паролем усе гаразд. Просимо вибачення за незручності!',
+        ),
+      ).toBeInTheDocument()
+    })
+    expect(usePortalSession.getState().token).toBeNull()
+  })
+
   it('redirects to home when already signed in for this tenant', () => {
     usePortalSession.getState().setSession({
       token: 'jwt',
