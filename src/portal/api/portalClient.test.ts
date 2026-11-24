@@ -528,7 +528,13 @@ describe('portalApi open courses (O-1)', () => {
   })
 
   it('the course card is a public GET with the key escaped', async () => {
-    const card = { course_id: 'c', course_title: 'Demo', author_name: 'A', languages: ['ukr'] }
+    const card = {
+      course_id: 'c',
+      course_title: 'Demo',
+      author_name: 'A',
+      languages: ['ukr'],
+      terms_version: '2027-01-15',
+    }
     const fetchMock = answer(200, card)
     vi.stubGlobal('fetch', fetchMock)
     expect(await portalApi.joinCard(T, 'k/ey')).toEqual(card)

@@ -4,8 +4,9 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 
 // Enrollment by a course link (O-1): the course card, the signup with its two
 // marks, the answers of the server, and the one-press join of a student who
-// already has a session of this author's portal. The real router; the
-// requests mocked.
+// already has a session of this author's portal. The revision of the terms a
+// join consents to is the card's; terms changed while the page was open — the
+// card is read again. The real router; the requests mocked.
 
 const api = vi.hoisted(() => ({
   joinCard: vi.fn(),
@@ -24,7 +25,7 @@ import { PortalLanguageProvider } from '../components/PortalLanguageProvider'
 import { usePortalLanguage } from '../stores/language'
 import { usePortalSession } from '../stores/session'
 import { consentSha256, joinConsentLines } from '../../utils/billingConsent'
-import { JOIN_TERMS_VERSION } from '../openCourses'
+import { importGraph, literalsOf } from '../../i18n/sourceScan'
 
 const T = '019eda80-67ea-7060-b4c4-9dc85761690e'
 const OTHER = '019edb00-0000-7000-8000-000000000002'
@@ -36,6 +37,8 @@ const CARD = {
   course_title: 'Python із нуля',
   author_name: 'Школа Олени',
   languages: ['ukr', 'eng'],
+  // Not the revision of any other fixture: what is sent comes from here.
+  terms_version: '2027-01-15',
 }
 
 function refusal(status: number, code: string, details = 'x', retryAfter: number | null = null) {
@@ -82,11 +85,6 @@ beforeEach(() => {
   usePortalLanguage.setState({ language: 'uk', picked: false, syncedToken: null })
   for (const mock of Object.values(api)) mock.mockReset()
   api.joinCard.mockResolvedValue(CARD)
-  api.billingTerms.mockResolvedValue({
-    terms_version: '2026-11-13',
-    consent_required: true,
-    consented_at: null,
-  })
 })
 
 describe('the course card', () => {
@@ -180,7 +178,7 @@ describe('the signup', () => {
       display_name: 'Олена',
       interface_language: 'ukr',
       adult: true,
-      terms_version: JOIN_TERMS_VERSION,
+      terms_version: CARD.terms_version,
       text_sha256: await consentSha256(joinConsentLines('uk')),
     })
     expect(router.state.location.pathname).toBe(`/${T}/join/${KEY}/sent`)
@@ -219,11 +217,13 @@ describe('the signup', () => {
     expect(screen.getByLabelText('Логін')).toHaveAttribute('aria-invalid', 'true')
   })
 
-  it('409 terms_changed: asks to confirm again, then sends the revision in force', async () => {
+  it('409 terms_changed: reads the card again, asks to confirm again, sends its revision', async () => {
+    api.joinCard
+      .mockResolvedValueOnce(CARD)
+      .mockResolvedValueOnce({ ...CARD, terms_version: '2027-02-01' })
     api.joinSignup
-      .mockRejectedValueOnce(
-        refusal(409, 'terms_changed', 'The billing terms changed: the current revision is 2026-12-01.'),
-      )
+      // No revision in the refusal: nothing is read from its text.
+      .mockRejectedValueOnce(refusal(409, 'terms_changed', 'The billing terms changed.'))
       .mockResolvedValueOnce({ signup_id: SIGNUP, email_masked: 'o***@e***.com', expires_at: 'x' })
     renderAt(`/${T}/join/${KEY}`)
     await screen.findByLabelText('Логін')
@@ -233,13 +233,34 @@ describe('the signup', () => {
     expect(
       await screen.findByText('Умови оновилися. Перегляньте чинну редакцію й підтвердьте її, щоб продовжити.'),
     ).toBeInTheDocument()
+    expect(api.joinCard).toHaveBeenCalledTimes(2)
+    expect(api.joinSignup.mock.calls[0]![2].terms_version).toBe(CARD.terms_version)
     const consent = screen.getByRole('checkbox', { name: /Я прочитав\(-ла\) і приймаю/ })
     expect(consent).not.toBeChecked()
     expect(joinButton()).toBeDisabled()
+    // What was typed stays.
+    expect(screen.getByLabelText('Логін')).toHaveValue(' olena ')
     fireEvent.click(consent)
     fireEvent.click(joinButton())
     await screen.findByRole('heading', { name: 'Підтвердіть пошту' })
-    expect(api.joinSignup.mock.calls[1]![2].terms_version).toBe('2026-12-01')
+    expect(api.joinSignup.mock.calls[1]![2].terms_version).toBe('2027-02-01')
+  })
+
+  it('409 terms_changed, and the link closed meanwhile: the invalid-link page', async () => {
+    api.joinCard
+      .mockResolvedValueOnce(CARD)
+      .mockRejectedValueOnce(refusal(404, 'course_not_found'))
+    api.joinSignup.mockRejectedValue(refusal(409, 'terms_changed'))
+    renderAt(`/${T}/join/${KEY}`)
+    await screen.findByLabelText('Логін')
+    fillSignup()
+    checkMarks()
+    fireEvent.click(joinButton())
+    expect(
+      await screen.findByText(
+        'Посилання на запис недійсне або запис закрито. Попросіть в автора нове посилання.',
+      ),
+    ).toBeInTheDocument()
   })
 
   it('422: a weak password and an unaccepted email, each in its words', async () => {
@@ -336,9 +357,37 @@ describe('joining with a session of this author', () => {
       tenant_id: T,
       key: KEY,
       adult: true,
-      terms_version: '2026-11-13',
+      terms_version: CARD.terms_version,
       text_sha256: await consentSha256(joinConsentLines('uk')),
     })
+    // The revision is the card's: the terms of the account are not asked.
+    expect(api.billingTerms).not.toHaveBeenCalled()
+  })
+
+  it('409 terms_changed: reads the card again, asks to confirm again, sends its revision', async () => {
+    signIn()
+    api.joinCard
+      .mockResolvedValueOnce(CARD)
+      .mockResolvedValueOnce({ ...CARD, terms_version: '2027-02-01' })
+    api.joinCourse
+      .mockRejectedValueOnce(refusal(409, 'terms_changed'))
+      .mockResolvedValueOnce({ status: 'enrolled', course_id: COURSE })
+    const router = renderAt(`/${T}/join/${KEY}`)
+    await screen.findByRole('heading', { name: 'Python із нуля' })
+    checkMarks()
+    fireEvent.click(joinWithLogin())
+    expect(
+      await screen.findByText('Умови оновилися. Перегляньте чинну редакцію й підтвердьте її, щоб продовжити.'),
+    ).toBeInTheDocument()
+    expect(api.joinCard).toHaveBeenCalledTimes(2)
+    expect(joinWithLogin()).toBeDisabled()
+    fireEvent.click(screen.getByRole('checkbox', { name: /Я прочитав\(-ла\) і приймаю/ }))
+    fireEvent.click(joinWithLogin())
+    await waitFor(() => expect(router.state.location.pathname).toBe(`/${T}/courses/${COURSE}`))
+    expect(api.joinCourse.mock.calls.map(([req]) => req.terms_version)).toEqual([
+      CARD.terms_version,
+      '2027-02-01',
+    ])
   })
 
   it('already_enrolled: says so and leads to the course', async () => {
@@ -377,5 +426,20 @@ describe('joining with a session of this author', () => {
     checkMarks()
     fireEvent.click(joinWithLogin())
     expect(await screen.findByText('Забагато спроб. Спробуйте через 1 хв.')).toBeInTheDocument()
+  })
+})
+
+describe('the revision of the terms', () => {
+  it('no date is written in the portal code: the revision always comes from the server', () => {
+    const DATE = /\d{4}-\d{2}-\d{2}/
+    const files = importGraph('/src/portal/main.tsx')
+    expect(files).toContain('/src/portal/pages/PortalJoinPage.tsx')
+    expect(files).toContain('/src/portal/openCourses.ts')
+    const found = files.flatMap((file) =>
+      literalsOf(file)
+        .filter((text) => DATE.test(text))
+        .map((text) => `${file}: ${text}`),
+    )
+    expect(found).toEqual([])
   })
 })

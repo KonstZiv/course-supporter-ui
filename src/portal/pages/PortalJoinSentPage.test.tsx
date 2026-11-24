@@ -45,7 +45,13 @@ beforeEach(() => {
   usePortalSession.getState().clear()
   api.joinResend.mockReset()
   api.joinCard.mockReset()
-  api.joinCard.mockResolvedValue({ course_id: 'c', course_title: 'Demo', author_name: 'A', languages: [] })
+  api.joinCard.mockResolvedValue({
+    course_id: 'c',
+    course_title: 'Demo',
+    author_name: 'A',
+    languages: [],
+    terms_version: '2027-01-15',
+  })
 })
 
 afterEach(() => {

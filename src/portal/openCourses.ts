@@ -1,23 +1,13 @@
-// Open courses (O-1): what the enrollment pages share — the revision of the
-// terms a signup consents to, the words of a refusal, the names of a course's
-// languages. The pages pick their words by the refusal's ``code``; the
-// server's ``details`` is never shown.
+// Open courses (O-1): what the enrollment pages share — the words of a
+// refusal, the names of a course's languages, the addresses of the pages. The
+// pages pick their words by the refusal's ``code``; the server's ``details`` is
+// never shown, nor read.
 
 import type { Language } from '../i18n/languages'
 import { localeOf } from '../i18n/languages'
 import { translate } from '../i18n/translate'
-import { doorRefusal, PortalApiError } from './api/portalClient'
+import { PortalApiError } from './api/portalClient'
 import { flowError } from './recoveryTexts'
-
-/**
- * The revision of the billing terms in force (YYYY-MM-DD, the date the site's
- * terms page states), sent with a signup. A signup has no session, so it
- * cannot ask ``GET /portal/billing/terms``, and the course card does not carry
- * the revision. When the operator raises it, the server answers the signup
- * ``409 terms_changed`` naming the revision in force (``termsVersionOf``): the
- * page asks to confirm again and sends that one.
- */
-export const JOIN_TERMS_VERSION = '2026-11-13'
 
 /** Seconds before the email may be sent again — the server's own pause per request. */
 export const RESEND_PAUSE_SECONDS = 60
@@ -25,20 +15,6 @@ export const RESEND_PAUSE_SECONDS = 60
 /** What the "confirm your email" page is handed with the signup's answer. */
 export interface JoinSentState {
   emailMasked: string
-}
-
-const REVISION = /\b(\d{4}-\d{2}-\d{2})\b/
-
-/**
- * The revision in force a ``terms_changed`` refusal names, or null for any
- * other failure. The server puts it in the refusal's ``details`` ("… the
- * current revision is 2026-11-13."): the one value read from there, never
- * shown.
- */
-export function termsVersionOf(err: unknown): string | null {
-  const refusal = doorRefusal(err)
-  if (refusal?.code !== 'terms_changed') return null
-  return REVISION.exec(refusal.details ?? '')?.[1] ?? null
 }
 
 /** A 429's wait, in whole minutes rounded up; null for any other failure or without ``Retry-After``. */

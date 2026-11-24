@@ -781,6 +781,9 @@ export interface JoinCourseCard {
   author_name: string
   // ISO 639-3: the course's own language first, then those of its materials.
   languages: string[]
+  // The revision of the billing terms in force (YYYY-MM-DD): a join consents
+  // to it and sends it back as ``terms_version``.
+  terms_version: string
 }
 
 // What a join records besides the request itself: the "18 or older" mark

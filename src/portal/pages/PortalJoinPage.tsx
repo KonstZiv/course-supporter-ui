@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowRight, Loader2 } from 'lucide-react'
 import { doorRefusal, portalApi, PortalApiError } from '../api/portalClient'
@@ -13,11 +13,9 @@ import {
   courseAddress,
   courseLanguageNames,
   isRateLimited,
-  JOIN_TERMS_VERSION,
   joinSentAddress,
   rateLimitedText,
   signupFieldFailure,
-  termsVersionOf,
   type JoinSentState,
 } from '../openCourses'
 import { InvalidPortalLink } from '../components/InvalidPortalLink'
@@ -36,12 +34,17 @@ type CardState =
   | { kind: 'invalid' }
   | { kind: 'failed' }
 
+/** A refusal of the card that means the link leads nowhere. */
+function cardRefused(err: unknown): boolean {
+  return err instanceof PortalApiError && (err.status === 404 || err.status === 422)
+}
+
 /**
  * Enrollment by a course link (O-1), `/<tenant>/join/<key>`: the course the
  * link leads to, then either a signup — a login, a password and an email,
  * confirmed by the mailed link before the course opens — or, with a session
  * of this author's portal, one press. Both need the "18 or older" mark and
- * the consent to the terms.
+ * the consent to the terms — to the revision in force the card names.
  */
 export function PortalJoinPage() {
   const { tenantId, key = '' } = useParams()
@@ -63,9 +66,7 @@ function JoinPage({ tenantId, courseKey }: { tenantId: string; courseKey: string
       .joinCard(tenantId, courseKey)
       .then((card) => live && setState({ kind: 'ready', card }))
       .catch((err: unknown) => {
-        if (!live) return
-        const invalid = err instanceof PortalApiError && (err.status === 404 || err.status === 422)
-        setState({ kind: invalid ? 'invalid' : 'failed' })
+        if (live) setState({ kind: cardRefused(err) ? 'invalid' : 'failed' })
       })
     return () => {
       live = false
@@ -73,6 +74,20 @@ function JoinPage({ tenantId, courseKey }: { tenantId: string; courseKey: string
   }, [tenantId, courseKey])
 
   const markInvalid = () => setState({ kind: 'invalid' })
+
+  // The terms changed while the page was open: the card is read again for the
+  // revision now in force. True when it was; a link that leads nowhere any
+  // more turns the page into the invalid-link page.
+  const reloadCard = useCallback(async (): Promise<boolean> => {
+    try {
+      const card = await portalApi.joinCard(tenantId, courseKey)
+      setState({ kind: 'ready', card })
+      return true
+    } catch (err) {
+      if (cardRefused(err)) setState({ kind: 'invalid' })
+      return false
+    }
+  }, [tenantId, courseKey])
 
   if (state.kind === 'invalid') {
     return <JoinLinkInvalid />
@@ -93,14 +108,17 @@ function JoinPage({ tenantId, courseKey }: { tenantId: string; courseKey: string
   }
 
   const signedIn = token !== null && sessionTenant === tenantId
+  const form: JoinFormProps = {
+    tenantId,
+    courseKey,
+    termsVersion: state.card.terms_version,
+    onInvalid: markInvalid,
+    onTermsChanged: reloadCard,
+  }
   return (
     <PublicShell wide>
       <CourseCard card={state.card} />
-      {signedIn ? (
-        <JoinWithLogin tenantId={tenantId} courseKey={courseKey} onInvalid={markInvalid} />
-      ) : (
-        <SignupForm tenantId={tenantId} courseKey={courseKey} onInvalid={markInvalid} />
-      )}
+      {signedIn ? <JoinWithLogin {...form} /> : <SignupForm {...form} />}
     </PublicShell>
   )
 }
@@ -141,8 +159,12 @@ function CourseCard({ card }: { card: JoinCourseCard }) {
 interface JoinFormProps {
   tenantId: string
   courseKey: string
+  /** The revision of the terms in force, from the card: the consent is to it. */
+  termsVersion: string
   /** The server says the link leads nowhere (any more). */
   onInvalid: () => void
+  /** The server says the terms changed: read the card again; true when it was read. */
+  onTermsChanged: () => Promise<boolean>
 }
 
 /** The two marks of a join, and whether the terms changed since the page opened. */
@@ -168,7 +190,13 @@ function useJoinMarks() {
 }
 
 /** A student with a session of this author's portal: one press. */
-function JoinWithLogin({ tenantId, courseKey, onInvalid }: JoinFormProps) {
+function JoinWithLogin({
+  tenantId,
+  courseKey,
+  termsVersion,
+  onInvalid,
+  onTermsChanged,
+}: JoinFormProps) {
   const language = useLanguage()
   const t = useT()
   const navigate = useNavigate()
@@ -184,12 +212,11 @@ function JoinWithLogin({ tenantId, courseKey, onInvalid }: JoinFormProps) {
     setError('')
     setOutcome(null)
     try {
-      const { terms_version } = await portalApi.billingTerms()
       const res = await portalApi.joinCourse({
         tenant_id: tenantId,
         key: courseKey,
         adult: true,
-        terms_version,
+        terms_version: termsVersion,
         text_sha256: await consentSha256(joinConsentLines(language)),
       })
       if (res.status === 'already_enrolled') {
@@ -201,8 +228,10 @@ function JoinWithLogin({ tenantId, courseKey, onInvalid }: JoinFormProps) {
       const code = doorRefusal(err)?.code
       if (code === 'course_not_found') onInvalid()
       else if (code === 'email_confirmation_required') setOutcome({ kind: 'emailRequired' })
-      else if (code === 'terms_changed') askAgain()
-      else if (isRateLimited(err)) setError(rateLimitedText(language, err))
+      else if (code === 'terms_changed') {
+        if (await onTermsChanged()) askAgain()
+        else setError(t('portal.login.network'))
+      } else if (isRateLimited(err)) setError(rateLimitedText(language, err))
       // A 401 is the client's: the session is dropped and sign-in brings the
       // student back here.
       else if (!(err instanceof PortalApiError && err.status === 401)) {
@@ -255,7 +284,13 @@ function JoinWithLogin({ tenantId, courseKey, onInvalid }: JoinFormProps) {
 }
 
 /** A newcomer: a login of their own, confirmed by the email before the course opens. */
-function SignupForm({ tenantId, courseKey, onInvalid }: JoinFormProps) {
+function SignupForm({
+  tenantId,
+  courseKey,
+  termsVersion,
+  onInvalid,
+  onTermsChanged,
+}: JoinFormProps) {
   const language = useLanguage()
   const t = useT()
   const navigate = useNavigate()
@@ -266,7 +301,6 @@ function SignupForm({ tenantId, courseKey, onInvalid }: JoinFormProps) {
   const [password, setPassword] = useState('')
   const [email, setEmail] = useState('')
   const [displayName, setDisplayName] = useState('')
-  const [termsVersion, setTermsVersion] = useState(JOIN_TERMS_VERSION)
   const [busy, setBusy] = useState(false)
   const [loginError, setLoginError] = useState('')
   const [error, setError] = useState('')
@@ -305,13 +339,12 @@ function SignupForm({ tenantId, courseKey, onInvalid }: JoinFormProps) {
       })
     } catch (err) {
       const code = doorRefusal(err)?.code
-      const inForce = termsVersionOf(err)
       const field = signupFieldFailure(err)
       if (code === 'course_not_found') onInvalid()
       else if (code === 'login_taken') setLoginError(t('portal.join.signup.loginTaken'))
-      else if (inForce !== null) {
-        setTermsVersion(inForce)
-        askAgain()
+      else if (code === 'terms_changed') {
+        if (await onTermsChanged()) askAgain()
+        else setError(t('portal.login.network'))
       } else if (isRateLimited(err)) setError(rateLimitedText(language, err))
       else if (field === 'invalidForm') setError(t('portal.join.signup.invalidForm'))
       else if (field !== null) setError(flowError(language, field))

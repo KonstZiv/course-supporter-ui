@@ -8,7 +8,6 @@ import {
   rateLimitedText,
   retryMinutes,
   signupFieldFailure,
-  termsVersionOf,
 } from './openCourses'
 
 const limited = (retryAfter: number | null) =>
@@ -28,20 +27,6 @@ describe('open courses: the words of a refusal', () => {
     expect(rateLimitedText('uk', limited(61))).toBe('Забагато спроб. Спробуйте через 2 хв.')
     expect(rateLimitedText('en', limited(61))).toBe('Too many attempts. Please try again in 2 min.')
     expect(rateLimitedText('uk', limited(null))).toBe('Забагато спроб. Спробуйте трохи згодом.')
-  })
-
-  it('reads the revision in force from terms_changed, nothing else', () => {
-    const changed = new PortalApiError(409, 'x', {
-      detail: {
-        code: 'terms_changed',
-        details: 'The billing terms changed: the current revision is 2026-12-01.',
-      },
-    })
-    expect(termsVersionOf(changed)).toBe('2026-12-01')
-    const taken = new PortalApiError(409, 'x', { detail: { code: 'login_taken', details: '2026-12-01' } })
-    expect(termsVersionOf(taken)).toBeNull()
-    const bare = new PortalApiError(409, 'x', { detail: { code: 'terms_changed', details: 'changed' } })
-    expect(termsVersionOf(bare)).toBeNull()
   })
 
   it('a 422 by its field: a weak password, an email, the rest', () => {

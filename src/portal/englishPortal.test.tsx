@@ -189,6 +189,7 @@ beforeEach(() => {
     course_title: 'Demo course',
     author_name: 'Demo school',
     languages: ['eng', 'ukr'],
+    terms_version: '2027-01-15',
   })
   api.joinCourse.mockRejectedValue(
     new PortalApiError(409, 'x', { detail: { code: 'email_confirmation_required', details: 'x' } }),
