@@ -88,6 +88,13 @@ export const estimateKeyExplanation = (documentId: string) =>
     `/api/v1/documents/${encodeURIComponent(documentId)}/reference/estimate`,
   )
 
+/** The price of regenerating section descriptions under the node. */
+export const estimateNodeSummary = (nodeId: string, force: boolean) =>
+  api.post<AuthorEstimateResponse>(
+    `/api/v1/nodes/${encodeURIComponent(nodeId)}/summary/estimate`,
+    { force },
+  )
+
 /**
  * The reason code of a billing refusal — `detail.code` of
  * `{ "detail": { "code", "details" } }` — or null when the error is not one
