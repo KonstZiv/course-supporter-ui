@@ -56,7 +56,7 @@ export function EditorBar({
             </span>
           </div>
 
-          <p className="text-xs text-ink-muted truncate">
+          <p className="text-xs text-ink-muted">
             {rule.kind === 'strict'
               ? t('panel.criteria.pass.strict', {
                   count: rule.count,
@@ -79,19 +79,28 @@ export function EditorBar({
             {t('panel.criteria.cancel')}
           </button>
 
-          <button
-            type="button"
-            disabled={isSaveDisabled}
-            title={saveTooltip}
-            onClick={onSave}
-            className={clsx(
-              'btn-primary text-sm px-4 py-2 flex items-center gap-2',
-              isSaveDisabled && 'opacity-50 cursor-not-allowed',
-            )}
+          <div
+            className="inline-flex"
+            onClick={() => {
+              if (isSaveDisabled) {
+                onSave()
+              }
+            }}
           >
-            {saving && <Loader2 size={16} className="animate-spin" />}
-            {saving ? t('panel.criteria.saving') : t('panel.criteria.save')}
-          </button>
+            <button
+              type="button"
+              disabled={isSaveDisabled}
+              title={saveTooltip}
+              onClick={onSave}
+              className={clsx(
+                'btn-primary text-sm px-4 py-2 flex items-center gap-2',
+                isSaveDisabled && 'opacity-50 cursor-not-allowed',
+              )}
+            >
+              {saving && <Loader2 size={16} className="animate-spin" />}
+              {saving ? t('panel.criteria.saving') : t('panel.criteria.save')}
+            </button>
+          </div>
         </div>
       </div>
     </div>

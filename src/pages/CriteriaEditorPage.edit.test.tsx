@@ -134,14 +134,14 @@ describe('CriteriaEditorPage — A3 Правка й збереження (spec �
       // Visible for must
       expect(screen.getByRole('switch', { name: "Зробити обов'язковим для заліку" })).toBeInTheDocument()
 
-      // Switch weight to "бажаний — 2"
-      fireEvent.click(screen.getByRole('radio', { name: 'бажаний — 2' }))
+      // Switch weight to "бажаний"
+      fireEvent.click(screen.getByRole('radio', { name: 'бажаний' }))
 
       // Hidden for should
       expect(screen.queryByRole('switch', { name: "Зробити обов'язковим для заліку" })).toBeNull()
 
-      // Switch weight to "додатковий — 1"
-      fireEvent.click(screen.getByRole('radio', { name: 'додатковий — 1' }))
+      // Switch weight to "додатковий"
+      fireEvent.click(screen.getByRole('radio', { name: 'додатковий' }))
       expect(screen.queryByRole('switch', { name: "Зробити обов'язковим для заліку" })).toBeNull()
     })
 
@@ -159,11 +159,11 @@ describe('CriteriaEditorPage — A3 Правка й збереження (spec �
       const sw = screen.getByRole('switch', { name: "Зробити обов'язковим для заліку" })
       expect(sw).toHaveAttribute('aria-checked', 'true')
 
-      // Lower weight to "бажаний — 2"
-      fireEvent.click(screen.getByRole('radio', { name: 'бажаний — 2' }))
+      // Lower weight to "бажаний"
+      fireEvent.click(screen.getByRole('radio', { name: 'бажаний' }))
 
-      // Raise weight back to "обов'язковий — 3" -> switch should be off (cleared)
-      fireEvent.click(screen.getByRole('radio', { name: "обов'язковий — 3" }))
+      // Raise weight back to "головний" -> switch should be off (cleared)
+      fireEvent.click(screen.getByRole('radio', { name: 'головний' }))
       const sw2 = screen.getByRole('switch', { name: "Зробити обов'язковим для заліку" })
       expect(sw2).toHaveAttribute('aria-checked', 'false')
     })
@@ -176,13 +176,13 @@ describe('CriteriaEditorPage — A3 Правка й збереження (spec �
       fireEvent.click(await screen.findByRole('button', { name: 'Правити перелік' }))
 
       // 1. Existing criterion raised to must
-      fireEvent.click(screen.getByRole('radio', { name: "обов'язковий — 3" }))
+      fireEvent.click(screen.getByRole('radio', { name: 'головний' }))
       const sw1 = screen.getByRole('switch', { name: "Зробити обов'язковим для заліку" })
       expect(sw1).toHaveAttribute('aria-checked', 'false')
 
       // 2. Add new criterion
       fireEvent.click(screen.getByRole('button', { name: 'Додати критерій' }))
-      const switches = screen.getAllByRole('radio', { name: "обов'язковий — 3" })
+      const switches = screen.getAllByRole('radio', { name: 'головний' })
       // Click must on the newly added second card
       fireEvent.click(switches[1]!)
       const sw2 = screen.getAllByRole('switch', { name: "Зробити обов'язковим для заліку" })[1]!
@@ -519,6 +519,146 @@ describe('CriteriaEditorPage — A3 Правка й збереження (spec �
       fireEvent.click(screen.getByRole('button', { name: 'Скасувати' }))
       fireEvent.click(screen.getByRole('button', { name: 'Піти без збереження' }))
       expect(screen.queryByDisplayValue('Новий текст')).toBeNull()
+    })
+  })
+
+  describe('Г-29: Критерії — правки після перевірки', () => {
+    it('ваги показують нові назви без чисел (перегляд і правка)', async () => {
+      const c1 = makeCriterion({ id: 'c1', weight: 'must' })
+      const c2 = makeCriterion({ id: 'c2', weight: 'should' })
+      const c3 = makeCriterion({ id: 'c3', weight: 'may' })
+      vi.mocked(criteriaApi.read).mockResolvedValue(makeReadyView([c1, c2, c3]))
+      renderPage()
+
+      // Read mode: check badges
+      expect(await screen.findByText('головний')).toBeInTheDocument()
+      expect(screen.getByText('бажаний')).toBeInTheDocument()
+      expect(screen.getByText('додатковий')).toBeInTheDocument()
+
+      // Edit mode: check radios
+      fireEvent.click(screen.getByRole('button', { name: 'Правити перелік' }))
+      expect(screen.getAllByRole('radio', { name: 'головний' }).length).toBeGreaterThan(0)
+      expect(screen.getAllByRole('radio', { name: 'бажаний' }).length).toBeGreaterThan(0)
+      expect(screen.getAllByRole('radio', { name: 'додатковий' }).length).toBeGreaterThan(0)
+    })
+
+    it('вибір понять: згорнуто за замовчуванням, видно лише вибрані, «×» прибирає, «Додати поняття» розгортає, пошук фільтрує, клік додає, «Згорнути» згортає, при 10 вибраних кнопка вимкнена', async () => {
+      const c1 = makeCriterion({
+        id: 'c1',
+        concepts: ['Масиви'],
+      })
+      const view: CriteriaView = {
+        ...makeReadyView([c1]),
+        concepts: ['Масиви', 'Алгоритми пошуку', 'Рекурсія', 'Графи', 'Стек'],
+      }
+      vi.mocked(criteriaApi.read).mockResolvedValue(view)
+      renderPage()
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Правити перелік' }))
+
+      // 1. Згорнуто за замовчуванням: поле пошуку не видно, кнопка "Додати поняття" є
+      expect(screen.queryByPlaceholderText('Знайти поняття')).toBeNull()
+      const addConceptBtn = screen.getByRole('button', { name: 'Додати поняття' })
+      expect(addConceptBtn).toBeInTheDocument()
+
+      // 2. Видно лише вибрані поняття з «×»
+      expect(screen.getByText('Масиви')).toBeInTheDocument()
+      expect(screen.queryByText('Алгоритми пошуку')).toBeNull()
+      const removeBtn = screen.getByRole('button', { name: '× Масиви' })
+      expect(removeBtn).toBeInTheDocument()
+
+      // 3. «×» прибирає
+      fireEvent.click(removeBtn)
+      expect(screen.getByText('Поняття не вибрано')).toBeInTheDocument()
+      expect(screen.queryByText('Масиви')).toBeNull()
+
+      // 4. «Додати поняття» розгортає
+      fireEvent.click(screen.getByRole('button', { name: 'Додати поняття' }))
+      const searchInput = screen.getByPlaceholderText('Знайти поняття')
+      expect(searchInput).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Алгоритми пошуку' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Рекурсія' })).toBeInTheDocument()
+
+      // 5. Пошук фільтрує (без урахування регістру, за входженням)
+      fireEvent.change(searchInput, { target: { value: 'рек' } })
+      expect(screen.getByRole('button', { name: 'Рекурсія' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Алгоритми пошуку' })).toBeNull()
+
+      // 6. Клік додає
+      fireEvent.click(screen.getByRole('button', { name: 'Рекурсія' }))
+      // Тепер 'Рекурсія' вибрана
+      expect(screen.getByRole('button', { name: '× Рекурсія' })).toBeInTheDocument()
+
+      // 7. «Згорнути» згортає
+      const collapseBtn = screen.getByRole('button', { name: 'Згорнути' })
+      fireEvent.click(collapseBtn)
+      expect(screen.queryByPlaceholderText('Знайти поняття')).toBeNull()
+      expect(screen.getByRole('button', { name: 'Додати поняття' })).toBeInTheDocument()
+    })
+
+    it('при 10 вибраних поняттях кнопка «Додати поняття» вимкнена', async () => {
+      const tenConcepts = Array.from({ length: 10 }, (_, i) => `Поняття ${i + 1}`)
+      const view10: CriteriaView = {
+        ...makeReadyView([makeCriterion({ id: 'c10', concepts: tenConcepts })]),
+        concepts: [...tenConcepts, 'Зайве поняття'],
+      }
+      vi.mocked(criteriaApi.read).mockResolvedValue(view10)
+      renderPage()
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Правити перелік' }))
+      const addBtn10 = screen.getByRole('button', { name: 'Додати поняття' })
+      expect(addBtn10).toBeDisabled()
+    })
+
+    it('смуга: рядок правила без truncate', async () => {
+      vi.mocked(criteriaApi.read).mockResolvedValue(makeReadyView())
+      renderPage()
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Правити перелік' }))
+
+      // Text of pass rule in EditorBar
+      const ruleText = screen.getByText(/Роботу зараховано, коли бал не менший за/)
+      expect(ruleText).toBeInTheDocument()
+      expect(ruleText).not.toHaveClass('truncate')
+    })
+
+    it('нова картка — без помилок до blur, після blur порожнього поля — помилка; після «Зберегти перелік» — помилки видно', async () => {
+      vi.mocked(criteriaApi.read).mockResolvedValue(makeReadyView([makeCriterion()]))
+      renderPage()
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Правити перелік' }))
+
+      // Add a new criterion card
+      fireEvent.click(screen.getByRole('button', { name: 'Додати критерій' }))
+
+      // 1. До blur — без помилок
+      expect(screen.queryByText('Впишіть, що перевірити.')).toBeNull()
+      expect(screen.queryByText('Впишіть ознаку виконання.')).toBeNull()
+
+      const textareas = screen.getAllByRole('textbox')
+      // Second criterion text field is index 2, evidence is index 3
+      const newCardTextInput = textareas[2]!
+      const newCardEvidenceInput = textareas[3]!
+
+      expect(newCardTextInput).not.toHaveClass('border-coral')
+      expect(newCardEvidenceInput).not.toHaveClass('border-coral')
+
+      // 2. Після blur порожнього поля — помилка
+      fireEvent.blur(newCardTextInput)
+      expect(screen.getByText('Впишіть, що перевірити.')).toBeInTheDocument()
+      expect(newCardTextInput).toHaveClass('border-coral')
+      // evidence ще не чіпали
+      expect(screen.queryByText('Впишіть ознаку виконання.')).toBeNull()
+      expect(newCardEvidenceInput).not.toHaveClass('border-coral')
+
+      // 3. Після «Зберегти перелік» — помилки видно на обох полях
+      const saveBtn = screen.getByRole('button', { name: 'Зберегти перелік' })
+      fireEvent.click(saveBtn)
+
+      expect(screen.getByText('Впишіть, що перевірити.')).toBeInTheDocument()
+      expect(screen.getByText('Впишіть ознаку виконання.')).toBeInTheDocument()
+      expect(newCardTextInput).toHaveClass('border-coral')
+      expect(newCardEvidenceInput).toHaveClass('border-coral')
     })
   })
 })

@@ -304,7 +304,7 @@ describe('CriteriaEditorPage (spec §3, A2)', () => {
         ),
       ).toBeInTheDocument()
       expect(
-        screen.getByText(/Вагу «обов'язковий» запропонувала система/),
+        screen.getByText(/Вагу «головний» запропонувала система/),
       ).toBeInTheDocument()
 
       // Criteria cards
