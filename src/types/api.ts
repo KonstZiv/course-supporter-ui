@@ -1202,3 +1202,121 @@ export interface BillingSpendingResponse {
   courses: BillingSpendingCourse[]
   unlinked: BillingSpendingUnits
 }
+
+// ── Criteria (mentor-rebuild task 08 / spec CRITERIA-EDITOR) ──
+
+/**
+ * Whether a list is in force for the task's current version, and if not, why.
+ */
+export type CriteriaStatus =
+  | 'awaiting_first_submission'
+  | 'composing'
+  | 'not_composed'
+  | 'ready'
+
+/**
+ * Why no list is composed for the task's version — the key of the advice.
+ */
+export type CriteriaReasonCode =
+  | 'task_not_processed'
+  | 'models_unavailable'
+  | 'limit_reached'
+  | 'composition_error'
+  | 'not_attempted'
+
+/**
+ * How much a criterion matters (weight category in OpenAPI: WeightCategory).
+ */
+export type CriteriaWeight = 'must' | 'should' | 'may'
+
+/**
+ * How a criterion is checked (OpenAPI: CheckMethod).
+ */
+export type CriteriaCheckMethod =
+  | 'model_verdict'
+  | 'mandatory_points'
+  | 'code_test'
+
+/**
+ * Which layer a list in force comes from (OpenAPI: CriteriaLayer).
+ */
+export type CriteriaLayer = 'author' | 'model'
+
+/**
+ * One mandatory point of a criterion — one thing a reviewer finds or not.
+ */
+export interface MandatoryPoint {
+  id: string
+  text: string
+}
+
+/**
+ * One criterion of a task version, as storage keeps it and readers take it.
+ */
+export interface Criterion {
+  id: string
+  text: string
+  evidence: string
+  weight: CriteriaWeight
+  check_method: CriteriaCheckMethod
+  soft_descent: boolean
+  concepts: string[]
+  mandatory_points: MandatoryPoint[]
+  must_by_author?: boolean | null
+}
+
+/**
+ * The list a review of the task's current version uses, and whose it is.
+ * OpenAPI schema: CriteriaInForceResponse.
+ */
+export interface CriteriaInForce {
+  layer: CriteriaLayer
+  criteria: Criterion[]
+}
+
+/**
+ * What the author sees about a task's criteria (OpenAPI: CriteriaViewResponse).
+ * Returned by GET, PUT, and DELETE criteria routes.
+ */
+export interface CriteriaView {
+  status: CriteriaStatus
+  reason_code?: CriteriaReasonCode | null
+  waiting_submissions?: number
+  message?: string | null
+  model?: Criterion[] | null
+  author?: Criterion[] | null
+  in_force?: CriteriaInForce | null
+  contradictions?: string[]
+  concepts?: string[]
+}
+
+/**
+ * A mandatory point as the author sends it in an edit of a list.
+ * OpenAPI schema: MandatoryPointEdit.
+ */
+export interface MandatoryPointEdit {
+  id?: string | null
+  text: string
+}
+
+/**
+ * A criterion as the author sends it: the stored form, identifiers optional.
+ */
+export interface CriterionEdit {
+  id?: string | null
+  text: string
+  evidence: string
+  weight: CriteriaWeight
+  check_method: CriteriaCheckMethod
+  concepts?: string[]
+  mandatory_points?: MandatoryPointEdit[]
+  must_by_author?: boolean | null
+}
+
+/**
+ * Body of PUT /documents/{id}/criteria/override (mentor-rebuild task 08).
+ */
+export interface CriteriaOverrideRequest {
+  criteria: CriterionEdit[]
+}
+

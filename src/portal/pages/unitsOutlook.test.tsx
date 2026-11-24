@@ -221,7 +221,7 @@ describe('charging off (operator 2026-11-16, A): nothing about units running sho
       document.dispatchEvent(new Event('visibilitychange'))
     })
     expect(screen.getByText(NEXT)).toBeInTheDocument()
-    expect(screen.getByText('Доступно 120 юнітів — вистачить приблизно на 0 перевірок.')).toBeInTheDocument()
+    expect(screen.getByText('Доступно 120 юнітів.')).toBeInTheDocument()
   })
 })
 

@@ -34,7 +34,11 @@ export function UnitsReminders({
   const t = useT()
   const reminders: Reminder[] = []
   if (outlook.warning === 'low' && outlook.reviews_left !== null) {
-    reminders.push({ key: 'low', text: lowReminder(language, outlook.reviews_left), action: buy })
+    const text =
+      outlook.reviews_left === 0
+        ? t('portal.units.nextMayFail')
+        : lowReminder(language, outlook.reviews_left)
+    reminders.push({ key: 'low', text, action: buy })
   }
   if (outlook.warning === 'next_may_fail') {
     reminders.push({ key: 'next', text: t('portal.units.nextMayFail'), action: buy })

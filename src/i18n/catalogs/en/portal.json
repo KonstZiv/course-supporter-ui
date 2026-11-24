@@ -115,7 +115,7 @@
   "portal.reason.pathState.processingFailed.action": "Send it again.",
   "portal.reason.pathState.awaitingFunds.what": "The review is paused: there were not enough units to start it.",
   "portal.reason.pathState.awaitingFunds.action": "After a purchase, the review will continue by itself — there is no need to send the work again.",
-  "portal.reason.pathState.awaitingAuthorFunds.what": "Your work has been accepted. The review will start when the course author tops up their units.",
+  "portal.reason.pathState.awaitingAuthorFunds.what": "Your work has been accepted. The review will start when the course author buys units.",
   "portal.reason.inArchive.mayContainSecrets.what": "The file was not opened: files like this usually contain secrets — keys or passwords.",
   "portal.reason.inArchive.mayContainSecrets.action": "Do not add them to your work; if an example is needed, include a .env.example file without real values.",
   "portal.reason.documentInArchive.what": "Documents inside an archive are not read.",

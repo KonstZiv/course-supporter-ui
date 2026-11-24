@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { formatDays, formatReviews, formatUnits, formatWorks } from '../utils/units'
 import { notOpenedCountLabel } from '../portal/rejectionReasons'
-import { translate } from './translate'
+import { translate, translateRich } from './translate'
 
 // The plural forms moved from code into ICU messages: the same words for the
 // same numbers as before the move. The expected values are what the code
@@ -101,6 +101,49 @@ describe('plural forms in uk, as before the catalog', () => {
         list: numbers.join(', '),
       }),
     ).toBe(text)
+  })
+})
+
+// The canvas counters said "{count} розділів" for any number; now the plural
+// form agrees with the number, as the dashboard's counters do.
+describe('canvas counters in uk', () => {
+  const COUNTS: [number, string][] = [
+    [1, 'one'],
+    [2, 'few'],
+    [5, 'many'],
+    [11, 'many'],
+    [21, 'one'],
+    [22, 'few'],
+  ]
+  const FORMS = {
+    'panel.flow.sectionNode.subsectionsCount': { one: 'підрозділ', few: 'підрозділи', many: 'підрозділів' },
+    'panel.flow.courseRootNode.sectionsCount': { one: 'розділ', few: 'розділи', many: 'розділів' },
+    'panel.flow.courseRootNode.documentsCount': { one: 'документ', few: 'документи', many: 'документів' },
+  } as const
+
+  describe.each(Object.entries(FORMS))('%s', (key, forms) => {
+    it.each(COUNTS)('%i', (count, form) => {
+      expect(translate('uk', key as keyof typeof FORMS, { count })).toBe(
+        `${count} ${forms[form as keyof typeof forms]}`,
+      )
+    })
+  })
+
+  const FILES = { one: 'файл', few: 'файли', many: 'файлів' } as const
+
+  it.each(COUNTS)('panel.flow.structure.filesCount %i', (count, form) => {
+    expect(translate('uk', 'panel.flow.structure.filesCount', { count })).toBe(
+      ` · ${count} ${FILES[form as keyof typeof FILES]}`,
+    )
+  })
+
+  it.each(COUNTS)('panel.flow.manifest.totalFiles %i', (count, form) => {
+    expect(
+      translateRich<string>('uk', 'panel.flow.manifest.totalFiles', {
+        count,
+        strong: (chunks) => `[${chunks.join('')}]`,
+      }).join(''),
+    ).toBe(`[${count}] ${FILES[form as keyof typeof FILES]}`)
   })
 })
 

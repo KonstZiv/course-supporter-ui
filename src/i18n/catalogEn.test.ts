@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { IntlMessageFormat } from 'intl-messageformat'
+import enPanel from './catalogs/en/panel.json'
 import enPortal from './catalogs/en/portal.json'
 import enShared from './catalogs/en/shared.json'
+import ukPanel from './catalogs/uk/panel.json'
 import ukPortal from './catalogs/uk/portal.json'
 import ukShared from './catalogs/uk/shared.json'
 import { localeOf } from './languages'
@@ -43,6 +45,7 @@ const CYRILLIC = /[Ѐ-ӿ]/
 const pairs = [
   { file: 'shared.json', uk: ukShared as Record<string, string>, en: enShared as Record<string, string> },
   { file: 'portal.json', uk: ukPortal as Record<string, string>, en: enPortal as Record<string, string> },
+  { file: 'panel.json', uk: ukPanel as Record<string, string>, en: enPanel as Record<string, string> },
 ]
 
 describe.each(pairs)('the en catalog, $file', ({ uk, en }) => {
@@ -76,6 +79,42 @@ describe.each(pairs)('the en catalog, $file', ({ uk, en }) => {
 
   it('has no Cyrillic', () => {
     expect(Object.entries(en).filter(([, message]) => CYRILLIC.test(message))).toEqual([])
+  })
+})
+
+// Payment is taken by a merchant of record, and a unit is not money: the
+// English panel says none of the words of money held or moved. "credit" only
+// as a word of its own — "credited" (units added after a purchase) stays.
+const AVOIDED =
+  /\b(balances?|wallets?|top[ -]?ups?|deposits?|credits?|vouchers?|gift cards?|tokens?|currenc(y|ies)|cash|refunds?)\b/i
+
+describe('the en panel catalog, words', () => {
+  const en = enPanel as Record<string, string>
+  const uk = ukPanel as Record<string, string>
+
+  it('has none of the avoided words', () => {
+    expect(Object.entries(en).filter(([, message]) => AVOIDED.test(message))).toEqual([])
+  })
+
+  it('reads the avoided words as words', () => {
+    expect(AVOIDED.test('Your balance')).toBe(true)
+    expect(AVOIDED.test('Top up units')).toBe(true)
+    expect(AVOIDED.test('a top-up')).toBe(true)
+    expect(AVOIDED.test('3 credits')).toBe(true)
+    expect(AVOIDED.test('{units} credited.')).toBe(false)
+    expect(AVOIDED.test('Discredit')).toBe(false)
+  })
+
+  // A message that asks the author to write to us gets the "write to the
+  // administrator" button: the app finds the phrase in the message text.
+  it('asks to write to us wherever uk does', () => {
+    const phrase = { uk: uk['panel.contactAdmin.writeToUsPhrase']!, en: en['panel.contactAdmin.writeToUsPhrase']! }
+    const differ = Object.keys(uk).filter(
+      (key) =>
+        uk[key]!.toLowerCase().includes(phrase.uk.toLowerCase()) !==
+        en[key]!.toLowerCase().includes(phrase.en.toLowerCase()),
+    )
+    expect(differ).toEqual([])
   })
 })
 

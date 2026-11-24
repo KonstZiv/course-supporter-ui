@@ -105,7 +105,7 @@ export function useUploadBatch() {
             hooks.onFileQueued?.() // Е9 — a visible row after the FIRST file, not the last
           } catch (err) {
             batchFailures.push(
-              authoredRejectionMessage(err, task.label) ??
+              authoredRejectionMessage(language, err, task.label) ??
                 translate(language, 'panel.upload.sendFailed', {
                   label: task.label,
                   code: err instanceof ApiError ? err.status : 'unknown',

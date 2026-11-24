@@ -33,11 +33,11 @@ export function BalanceCard({
   const { reserved, held, next_expiry: expiry } = balance
   const difference = withDifference ? balance.difference : 0
   const nothing =
-  balance.balance === 0 &&
-  reserved === 0 &&
-  held === 0 &&
-  difference === 0 &&
-  expiry === null
+    balance.balance === 0 &&
+    reserved === 0 &&
+    held === 0 &&
+    difference === 0 &&
+    expiry === null
 
   return (
     <section aria-labelledby="billing-balance" className="card p-6 space-y-3">
