@@ -24,6 +24,9 @@ const api = vi.hoisted(() => ({
   billingStatement: vi.fn(),
   billingOutlook: vi.fn(),
   setInterfaceLanguage: vi.fn(),
+  joinCard: vi.fn(),
+  joinCourse: vi.fn(),
+  loginByEmail: vi.fn(),
 }))
 vi.mock('./api/portalClient', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./api/portalClient')>()
@@ -31,6 +34,7 @@ vi.mock('./api/portalClient', async (importOriginal) => {
 })
 
 import { PortalApp } from './App'
+import { PortalApiError } from './api/portalClient'
 import { PortalLanguageProvider } from './components/PortalLanguageProvider'
 import { usePortalLanguage } from './stores/language'
 import { usePortalSession } from './stores/session'
@@ -180,6 +184,22 @@ beforeEach(() => {
     ],
     next_cursor: null,
   })
+  api.joinCard.mockResolvedValue({
+    course_id: 'r',
+    course_title: 'Demo course',
+    author_name: 'Demo school',
+    languages: ['eng', 'ukr'],
+    terms_version: '2027-01-15',
+  })
+  api.joinCourse.mockRejectedValue(
+    new PortalApiError(409, 'x', { detail: { code: 'email_confirmation_required', details: 'x' } }),
+  )
+  api.loginByEmail.mockResolvedValue({
+    choose: [
+      { tenant_id: T, tenant_name: 'Demo school', login: 'olena' },
+      { tenant_id: '019edb00-0000-7000-8000-000000000002', tenant_name: 'Other school', login: 'olena' },
+    ],
+  })
   api.billingOutlook.mockResolvedValue({
     reviews_left: 3,
     warning: 'low',
@@ -218,6 +238,60 @@ describe('the portal in English shows no Cyrillic', () => {
   it('email confirmation', async () => {
     renderAt(`/${T}/confirm-email?token=abc`)
     await screen.findByRole('heading', { name: 'Email confirmation' })
+    await expectNoCyrillic()
+  })
+
+  it('enrollment by a course link, with the marks to confirm', async () => {
+    renderAt(`/${T}/join/k3y`)
+    await screen.findByRole('heading', { name: 'Demo course' })
+    expect(screen.getByText('Before you join the course, please confirm:')).toBeInTheDocument()
+    expect(screen.getByText('Course languages: English, Ukrainian')).toBeInTheDocument()
+    await expectNoCyrillic()
+  })
+
+  it('a course link that leads nowhere', async () => {
+    api.joinCard.mockRejectedValue(
+      new PortalApiError(404, 'x', { detail: { code: 'course_not_found', details: 'x' } }),
+    )
+    renderAt(`/${T}/join/k3y`)
+    await screen.findByText(
+      'The enrollment link is invalid or enrollment is closed. Ask the author for a new link.',
+    )
+    await expectNoCyrillic()
+  })
+
+  it('joining with a session, when the email is not confirmed', async () => {
+    signIn()
+    renderAt(`/${T}/join/k3y`)
+    await screen.findByRole('heading', { name: 'Demo course' })
+    fireEvent.click(screen.getByLabelText('I am 18 or older.'))
+    fireEvent.click(screen.getByRole('checkbox', { name: /I have read and accept/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Join the course' }))
+    await screen.findByText(/you need a confirmed email/)
+    await expectNoCyrillic()
+  })
+
+  it('confirm your email', async () => {
+    renderAt(`/${T}/join/k3y/sent?signup=019edc00-0000-7000-8000-0000000000aa`)
+    await screen.findByRole('heading', { name: 'Confirm your email' })
+    await screen.findByText(/You can send the email again in/)
+    await expectNoCyrillic()
+  })
+
+  it('the confirm link', async () => {
+    renderAt(`/${T}/join/confirm?token=abc`)
+    await screen.findByRole('heading', { name: 'Email confirmation' })
+    await expectNoCyrillic()
+  })
+
+  it('sign-in by email, and the choice of a login', async () => {
+    renderAt('/login')
+    await screen.findByRole('heading', { name: 'Sign in with email' })
+    await expectNoCyrillic()
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'olena@example.com' } })
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret-pass' } })
+    fireEvent.click(screen.getByRole('button', { name: /^Sign in/ }))
+    await screen.findByRole('heading', { name: 'Choose where to sign in' })
     await expectNoCyrillic()
   })
 

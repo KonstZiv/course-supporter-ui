@@ -5,8 +5,10 @@ import {
   consentLines,
   consentSha256,
   consentText,
+  joinConsentLines,
   STUDENT_CONSENT_LINES,
 } from './billingConsent'
+import { translate } from '../i18n/translate'
 
 describe('billing consent text', () => {
   it('is exactly the four lines, in order', () => {
@@ -74,5 +76,62 @@ describe('consent fingerprints of every text the server accepts', () => {
       'In short: a unit is not money and not a means of payment, and cannot be exchanged for money, sold or transferred; a package is valid for six months; you can get a refund for the unused units of a valid package.',
       'If the terms change, we will ask you to confirm them again.',
     ])
+  })
+})
+
+describe('the consent of joining a course by its link (O-1)', () => {
+  it('is these four lines in Ukrainian: its own title and checkbox, the student summary and change', () => {
+    expect(joinConsentLines('uk')).toEqual([
+      'Перед записом на курс підтвердьте:',
+      'Я прочитав(-ла) і приймаю Умови користування, Правила повернення й Політику конфіденційності.',
+      STUDENT_CONSENT_LINES[2],
+      STUDENT_CONSENT_LINES[3],
+    ])
+  })
+
+  it('is these four lines in English', () => {
+    const student = consentLines('en', 'student')
+    expect(joinConsentLines('en')).toEqual([
+      'Before you join the course, please confirm:',
+      'I have read and accept the Terms of Use, the Refunds rules and the Privacy Policy.',
+      student[2],
+      student[3],
+    ])
+  })
+
+  it.each([
+    ['uk', '41e324ddfc945ea6cf8ec18166836587f089cda7244904575a2fedcd2a2e7906'],
+    ['en', '357464a0b7cf14ecb4a72fb52831e499c9f8fe90cbeefaffbb11114ae4aaaa1d'],
+  ] as const)('has the fingerprint the server records, %s', async (language, sha256) => {
+    expect(await consentSha256(joinConsentLines(language))).toBe(sha256)
+  })
+
+  it('the age mark is a line of its own, outside the fingerprinted text', () => {
+    for (const language of ['uk', 'en'] as const) {
+      const adult = translate(language, 'portal.join.adult')
+      expect(consentText(joinConsentLines(language))).not.toContain(adult)
+    }
+    expect(translate('uk', 'portal.join.adult')).toBe('Мені виповнилося 18 років.')
+    expect(translate('en', 'portal.join.adult')).toBe('I am 18 or older.')
+  })
+
+  it('the checkbox line holds the words of its three links', () => {
+    for (const language of ['uk', 'en'] as const) {
+      const checkbox = joinConsentLines(language)[1]
+      for (const key of [
+        'shared.consent.join.termsLinkWords',
+        'shared.consent.join.refundsLinkWords',
+        'shared.consent.join.privacyLinkWords',
+      ] as const) {
+        expect(checkbox).toContain(translate(language, key))
+      }
+    }
+  })
+
+  it('leaves the author and student texts as they were', async () => {
+    expect(await consentSha256()).toBe('720b66e24bb1b00ee44ed066123e075b82a2c4c1f1ac18f1abeabf9914c63749')
+    expect(await consentSha256(STUDENT_CONSENT_LINES)).toBe(
+      'ff89a2f5ebab4d8f5956fcc590160d961283b414a8e953bec428d5c06d6cb33f',
+    )
   })
 })

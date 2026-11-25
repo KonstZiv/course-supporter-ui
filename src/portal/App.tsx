@@ -6,6 +6,10 @@ import { PortalConfirmEmailPage } from './pages/PortalConfirmEmailPage'
 import { PortalHomePage } from './pages/PortalHomePage'
 import { PortalCoursePage } from './pages/PortalCoursePage'
 import { PortalBillingPage } from './pages/PortalBillingPage'
+import { PortalEmailLoginPage } from './pages/PortalEmailLoginPage'
+import { PortalJoinPage } from './pages/PortalJoinPage'
+import { PortalJoinSentPage } from './pages/PortalJoinSentPage'
+import { PortalJoinConfirmPage } from './pages/PortalJoinConfirmPage'
 import { PortalProtectedRoute } from './components/PortalProtectedRoute'
 import { InvalidPortalLink } from './components/InvalidPortalLink'
 import { PortalLayout } from './components/PortalLayout'
@@ -30,15 +34,24 @@ function CheckoutReturn() {
   )
 }
 
-// Portal router (Phase 6 / T4b, c1). All routes carry the tenant-id segment
-// (ratify Q3). A separate router from the author app — they never share an
-// App or an entry point. Every route, the neutral page among them, renders
-// inside PortalLayout — the one place of the site's footer.
+// Portal router (Phase 6 / T4b, c1). The routes carry the tenant-id segment
+// (ratify Q3) — but the shared sign-in by email, `/login` (O-1), where the
+// author is not known yet; the portal's root leads there. A static segment
+// outranks a dynamic one, so `/login` never reaches `/:tenantId`, nor
+// `/:tenantId/join/confirm` the course link `/:tenantId/join/:key`. A separate
+// router from the author app — they never share an App or an entry point.
+// Every route, the neutral page among them, renders inside PortalLayout — the
+// one place of the site's footer.
 export function PortalApp() {
   return (
     <Routes>
       <Route element={<PortalLayout />}>
+        <Route index element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<PortalEmailLoginPage />} />
         <Route path="/:tenantId/login" element={<PortalLoginPage />} />
+        <Route path="/:tenantId/join/confirm" element={<PortalJoinConfirmPage />} />
+        <Route path="/:tenantId/join/:key" element={<PortalJoinPage />} />
+        <Route path="/:tenantId/join/:key/sent" element={<PortalJoinSentPage />} />
         <Route
           path="/:tenantId/forgot-password"
           element={<PortalForgotPasswordPage />}

@@ -13,6 +13,7 @@ import { isUuid } from '../uuid'
 import { InvalidPortalLink } from '../components/InvalidPortalLink'
 import { PublicPage } from '../components/PublicPage'
 import { afterSignIn, nextOf } from '../signInReturn'
+import { emailLoginAddress } from '../openCourses'
 import { useT } from '../../i18n/LanguageContext'
 import { applySignInLanguage } from '../stores/language'
 import { isServiceUpdatingBody } from '../../serviceStatus/store'
@@ -162,6 +163,12 @@ export function PortalLoginPage() {
             )}
           </button>
         </form>
+
+        <p className="mt-6 text-center">
+          <Link to={emailLoginAddress(nextOf(search))} className="text-sm text-ink-muted hover:text-ink">
+            {t('portal.login.byEmail')}
+          </Link>
+        </p>
       </div>
     </PublicPage>
   )

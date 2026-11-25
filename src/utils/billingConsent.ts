@@ -3,7 +3,10 @@
 // with the consent is of the very same lines: one constant for both, so what
 // is shown and what is recorded cannot drift apart. The author (program) and
 // the student (portal) each have their own text; both are four lines, the
-// first the window's title, the second the checkbox's.
+// first the window's title, the second the checkbox's. Joining a course by its
+// link (open courses, portal) has a text of its own, four lines too: its own
+// title and checkbox, then the student's summary and change lines word for
+// word. The "18 or older" mark shown beside it is not part of it.
 
 import { DEFAULT_LANGUAGE, type Language } from '../i18n/languages'
 import { translate } from '../i18n/translate'
@@ -21,6 +24,16 @@ export function consentLines(language: Language, holder: ConsentHolder): Consent
       holder === 'author' ? 'shared.consent.author.title' : 'shared.consent.student.title',
     ),
     translate(language, 'shared.consent.checkbox'),
+    translate(language, 'shared.consent.summary'),
+    translate(language, 'shared.consent.change'),
+  ]
+}
+
+/** The consent given on joining a course by its link, in the portal. */
+export function joinConsentLines(language: Language): ConsentLines {
+  return [
+    translate(language, 'shared.consent.join.title'),
+    translate(language, 'shared.consent.join.checkbox'),
     translate(language, 'shared.consent.summary'),
     translate(language, 'shared.consent.change'),
   ]
