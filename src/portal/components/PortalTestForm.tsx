@@ -77,7 +77,8 @@ export function PortalTestForm({
   const t = useT()
   const language =
     chosenLanguage ?? defaultReviewLanguage(iso3Of(uiLanguage), courseLanguage, languages)
-  const estimate = useReviewEstimate(taskId, null)
+  const responseLanguage = language || courseLanguage || null
+  const estimate = useReviewEstimate(taskId, null, responseLanguage)
   const cost = testCostView(estimate.outcome, estimate.last)
   useUnitsWait(cost === 'panel' ? TEST_THRESHOLD : null, estimate.askAgain)
 
@@ -158,12 +159,11 @@ export function PortalTestForm({
     const answers = Object.fromEntries(
       structure.questions.map((q) => [q.number, ticked[q.number] ?? []]),
     )
-    const chosen = language || courseLanguage
     try {
       const res = await portalApi.submitTest(taskId, {
         answers,
         test_version: structure.version,
-        ...(chosen ? { response_language: chosen } : {}),
+        ...(responseLanguage ? { response_language: responseLanguage } : {}),
       })
       setState('success')
       setMessage(t('portal.test.sent'))

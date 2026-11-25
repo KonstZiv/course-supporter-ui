@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { billingReason, doorRefusal, portalApi, PortalApiError } from './portalClient'
+import {
+  billingReason,
+  doorRefusal,
+  portalApi,
+  PortalApiError,
+  refusedSignupId,
+} from './portalClient'
 import { usePortalSession } from '../stores/session'
+import { useServiceStatus } from '../../serviceStatus/store'
 
 describe('portalApi.submitTask (authPost)', () => {
   beforeEach(() => {
@@ -497,5 +504,226 @@ describe('portalApi billing (the student units)', () => {
     )
     await expect(portalApi.billingBalance()).rejects.toBeInstanceOf(PortalApiError)
     expect(assign).not.toHaveBeenCalled()
+  })
+})
+
+describe('portalApi open courses (O-1)', () => {
+  const T = '019eda80-67ea-7060-b4c4-9dc85761690e'
+  const SIGNUP = '019edc00-0000-7000-8000-0000000000aa'
+
+  function answer(status: number, body: unknown, headers: Record<string, string> = {}) {
+    return vi.fn().mockResolvedValue({
+      ok: status >= 200 && status < 300,
+      status,
+      headers: new Headers(headers),
+      json: () => Promise.resolve(body),
+    })
+  }
+
+  beforeEach(() => {
+    localStorage.clear()
+    usePortalSession.getState().clear()
+    useServiceStatus.setState({ status: 'ok', since: null })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    useServiceStatus.setState({ status: 'ok', since: null })
+  })
+
+  it('the course card is a public GET with the key escaped', async () => {
+    const card = {
+      course_id: 'c',
+      course_title: 'Demo',
+      author_name: 'A',
+      languages: ['ukr'],
+      terms_version: '2027-01-15',
+    }
+    const fetchMock = answer(200, card)
+    vi.stubGlobal('fetch', fetchMock)
+    expect(await portalApi.joinCard(T, 'k/ey')).toEqual(card)
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit | undefined]
+    expect(url).toBe(`/api/v1/portal/join/${T}/k%2Fey`)
+    expect(init).toBeUndefined()
+  })
+
+  it('the signup POSTs JSON without a bearer and returns the 202 body', async () => {
+    usePortalSession.getState().setSession({ token: 'jwt', tenantId: T, studentId: 's', displayName: null })
+    const accepted = { signup_id: SIGNUP, email_masked: 'o***@e***.com', expires_at: '2026-11-30T10:00:00Z' }
+    const fetchMock = answer(202, accepted)
+    vi.stubGlobal('fetch', fetchMock)
+    const req = {
+      login: 'olena',
+      password: 'long-enough-1',
+      email: 'olena@example.com',
+      display_name: null,
+      interface_language: 'ukr',
+      adult: true,
+      terms_version: '2026-11-13',
+      text_sha256: 'a'.repeat(64),
+    }
+    expect(await portalApi.joinSignup(T, 'key1', req)).toEqual(accepted)
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe(`/api/v1/portal/join/${T}/key1/signup`)
+    expect(init.method).toBe('POST')
+    expect((init.headers as Record<string, string>).Authorization).toBeUndefined()
+    expect(JSON.parse(init.body as string)).toEqual(req)
+  })
+
+  it('resend, confirm and another login go to their routes', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 202, json: () => Promise.resolve({ signup_id: SIGNUP }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve({ access_token: 'x' }) })
+      .mockResolvedValueOnce({ ok: true, status: 204, json: () => Promise.reject(new Error('no body')) })
+    vi.stubGlobal('fetch', fetchMock)
+    await portalApi.joinResend(SIGNUP)
+    await portalApi.joinConfirm('tok')
+    await expect(portalApi.joinChangeLogin(SIGNUP, { login: 'new', token: 'tok' })).resolves.toBeUndefined()
+    const calls = fetchMock.mock.calls as [string, RequestInit][]
+    expect(calls.map(([url]) => url)).toEqual([
+      '/api/v1/portal/join/resend',
+      '/api/v1/portal/join/confirm',
+      `/api/v1/portal/join/${SIGNUP}/login`,
+    ])
+    expect(calls.map(([, init]) => JSON.parse(init.body as string))).toEqual([
+      { signup_id: SIGNUP },
+      { token: 'tok' },
+      { login: 'new', token: 'tok' },
+    ])
+  })
+
+  it('the login by email answers a session or a choice', async () => {
+    const choice = { choose: [{ tenant_id: T, tenant_name: 'A', login: 'olena' }] }
+    const fetchMock = answer(200, choice)
+    vi.stubGlobal('fetch', fetchMock)
+    expect(await portalApi.loginByEmail({ email: 'o@e.com', password: 'p' })).toEqual(choice)
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('/api/v1/portal/login-by-email')
+    expect(JSON.parse(init.body as string)).toEqual({ email: 'o@e.com', password: 'p' })
+  })
+
+  it('a course join goes with the session', async () => {
+    usePortalSession.getState().setSession({ token: 'jwt', tenantId: T, studentId: 's', displayName: null })
+    const fetchMock = answer(200, { status: 'already_enrolled', course_id: 'c' })
+    vi.stubGlobal('fetch', fetchMock)
+    const req = { tenant_id: T, key: 'k', adult: true, terms_version: 'v', text_sha256: 'b'.repeat(64) }
+    expect(await portalApi.joinCourse(req)).toEqual({ status: 'already_enrolled', course_id: 'c' })
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('/api/v1/portal/courses/join')
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer jwt')
+    expect(JSON.parse(init.body as string)).toEqual(req)
+  })
+
+  it('a 429 keeps its Retry-After, in seconds', async () => {
+    vi.stubGlobal(
+      'fetch',
+      answer(429, { detail: { code: 'rate_limited', details: 'x' } }, { 'Retry-After': '125' }),
+    )
+    const err = await portalApi.joinResend(SIGNUP).catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(PortalApiError)
+    expect((err as PortalApiError).retryAfter).toBe(125)
+    expect(doorRefusal(err)?.code).toBe('rate_limited')
+  })
+
+  it('no Retry-After, or one not in seconds, is null', async () => {
+    vi.stubGlobal('fetch', answer(429, null, { 'Retry-After': 'Wed, 21 Oct 2026 07:28:00 GMT' }))
+    const dated = await portalApi.joinResend(SIGNUP).catch((e: unknown) => e)
+    expect((dated as PortalApiError).retryAfter).toBeNull()
+    vi.stubGlobal('fetch', answer(429, null))
+    const bare = await portalApi.joinResend(SIGNUP).catch((e: unknown) => e)
+    expect((bare as PortalApiError).retryAfter).toBeNull()
+  })
+
+  it('refusedSignupId reads the request a login_taken names', () => {
+    const taken = new PortalApiError(409, 'x', {
+      detail: { code: 'login_taken', details: 'x', signup_id: SIGNUP },
+    })
+    expect(refusedSignupId(taken)).toBe(SIGNUP)
+    expect(refusedSignupId(new PortalApiError(409, 'x', { detail: { code: 'login_taken' } }))).toBeNull()
+    expect(refusedSignupId(new Error('x'))).toBeNull()
+  })
+
+  it('a 503 service_updating on a public call raises the updating state with Retry-After', async () => {
+    vi.stubGlobal(
+      'fetch',
+      answer(503, { detail: 'service_updating' }, { 'Retry-After': '30' }),
+    )
+    const err = await portalApi.joinCard(T, 'key1').catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(PortalApiError)
+    expect((err as PortalApiError).status).toBe(503)
+    const state = useServiceStatus.getState()
+    expect(state.status).toBe('updating')
+    expect(state.retryAfter).toBe(30)
+  })
+
+  it('a 503 on a public POST (signup) does the same', async () => {
+    vi.stubGlobal('fetch', answer(503, { detail: 'service_updating' }))
+    await expect(
+      portalApi.loginByEmail({ email: 'o@e.com', password: 'p' }),
+    ).rejects.toBeInstanceOf(PortalApiError)
+    expect(useServiceStatus.getState().status).toBe('updating')
+  })
+
+  it('an ordinary public failure does not raise the updating state', async () => {
+    vi.stubGlobal('fetch', answer(409, { detail: { code: 'login_taken', details: 'x' } }))
+    await portalApi.joinResend(SIGNUP).catch(() => undefined)
+    expect(useServiceStatus.getState().status).toBe('ok')
+  })
+
+  it('a successful public call clears the updating state', async () => {
+    useServiceStatus.getState().report('updating', 30)
+    vi.stubGlobal('fetch', answer(200, { course_id: 'c' }))
+    await portalApi.joinCard(T, 'key1')
+    expect(useServiceStatus.getState().status).toBe('ok')
+  })
+})
+
+describe('portalApi.estimateTask (G-33 response_language)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    usePortalSession.getState().setSession({
+      token: 'jwt',
+      tenantId: 't',
+      studentId: 's',
+      displayName: null,
+    })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('appends response_language to FormData when provided', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ price_units: 5, available_units: 20, enough: true, missing_units: 0, charging_enabled: true, basis: 'typical', paid_by: 'self' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const file = new File(['hi'], 'a.py', { type: 'text/plain' })
+    await portalApi.estimateTask('task-1', file, 'eng')
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/api/v1/portal/tasks/task-1/estimate')
+    const fd = init.body as FormData
+    expect(fd.get('file')).toBeInstanceOf(File)
+    expect(fd.get('response_language')).toBe('eng')
+  })
+
+  it('omits response_language when not provided or null', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ price_units: 5, available_units: 20, enough: true, missing_units: 0, charging_enabled: true, basis: 'typical', paid_by: 'self' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await portalApi.estimateTask('task-1')
+    await portalApi.estimateTask('task-1', null, null)
+
+    const fd1 = (fetchMock.mock.calls[0]![1] as RequestInit).body as FormData
+    const fd2 = (fetchMock.mock.calls[1]![1] as RequestInit).body as FormData
+    expect(fd1.has('response_language')).toBe(false)
+    expect(fd2.has('response_language')).toBe(false)
   })
 })

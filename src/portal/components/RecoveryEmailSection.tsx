@@ -4,16 +4,7 @@ import { portalApi, PortalApiError } from '../api/portalClient'
 import type { PortalMe } from '../types'
 import { useLanguage, useT } from '../../i18n/LanguageContext'
 import { flowError } from '../recoveryTexts'
-
-// Minimal mirror of the backend email shape (RP6: "@" + non-empty local +
-// non-empty domain, max 320) — no strict RFC.
-function isEmailShaped(value: string): boolean {
-  if (value.length === 0 || value.length > 320) return false
-  const at = value.indexOf('@')
-  if (at <= 0) return false
-  if (value.indexOf('@', at + 1) !== -1) return false
-  return value.length - at - 1 > 0
-}
+import { isEmailShaped } from '../emailShape'
 
 // Recovery-email management, inline on the portal home (ratify A: a card below
 // the courses, its own component). The /me fetch is encapsulated HERE — the home
