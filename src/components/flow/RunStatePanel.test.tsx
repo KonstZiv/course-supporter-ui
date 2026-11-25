@@ -1,13 +1,41 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { RunStatePanel } from './RunStatePanel'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import type {
   JobListItemResponse,
+  JobResponse,
   JobState,
   NodeSummaryRunError,
   NodeSummaryRunState,
   RunErrorSeverity,
 } from '../../types/api'
+
+const { getJobMock } = vi.hoisted(() => ({ getJobMock: vi.fn() }))
+vi.mock('../../api/jobs', () => ({
+  jobsApi: { get: getJobMock },
+}))
+
+import { RunStatePanel } from './RunStatePanel'
+
+function makeJobResponse(overrides: Partial<JobResponse> = {}): JobResponse {
+  return {
+    id: 'job-1',
+    job_type: 'node_summary_regeneration',
+    priority: 'normal',
+    status: 'failed',
+    tenant_id: null,
+    course_node_id: null,
+    arq_job_id: null,
+    current_stage: null,
+    stage_progress: null,
+    result_data: null,
+    error_message: null,
+    error_category: null,
+    queued_at: '2026-06-13T00:00:00Z',
+    started_at: null,
+    completed_at: null,
+    ...overrides,
+  }
+}
 
 function makeRunState(
   overrides: Partial<NodeSummaryRunState> = {},
@@ -69,6 +97,9 @@ function makeError(
 }
 
 describe('RunStatePanel', () => {
+  beforeEach(() => {
+    getJobMock.mockReset().mockResolvedValue(makeJobResponse())
+  })
   it('renders ERROR as an alert and WARNING muted; reason verbatim', () => {
     const rs = makeRunState({
       errors: [
@@ -204,5 +235,103 @@ describe('RunStatePanel', () => {
       />,
     )
     expect(screen.getByText(/«abcd1234»/)).toBeInTheDocument()
+  })
+
+  it('renders insufficientUnits message and /billing link when get returns insufficient_units', async () => {
+    getJobMock.mockResolvedValue(makeJobResponse({ error_category: 'insufficient_units' }))
+    render(<RunStatePanel job={makeJob('error', makeRunState())} nodeTitle="Розділ 1" onDismiss={vi.fn()} />)
+
+    const text = await screen.findByText(
+      'Описи розділів не складено: на це не вистачило юнітів. Після купівлі юнітів запустіть Методиста ще раз.',
+    )
+    expect(text).toBeInTheDocument()
+    expect(text.className).toContain('text-coral')
+
+    const link = screen.getByRole('link', { name: 'Купити юніти' })
+    expect(link).toBeInTheDocument()
+    expect(link).toHaveAttribute('href', '/billing')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(getJobMock).toHaveBeenCalledExactlyOnceWith('job-1')
+  })
+
+  it('does not render insufficientUnits message when get returns another category', async () => {
+    getJobMock.mockResolvedValue(makeJobResponse({ error_category: 'pipeline_failure' }))
+    render(
+      <RunStatePanel
+        job={makeJob('error', makeRunState({
+          errors: [makeError('ERROR', { reason: 'Pipeline failure' })],
+        }))}
+        nodeTitle="Розділ 1"
+        onDismiss={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => expect(getJobMock).toHaveBeenCalledWith('job-1'))
+    expect(
+      screen.queryByText(
+        'Описи розділів не складено: на це не вистачило юнітів. Після купівлі юнітів запустіть Методиста ще раз.',
+      ),
+    ).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Купити юніти' })).toBeNull()
+    expect(screen.getByText('Pipeline failure')).toBeInTheDocument()
+  })
+
+  it('does not call jobsApi.get when job_state is not error', () => {
+    render(
+      <RunStatePanel
+        job={makeJob('processing', makeRunState())}
+        nodeTitle="Розділ 1"
+        onDismiss={vi.fn()}
+      />,
+    )
+    expect(getJobMock).not.toHaveBeenCalled()
+  })
+
+  it('renders card normally without extra text when jobsApi.get rejects', async () => {
+    getJobMock.mockRejectedValue(new Error('Network failure'))
+    render(
+      <RunStatePanel
+        job={makeJob('error', makeRunState({
+          errors: [makeError('ERROR', { reason: 'Some error' })],
+        }))}
+        nodeTitle="Розділ 1"
+        onDismiss={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => expect(getJobMock).toHaveBeenCalledWith('job-1'))
+    expect(
+      screen.queryByText(
+        'Описи розділів не складено: на це не вистачило юнітів. Після купівлі юнітів запустіть Методиста ще раз.',
+      ),
+    ).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Купити юніти' })).toBeNull()
+    expect(screen.getByText('Some error')).toBeInTheDocument()
+  })
+
+  it('calls jobsApi.get only once across rerenders with the same job.id', async () => {
+    getJobMock.mockResolvedValue(makeJobResponse({ error_category: 'insufficient_units' }))
+    const { rerender } = render(
+      <RunStatePanel
+        job={makeJob('error', makeRunState())}
+        nodeTitle="Розділ 1"
+        onDismiss={vi.fn()}
+      />,
+    )
+
+    await screen.findByText(
+      'Описи розділів не складено: на це не вистачило юнітів. Після купівлі юнітів запустіть Методиста ще раз.',
+    )
+    expect(getJobMock).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <RunStatePanel
+        job={makeJob('error', makeRunState())}
+        nodeTitle="Розділ 1 — змінено"
+        onDismiss={vi.fn()}
+      />,
+    )
+
+    expect(getJobMock).toHaveBeenCalledTimes(1)
   })
 })

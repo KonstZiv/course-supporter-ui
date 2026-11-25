@@ -7,6 +7,7 @@ import {
   refusedSignupId,
 } from './portalClient'
 import { usePortalSession } from '../stores/session'
+import { useServiceStatus } from '../../serviceStatus/store'
 
 describe('portalApi.submitTask (authPost)', () => {
   beforeEach(() => {
@@ -522,9 +523,11 @@ describe('portalApi open courses (O-1)', () => {
   beforeEach(() => {
     localStorage.clear()
     usePortalSession.getState().clear()
+    useServiceStatus.setState({ status: 'ok', since: null })
   })
   afterEach(() => {
     vi.unstubAllGlobals()
+    useServiceStatus.setState({ status: 'ok', since: null })
   })
 
   it('the course card is a public GET with the key escaped', async () => {
@@ -638,5 +641,89 @@ describe('portalApi open courses (O-1)', () => {
     expect(refusedSignupId(taken)).toBe(SIGNUP)
     expect(refusedSignupId(new PortalApiError(409, 'x', { detail: { code: 'login_taken' } }))).toBeNull()
     expect(refusedSignupId(new Error('x'))).toBeNull()
+  })
+
+  it('a 503 service_updating on a public call raises the updating state with Retry-After', async () => {
+    vi.stubGlobal(
+      'fetch',
+      answer(503, { detail: 'service_updating' }, { 'Retry-After': '30' }),
+    )
+    const err = await portalApi.joinCard(T, 'key1').catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(PortalApiError)
+    expect((err as PortalApiError).status).toBe(503)
+    const state = useServiceStatus.getState()
+    expect(state.status).toBe('updating')
+    expect(state.retryAfter).toBe(30)
+  })
+
+  it('a 503 on a public POST (signup) does the same', async () => {
+    vi.stubGlobal('fetch', answer(503, { detail: 'service_updating' }))
+    await expect(
+      portalApi.loginByEmail({ email: 'o@e.com', password: 'p' }),
+    ).rejects.toBeInstanceOf(PortalApiError)
+    expect(useServiceStatus.getState().status).toBe('updating')
+  })
+
+  it('an ordinary public failure does not raise the updating state', async () => {
+    vi.stubGlobal('fetch', answer(409, { detail: { code: 'login_taken', details: 'x' } }))
+    await portalApi.joinResend(SIGNUP).catch(() => undefined)
+    expect(useServiceStatus.getState().status).toBe('ok')
+  })
+
+  it('a successful public call clears the updating state', async () => {
+    useServiceStatus.getState().report('updating', 30)
+    vi.stubGlobal('fetch', answer(200, { course_id: 'c' }))
+    await portalApi.joinCard(T, 'key1')
+    expect(useServiceStatus.getState().status).toBe('ok')
+  })
+})
+
+describe('portalApi.estimateTask (G-33 response_language)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    usePortalSession.getState().setSession({
+      token: 'jwt',
+      tenantId: 't',
+      studentId: 's',
+      displayName: null,
+    })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('appends response_language to FormData when provided', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ price_units: 5, available_units: 20, enough: true, missing_units: 0, charging_enabled: true, basis: 'typical', paid_by: 'self' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const file = new File(['hi'], 'a.py', { type: 'text/plain' })
+    await portalApi.estimateTask('task-1', file, 'eng')
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toContain('/api/v1/portal/tasks/task-1/estimate')
+    const fd = init.body as FormData
+    expect(fd.get('file')).toBeInstanceOf(File)
+    expect(fd.get('response_language')).toBe('eng')
+  })
+
+  it('omits response_language when not provided or null', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ price_units: 5, available_units: 20, enough: true, missing_units: 0, charging_enabled: true, basis: 'typical', paid_by: 'self' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await portalApi.estimateTask('task-1')
+    await portalApi.estimateTask('task-1', null, null)
+
+    const fd1 = (fetchMock.mock.calls[0]![1] as RequestInit).body as FormData
+    const fd2 = (fetchMock.mock.calls[1]![1] as RequestInit).body as FormData
+    expect(fd1.has('response_language')).toBe(false)
+    expect(fd2.has('response_language')).toBe(false)
   })
 })

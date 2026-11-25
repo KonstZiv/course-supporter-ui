@@ -1,7 +1,13 @@
 import { usePortalSession } from '../stores/session'
 import { loginAddress } from '../signInReturn'
+import {
+  reportHttpFailure,
+  reportNetworkError,
+  useServiceStatus,
+} from '../../serviceStatus/store'
 import type {
   ConfirmRecoveryEmailRequest,
+  CreateRemarkComment,
   FeedbackTouch,
   FeedbackValue,
   ForgotPasswordRequest,
@@ -46,6 +52,8 @@ import type {
   PortalUnitsShortfall,
   RecoveryEmailRequest,
   RecoveryEmailResponse,
+  RemarkComment,
+  RemarkThreads,
   ResetPasswordRequest,
   TestStructureResponse,
 } from '../types'
@@ -120,6 +128,26 @@ export function doorRefusal(err: unknown): PortalDoorRefusal | null {
   return { code, details: typeof details === 'string' ? details : null }
 }
 
+export interface ReplyRefusal {
+  code: string
+  details: Record<string, unknown>
+}
+
+// Refusal on a remark reply (task 12a). Unlike doorRefusal, details is an
+// object (e.g. { max: 5 }, { category: '...' }) instead of a string.
+export function replyRefusal(err: unknown): ReplyRefusal | null {
+  if (!(err instanceof PortalApiError)) return null
+  const detail = (err.body as { detail?: unknown } | null)?.detail
+  if (detail === null || typeof detail !== 'object') return null
+  const { code, details } = detail as { code?: unknown; details?: unknown }
+  if (typeof code !== 'string') return null
+  const detailsObj =
+    details !== null && typeof details === 'object' && !Array.isArray(details)
+      ? (details as Record<string, unknown>)
+      : {}
+  return { code, details: detailsObj }
+}
+
 // Unauthenticated login. Does NOT attach a bearer and does NOT trigger the
 // 401 redirect — the caller (login page) renders the failure inline.
 export async function portalLogin(
@@ -154,45 +182,82 @@ async function postPublicJson(path: string, body: unknown): Promise<void> {
 // Unauthenticated JSON request that answers with a body (open courses, O-1):
 // the course card, the signup and its resend, the confirm, the login by email.
 // No bearer, no 401 redirect — the caller renders every failure inline. A 204
-// answers ``undefined``.
+// answers ``undefined``. Reports the service state like the bearer calls do.
 async function publicJson<T>(path: string, body?: unknown): Promise<T> {
-  const res = await fetch(
-    `${BASE_URL}${path}`,
-    body === undefined
-      ? undefined
-      : {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        },
-  )
-  if (!res.ok) {
-    throw await parseError(res)
+  let res: Response
+  try {
+    res = await fetch(
+      `${BASE_URL}${path}`,
+      body === undefined
+        ? undefined
+        : {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          },
+    )
+  } catch (err) {
+    reportNetworkError(err)
+    throw err
   }
+  if (!res.ok) {
+    const apiError = await parseError(res)
+    // A 503 ``service_updating`` raises the same "service is updating" state
+    // (with its Retry-After) as every bearer call; the caller still renders
+    // the failure inline.
+    reportHttpFailure(
+      res.status,
+      apiError.body,
+      res.headers?.get?.('Retry-After'),
+    )
+    throw apiError
+  }
+  useServiceStatus.getState().recover()
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }
 
-// Authenticated GET. Attaches the bearer; on 401 clears the session and
-// redirects to login (the contract c2/c3 inherit for every bearer call).
-async function authGet<T>(path: string): Promise<T> {
+async function authFetch<T>(
+  path: string,
+  init: Omit<RequestInit, 'headers'> & { headers?: Record<string, string> } = {},
+): Promise<T> {
   const { token, tenantId } = usePortalSession.getState()
   if (!token) {
     redirectToLogin(tenantId)
     throw new PortalApiError(401, 'No portal session')
   }
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
+  let res: Response
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      ...init,
+      headers: { ...init.headers, Authorization: `Bearer ${token}` },
+    })
+  } catch (err) {
+    reportNetworkError(err)
+    throw err
+  }
   if (res.status === 401) {
     usePortalSession.getState().clear()
     redirectToLogin(tenantId)
     throw new PortalApiError(401, 'Portal session expired')
   }
   if (!res.ok) {
-    throw await parseError(res)
+    const apiError = await parseError(res)
+    reportHttpFailure(
+      res.status,
+      apiError.body,
+      res.headers?.get?.('Retry-After'),
+    )
+    throw apiError
   }
+  useServiceStatus.getState().recover()
   return res.json() as Promise<T>
+}
+
+// Authenticated GET. Attaches the bearer; on 401 clears the session and
+// redirects to login (the contract c2/c3 inherit for every bearer call).
+function authGet<T>(path: string): Promise<T> {
+  return authFetch<T>(path)
 }
 
 // Authenticated multipart POST (c3a). Sends FormData WITHOUT a Content-Type
@@ -200,26 +265,8 @@ async function authGet<T>(path: string): Promise<T> {
 // Same bearer + 401-clear-redirect contract as authGet; non-401 errors (422
 // validation, 409 readiness, network) throw a PortalApiError the caller renders
 // inline.
-async function authPost<T>(path: string, body: FormData): Promise<T> {
-  const { token, tenantId } = usePortalSession.getState()
-  if (!token) {
-    redirectToLogin(tenantId)
-    throw new PortalApiError(401, 'No portal session')
-  }
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body,
-  })
-  if (res.status === 401) {
-    usePortalSession.getState().clear()
-    redirectToLogin(tenantId)
-    throw new PortalApiError(401, 'Portal session expired')
-  }
-  if (!res.ok) {
-    throw await parseError(res)
-  }
-  return res.json() as Promise<T>
+function authPost<T>(path: string, body: FormData): Promise<T> {
+  return authFetch<T>(path, { method: 'POST', body })
 }
 
 // Authenticated JSON request (R3): the recovery-email set/change, the
@@ -227,29 +274,16 @@ async function authPost<T>(path: string, body: FormData): Promise<T> {
 // authGet/authPost, but a JSON body (authPost is multipart-only for file
 // submission). Returns the parsed 200 body; non-401 errors (422 validation)
 // throw for inline rendering.
-async function sendAuthJson<T>(method: 'POST' | 'PUT', path: string, body: unknown): Promise<T> {
-  const { token, tenantId } = usePortalSession.getState()
-  if (!token) {
-    redirectToLogin(tenantId)
-    throw new PortalApiError(401, 'No portal session')
-  }
-  const res = await fetch(`${BASE_URL}${path}`, {
+function sendAuthJson<T>(
+  method: 'POST' | 'PUT',
+  path: string,
+  body: unknown,
+): Promise<T> {
+  return authFetch<T>(path, {
     method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (res.status === 401) {
-    usePortalSession.getState().clear()
-    redirectToLogin(tenantId)
-    throw new PortalApiError(401, 'Portal session expired')
-  }
-  if (!res.ok) {
-    throw await parseError(res)
-  }
-  return res.json() as Promise<T>
 }
 
 const postAuthJson = <T>(path: string, body: unknown) => sendAuthJson<T>('POST', path, body)
@@ -276,9 +310,10 @@ export const portalApi = {
   // file — the task's typical price; with one — the price of that file (read
   // by the doors, never stored). A file the doors refuse is a 422 with their
   // code, as the submission would be: read it with ``doorRefusal``.
-  estimateTask: (taskId: string, file?: File | null) => {
+  estimateTask: (taskId: string, file?: File | null, responseLanguage?: string | null) => {
     const body = new FormData()
     if (file) body.append('file', file)
+    if (responseLanguage) body.append('response_language', responseLanguage)
     return authPost<PortalReviewEstimate>(
       `/api/v1/portal/tasks/${taskId}/estimate`,
       body,
@@ -312,6 +347,16 @@ export const portalApi = {
   submission: (submissionId: string) =>
     authGet<PortalSubmissionDetail>(
       `/api/v1/portal/submissions/${submissionId}`,
+    ),
+  // Task 12a: Remark comments and replies
+  remarkThreads: (submissionId: string) =>
+    authGet<RemarkThreads>(
+      `/api/v1/portal/submissions/${submissionId}/comments`,
+    ),
+  replyToRemark: (submissionId: string, req: CreateRemarkComment) =>
+    postAuthJson<RemarkComment>(
+      `/api/v1/portal/submissions/${submissionId}/comments`,
+      req,
     ),
   // KD18 P5: presigned download of a project task's active base ORIGINAL archive
   // (D2 option B — served on demand, not baked into the descriptor). A visible
