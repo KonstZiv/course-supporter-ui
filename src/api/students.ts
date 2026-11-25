@@ -1,9 +1,13 @@
 import { api } from './client'
 import type {
+  AuthorStudentSubmissions,
+  AuthorSubmissionDetail,
+  AuthorSubmissionFileLink,
   EnrollmentBound,
   EnrollmentRequest,
   ProvisionStudentRequest,
   ProvisionStudentResponse,
+  RemarkThreads,
   SetStudentPasswordRequest,
   StudentEnrollmentsResponse,
   StudentRosterResponse,
@@ -28,6 +32,35 @@ export const studentsApi = {
   enrollments: (studentId: string) =>
     api.get<StudentEnrollmentsResponse>(
       `/api/v1/students/${encodeURIComponent(studentId)}/enrollments`,
+    ),
+
+  submissions: (
+    studentId: string,
+    params: { courseNodeId?: string; limit?: number; offset?: number } = {},
+  ) => {
+    const qs = new URLSearchParams()
+    if (params.courseNodeId) qs.set('course_node_id', params.courseNodeId)
+    if (params.limit !== undefined) qs.set('limit', String(params.limit))
+    if (params.offset !== undefined) qs.set('offset', String(params.offset))
+    const query = qs.toString()
+    return api.get<AuthorStudentSubmissions>(
+      `/api/v1/students/${encodeURIComponent(studentId)}/submissions${query ? `?${query}` : ''}`,
+    )
+  },
+
+  submission: (studentId: string, submissionId: string) =>
+    api.get<AuthorSubmissionDetail>(
+      `/api/v1/students/${encodeURIComponent(studentId)}/submissions/${encodeURIComponent(submissionId)}`,
+    ),
+
+  submissionFile: (studentId: string, submissionId: string) =>
+    api.get<AuthorSubmissionFileLink>(
+      `/api/v1/students/${encodeURIComponent(studentId)}/submissions/${encodeURIComponent(submissionId)}/file`,
+    ),
+
+  submissionComments: (studentId: string, submissionId: string) =>
+    api.get<RemarkThreads>(
+      `/api/v1/students/${encodeURIComponent(studentId)}/submissions/${encodeURIComponent(submissionId)}/comments`,
     ),
 
   // Write (T1) ------------------------------------------------------------
