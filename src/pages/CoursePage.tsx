@@ -13,6 +13,7 @@ import { SummaryModal } from '../components/flow/SummaryModal'
 import { MethodistRunDialog } from '../components/flow/MethodistRunDialog'
 import { ArrowLeft, Loader2, AlertTriangle, Pencil, Check, X } from 'lucide-react'
 import { LanguageSelect, LanguageBadge } from '../components/ui/LanguageSelect'
+import { EnrollmentLinkControl } from '../components/course/EnrollmentLinkControl'
 import { findNode } from '../utils/tree'
 import type { UncoveredStaleNodesDetail } from '../types/api'
 import { useT } from '../i18n/LanguageContext'
@@ -220,6 +221,9 @@ export function CoursePage() {
             <p className="text-ink-muted text-sm">{tree.description}</p>
           )}
         </div>
+
+        {/* O-3: enrolment by the course link */}
+        <EnrollmentLinkControl courseId={tree.id} />
 
         {/* Course language — inline view / editor */}
         <div className="flex items-center gap-2 shrink-0">

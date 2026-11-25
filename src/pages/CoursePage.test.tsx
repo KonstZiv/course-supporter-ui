@@ -13,6 +13,11 @@ const { getDetailMock, generateMock, estimateNodeSummaryMock } = vi.hoisted(() =
 }))
 
 vi.mock('../api/nodes', () => ({ nodesApi: { getDetail: getDetailMock } }))
+vi.mock('../api/enrollment-link', () => ({
+  enrollmentLinkApi: {
+    get: vi.fn(() => Promise.resolve({ open: false, key: null, url: null })),
+  },
+}))
 vi.mock('../api/node-summary', async (importOriginal) => {
   const real = await importOriginal<typeof import('../api/node-summary')>()
   return { ...real, summaryApi: { ...real.summaryApi, generate: generateMock } }
