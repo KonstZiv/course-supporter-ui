@@ -901,6 +901,10 @@ export interface HomeworkTaskCostResponse {
 // against the OpenAPI snapshot from backend main. Course roots for the bind
 // picker reuse the existing NodeResponse / NodeListResponse (nodesApi).
 
+// O-1: who made an enrollment — the author, or the student by the course link.
+// On a roster row it is the source of the student's first enrollment.
+export type EnrollmentSource = 'author' | 'self'
+
 export interface StudentRosterItem {
   student_id: string
   external_id: string
@@ -911,6 +915,7 @@ export interface StudentRosterItem {
   display_name: string | null
   is_active: boolean | null
   enrollment_count: number
+  source: EnrollmentSource
 }
 
 export interface StudentRosterResponse {
@@ -927,6 +932,7 @@ export interface StudentRosterResponse {
 export interface StudentEnrollmentItem {
   course_node_id: string
   enrolled_at: string
+  source: EnrollmentSource
 }
 
 export interface StudentEnrollmentsResponse {
@@ -964,6 +970,21 @@ export interface SetStudentPasswordRequest {
 export interface EnrollmentRequest {
   student_id: string
   course_node_id: string
+}
+
+// POST /students/enrollments (201): always 'author' — a grant by the author.
+export interface EnrollmentBound {
+  student_id: string
+  course_node_id: string
+  source: EnrollmentSource
+}
+
+// O-3: the course's open enrolment link (GET and POST open|rotate|close of
+// /nodes/{course_id}/enrollment-link). While closed, key and url are null.
+export interface EnrollmentLink {
+  open: boolean
+  key: string | null
+  url: string | null
 }
 
 // ─── Units of the author's account (BIL-A, BIL-PAY) ───
@@ -1169,7 +1190,11 @@ export interface AuthorEstimateResponse {
  * Why an author's action has no price: the request lacks a feature its kind
  * needs, or the estimate itself failed.
  */
-export type EstimateUnpricedReason = 'missing_features' | 'estimate_failed'
+export type EstimateUnpricedReason =
+  | 'missing_features'
+  | 'estimate_failed'
+  // The price is 0 because there is no work to do.
+  | 'nothing_to_do'
 
 export interface BillingSpendingUnits {
   /** Charged to the author. */
@@ -1336,4 +1361,163 @@ export interface AuthorInterfaceLanguageResponse {
 export interface AuthorInterfaceLanguageRequest {
   language: string
 }
+
+// ─── Author-side student submissions & reviews (PR #723, М-3) ───
+
+export type SubmissionPresentationState =
+  | 'not_opened'
+  | 'not_an_attempt'
+  | 'awaiting_funds'
+  | 'in_progress'
+  | 'reviewed'
+
+export interface SubmissionPresentation {
+  state: SubmissionPresentationState
+  reason_code?: string | null
+}
+
+export interface SubmissionRejection {
+  code: string
+  details?: string | null
+}
+
+export interface SubmissionNotOpened {
+  path: string
+  reason: string
+  size: number
+}
+
+export interface SubmissionVerdict {
+  passed: boolean
+  correctness: string
+}
+
+export interface SubmissionDeltaReceipt {
+  changed: number
+  new: number
+  deleted: number
+  base_version?: number | null
+  latest_version?: number | null
+  is_stale: boolean
+}
+
+export interface SubmissionFeedbackTouch {
+  kind: 'touch'
+  value: 'helped' | 'not_helped'
+  updated_at: string
+}
+
+export interface AuthorStudentHeader {
+  student_id: string
+  display_name?: string | null
+  login?: string | null
+}
+
+export interface AuthorStudentEnrollment {
+  course_id: string
+  course_title: string
+  enrolled_at: string
+}
+
+export interface AuthorSubmissionListItem {
+  id: string
+  attempt_no?: number | null
+  previous_submission_id?: string | null
+  created_at: string
+  reviewed_at?: string | null
+  course_id: string
+  course_title: string
+  task_document_id: string
+  task_title: string
+  task_type?: string | null
+  status: string
+  presentation: SubmissionPresentation
+  score?: number | null
+  rejection?: SubmissionRejection | null
+  not_opened?: SubmissionNotOpened[]
+  recovered_encoding?: string | null
+  is_repeat_copy: boolean
+  review_language?: string | null
+  original_filename?: string | null
+  passed?: boolean | null
+}
+
+export interface AuthorStudentSubmissions {
+  student: AuthorStudentHeader
+  enrollments: AuthorStudentEnrollment[]
+  items: AuthorSubmissionListItem[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface AuthorSubmissionStudent {
+  student_id: string
+  display_name?: string | null
+}
+
+export interface AuthorPassRule {
+  basis: string
+  threshold: number
+  required_musts?: number | null
+}
+
+export type AuthorCriterionVerdictValue = 'met' | 'not_met' | 'unconfirmed'
+export type AuthorRemarkState = 'new' | 'open' | 'fixed' | 'broken'
+
+export interface AuthorCriterionVerdict {
+  item_id: string
+  item_kind: 'criterion' | 'point'
+  text: string
+  weight?: CriteriaWeight | null
+  must_by_author: boolean
+  verdict: AuthorCriterionVerdictValue
+  quote?: string | null
+  quote_line_start?: number | null
+  missing?: string | null
+  remark_state?: AuthorRemarkState | null
+}
+
+export interface AuthorSubmissionDetail {
+  id: string
+  attempt_no?: number | null
+  previous_submission_id?: string | null
+  created_at: string
+  reviewed_at?: string | null
+  course_id: string
+  course_title: string
+  task_document_id: string
+  task_title: string
+  task_type?: string | null
+  status: string
+  presentation: SubmissionPresentation
+  score?: number | null
+  rejection?: SubmissionRejection | null
+  not_opened?: SubmissionNotOpened[]
+  recovered_encoding?: string | null
+  is_repeat_copy: boolean
+  review_language?: string | null
+  original_filename?: string | null
+  student: AuthorSubmissionStudent
+  verdict?: SubmissionVerdict | null
+  structure?: Record<string, unknown> | null
+  review_markdown?: string | null
+  delta?: SubmissionDeltaReceipt | null
+  own_feedback?: SubmissionFeedbackTouch | null
+  pass_rule?: AuthorPassRule | null
+  criteria: AuthorCriterionVerdict[]
+}
+
+export interface AuthorSubmissionFileLink {
+  url: string
+  expires_at: string
+}
+
+export type {
+  RemarkComment,
+  RemarkCommentAuthor,
+  RemarkCommentKind,
+  RemarkThread,
+  RemarkThreads,
+} from '../portal/types'
 

@@ -9,6 +9,8 @@ import { ConfirmRolesPage } from './pages/ConfirmRolesPage'
 import { CostPage } from './pages/CostPage'
 import { HomeworkCostPage } from './pages/HomeworkCostPage'
 import { StudentsPage } from './pages/StudentsPage'
+import { StudentSubmissionsPage } from './pages/StudentSubmissionsPage'
+import { StudentSubmissionPage } from './pages/StudentSubmissionPage'
 import { HistoryPage } from './pages/HistoryPage'
 import { HelpPage } from './pages/HelpPage'
 import { BillingPage } from './pages/BillingPage'
@@ -86,6 +88,11 @@ export default function App() {
           element={<ConfirmRolesPage />}
         />
         <Route path="students" element={<StudentsPage />} />
+        <Route path="students/:studentId" element={<StudentSubmissionsPage />} />
+        <Route
+          path="students/:studentId/submissions/:submissionId"
+          element={<StudentSubmissionPage />}
+        />
         <Route path="cost" element={<CostPage />} />
         <Route path="cost/homework" element={<HomeworkCostPage />} />
         <Route path="billing" element={<BillingPage />} />

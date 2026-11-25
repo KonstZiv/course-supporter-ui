@@ -1,11 +1,18 @@
+import { useEffect, useState } from 'react'
 import { AlertTriangle, Info, X } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { JobListItemResponse, NodeSummaryRunError } from '../../types/api'
+import { jobsApi } from '../../api/jobs'
 import { jobStateLabel, jobStateWordClass } from '../../utils/stateVocabulary'
 import { workProgressBar } from '../../utils/workProgress'
 import { ProgressMeter } from '../activity/ProgressMeter'
 import { useLanguage, useT } from '../../i18n/LanguageContext'
 import { Message } from '../../i18n/Message'
+import {
+  buyUnitsText,
+  INSUFFICIENT_UNITS_CATEGORY,
+} from '../../utils/authorBillingTexts'
+import { NewTabLink } from '../billing/NewTabLink'
 
 // The card reads a work-list row (Д1/В2 fold), whose stage_progress is the
 // untyped run-state JSONB. Narrow only the two pieces this card needs — the run
@@ -50,6 +57,32 @@ export function RunStatePanel({ job, nodeTitle, onDismiss }: Props) {
   const bar = workProgressBar(job)
   const errors = errorsOf(sp)
 
+  const [errorCategory, setErrorCategory] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (state !== 'error') {
+      setErrorCategory(null)
+      return
+    }
+    let cancelled = false
+    jobsApi
+      .get(job.id)
+      .then((res) => {
+        if (!cancelled) {
+          setErrorCategory(res.error_category ?? null)
+        }
+      })
+      .catch(() => {
+        // failed request -> show nothing extra
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [state, job.id])
+
+  const isInsufficientUnits =
+    state === 'error' && errorCategory === INSUFFICIENT_UNITS_CATEGORY
+
   return (
     // `max-w-[90vw]` bounds the fixed 360px to a window share, mirroring
     // ActivityStripPanel; without it the panel ran off the left edge at 320.
@@ -85,6 +118,17 @@ export function RunStatePanel({ job, nodeTitle, onDismiss }: Props) {
       {/* Body */}
       <div className="p-4 space-y-2">
         {bar && <ProgressMeter {...bar} />}
+
+        {isInsufficientUnits && (
+          <>
+            <p className="text-xs text-coral">
+              {t('panel.flow.runState.insufficientUnits')}
+            </p>
+            <p className="text-xs">
+              <NewTabLink href="/billing">{buyUnitsText(language)}</NewTabLink>
+            </p>
+          </>
+        )}
 
         {errors.length > 0 && (
           <ul className="space-y-1.5">

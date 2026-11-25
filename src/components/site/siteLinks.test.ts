@@ -15,7 +15,7 @@ describe('siteLinks', () => {
     })
 
     it('declares the supported documentation languages', () => {
-      expect(DOCS_LANGUAGES).toEqual(['uk'])
+      expect(DOCS_LANGUAGES).toEqual(['uk', 'en'])
     })
   })
 
@@ -71,9 +71,16 @@ describe('siteLinks', () => {
       )
     })
 
-    it('falls back to "uk" for documentation when language is "en" or unsupported', () => {
-      expect(docsUrl('en')).toBe('https://about.pythoncourse.me/uk/')
-      expect(docsUrl('en', 'authors/')).toBe('https://about.pythoncourse.me/uk/authors/')
+    it('builds English documentation URL with and without subpaths', () => {
+      expect(docsUrl('en')).toBe('https://about.pythoncourse.me/en/')
+      expect(docsUrl('en', 'authors/')).toBe('https://about.pythoncourse.me/en/authors/')
+      expect(docsUrl('en', 'authors/first-course/')).toBe(
+        'https://about.pythoncourse.me/en/authors/first-course/',
+      )
+    })
+
+    it('falls back to "uk" for documentation when language is unsupported', () => {
+      expect(docsUrl('fr' as Language)).toBe('https://about.pythoncourse.me/uk/')
       expect(docsUrl('fr' as Language, 'authors/')).toBe('https://about.pythoncourse.me/uk/authors/')
     })
 

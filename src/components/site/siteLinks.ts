@@ -27,7 +27,7 @@ export function siteUrl(language: Language, page: SitePage): string {
   return page === 'home' ? base : `${base}${page}/`
 }
 
-export const DOCS_LANGUAGES: readonly Language[] = ['uk']
+export const DOCS_LANGUAGES: readonly Language[] = ['uk', 'en']
 
 export function docsUrl(language: Language, path = ''): string {
   const lang = (DOCS_LANGUAGES as readonly string[]).includes(language) ? language : 'uk'

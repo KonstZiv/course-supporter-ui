@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   AlertCircle,
   ChevronDown,
@@ -10,6 +11,7 @@ import {
 import { studentsApi } from '../../api/students'
 import { studentErrorMessage } from './studentErrors'
 import { StudentStatusBadge } from './StudentStatusBadge'
+import { SelfEnrolledBadge } from './SelfEnrolledBadge'
 import { CoursePickerModal } from './CoursePickerModal'
 import { ResetPasswordModal } from './ResetPasswordModal'
 import { Modal } from '../ui/Modal'
@@ -105,17 +107,20 @@ export function StudentRow({ student, titleOf, onChanged }: Props) {
     <>
       <tr className="border-t border-canvas-dark/40">
         <td className="px-4 py-3">
-          <button
-            className="flex items-center gap-2 text-left"
-            onClick={() => setExpanded((v) => !v)}
-          >
-            {expanded ? (
-              <ChevronDown size={16} className="text-ink-muted shrink-0" />
-            ) : (
-              <ChevronRight size={16} className="text-ink-muted shrink-0" />
-            )}
-            <span className="font-medium text-ink">{displayName}</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              className="flex items-center gap-2 text-left"
+              onClick={() => setExpanded((v) => !v)}
+            >
+              {expanded ? (
+                <ChevronDown size={16} className="text-ink-muted shrink-0" />
+              ) : (
+                <ChevronRight size={16} className="text-ink-muted shrink-0" />
+              )}
+              <span className="font-medium text-ink">{displayName}</span>
+            </button>
+            {student.source === 'self' && <SelfEnrolledBadge />}
+          </div>
         </td>
         <td className="px-4 py-3 text-ink-light">{student.login ?? '—'}</td>
         <td className="px-4 py-3">
@@ -125,6 +130,12 @@ export function StudentRow({ student, titleOf, onChanged }: Props) {
         <td className="px-4 py-3">
           <div className="flex items-center justify-end gap-2">
             {actionBusy && <Loader2 size={14} className="animate-spin text-ink-muted" />}
+            <Link
+              to={`/students/${encodeURIComponent(student.student_id)}`}
+              className="btn-ghost btn-sm"
+            >
+              {t('panel.students.action.submissions')}
+            </Link>
             {student.is_active === true && (
               <button
                 className="btn-ghost btn-sm text-coral"
@@ -201,7 +212,7 @@ export function StudentRow({ student, titleOf, onChanged }: Props) {
                       key={e.course_node_id}
                       className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-white border border-canvas-dark/40"
                     >
-                      <span className="text-sm text-ink">
+                      <span className="flex flex-wrap items-center gap-2 text-sm text-ink">
                         {title ?? (
                           <span className="text-ink-muted italic">
                             {t('panel.students.action.deletedCourse', {
@@ -209,6 +220,7 @@ export function StudentRow({ student, titleOf, onChanged }: Props) {
                             })}
                           </span>
                         )}
+                        {e.source === 'self' && <SelfEnrolledBadge />}
                       </span>
                       <button
                         className="p-1 rounded-md hover:bg-coral-pale hover:text-coral text-ink-muted disabled:opacity-50"

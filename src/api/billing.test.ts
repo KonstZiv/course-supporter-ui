@@ -21,6 +21,7 @@ import {
   getTerms,
   postCheckout,
   postConsent,
+  estimateNodeSummary,
 } from './billing'
 
 describe('billing requests', () => {
@@ -66,6 +67,15 @@ describe('billing requests', () => {
     expect(getMock.mock.calls).toEqual([
       ['/api/v1/billing/statement?limit=50'],
       ['/api/v1/billing/statement?limit=50&cursor=next+1'],
+    ])
+  })
+
+  it('estimates node summary regeneration with force in the body', () => {
+    void estimateNodeSummary('node-123', false)
+    void estimateNodeSummary('node-456', true)
+    expect(postMock.mock.calls).toEqual([
+      ['/api/v1/nodes/node-123/summary/estimate', { force: false }],
+      ['/api/v1/nodes/node-456/summary/estimate', { force: true }],
     ])
   })
 })
