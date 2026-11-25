@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { useAuthStore } from '../stores/auth'
+import { syncServerPanelLanguage } from '../stores/panelLanguage'
 import { returnPath } from '../utils/returnPath'
 import { ContactAdmin } from '../components/ui/ContactAdmin'
 import { SiteHeader } from '../components/site/SiteHeader'
+import { PanelLanguageSwitcher } from '../components/layout/PanelLanguageSwitcher'
 import { SiteFooter } from '../components/site/SiteFooter'
 import {
   docsUrl,
@@ -54,6 +56,7 @@ export function LoginPage() {
       if (res.ok) {
         setApiKey(trimmed)
         setConnected(true)
+        syncServerPanelLanguage(trimmed)
         navigate(returnPath(from), { replace: true })
       } else if (res.status === 401 || res.status === 403) {
         setError(t('panel.login.error.rejected'))
@@ -74,7 +77,7 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen bg-canvas flex flex-col">
-      <SiteHeader links={headerLinks} />
+      <SiteHeader links={headerLinks} afterLinks={<PanelLanguageSwitcher />} />
 
       <main className="flex-1 w-full max-w-[28rem] mx-auto px-4 py-10 sm:py-16">
         <h1 className="font-display text-3xl text-ink">{t('panel.login.title')}</h1>

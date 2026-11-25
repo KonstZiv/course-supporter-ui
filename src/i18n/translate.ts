@@ -31,6 +31,22 @@ const CATALOGS: Partial<Record<Language, Partial<Catalog>>> = { uk: UK, en: EN }
 
 const compiledMessages = new Map<string, IntlMessageFormat>()
 
+/**
+ * Add `messages` to the catalog of `language` (for catalogs loaded on demand)
+ * and drop compiled messages of `language` so subsequent lookups compile from
+ * the newly registered entries without disturbing other languages.
+ */
+export function registerCatalog(
+  language: Language,
+  messages: Partial<Catalog>,
+): void {
+  CATALOGS[language] = { ...CATALOGS[language], ...messages }
+  const prefix = `${language}\u0000`
+  for (const cacheKey of compiledMessages.keys()) {
+    if (cacheKey.startsWith(prefix)) compiledMessages.delete(cacheKey)
+  }
+}
+
 function compiled(language: Language, key: MessageKey): IntlMessageFormat {
   const own = CATALOGS[language]?.[key]
   const source = own === undefined ? DEFAULT_LANGUAGE : language

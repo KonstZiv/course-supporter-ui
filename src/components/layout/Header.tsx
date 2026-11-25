@@ -14,6 +14,7 @@ import { clsx } from 'clsx'
 import type { JobListItemResponse } from '../../types/api'
 import { ActivityStrip } from '../activity/ActivityStrip'
 import { useT } from '../../i18n/LanguageContext'
+import { PanelLanguageSwitcher } from './PanelLanguageSwitcher'
 
 // The base :focus-visible outline (3px, offset 3px) drawn inside the control
 // below `sm`, where the nav row scrolls and clips what lies outside it.
@@ -143,6 +144,7 @@ export function Header({
             <span className="hidden xl:inline">{t('panel.header.logout')}</span>
           </button>
         </nav>
+        <PanelLanguageSwitcher className="shrink-0" />
       </div>
     </header>
   )
