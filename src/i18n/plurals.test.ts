@@ -145,6 +145,12 @@ describe('canvas counters in uk', () => {
       }).join(''),
     ).toBe(`[${count}] ${FILES[form as keyof typeof FILES]}`)
   })
+
+  it.each(COUNTS)('panel.confirmRoles.removedLine %i', (count, form) => {
+    expect(translate('uk', 'panel.confirmRoles.removedLine', { count })).toBe(
+      `Система вилучила ${count} ${FILES[form as keyof typeof FILES]} (безпека або службові теки) — їх подано лише у структурі проєкту; повернути їх не можна.`,
+    )
+  })
 })
 
 describe('package validity plural forms', () => {

@@ -12,6 +12,7 @@ import {
   SITE_TEXT_LINK_CLASS,
 } from '../components/site/siteLinks'
 import { useLanguage, useT } from '../i18n/LanguageContext'
+import { isServiceUpdatingBody } from '../serviceStatus/store'
 
 /**
  * The author program's sign-in page. Strangers see it too, so it is neutral and
@@ -56,6 +57,11 @@ export function LoginPage() {
         navigate(returnPath(from), { replace: true })
       } else if (res.status === 401 || res.status === 403) {
         setError(t('panel.login.error.rejected'))
+      } else if (
+        res.status === 503 &&
+        isServiceUpdatingBody(await res.json?.().catch(() => null))
+      ) {
+        setError(t('panel.login.error.updating'))
       } else {
         setError(t('panel.login.error.server'))
       }

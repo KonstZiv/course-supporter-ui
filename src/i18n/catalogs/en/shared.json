@@ -29,6 +29,11 @@
   "shared.consent.checkbox": "I have read and accept the Terms of Use and the Refunds rules.",
   "shared.consent.summary": "In short: a unit is not money and not a means of payment, and cannot be exchanged for money, sold or transferred; a package is valid for six months; you can get a refund for the unused units of a valid package.",
   "shared.consent.change": "If the terms change, we will ask you to confirm them again.",
+  "shared.consent.join.title": "Before you join the course, please confirm:",
+  "shared.consent.join.checkbox": "I have read and accept the Terms of Use, the Refunds rules and the Privacy Policy.",
+  "shared.consent.join.termsLinkWords": "Terms of Use",
+  "shared.consent.join.refundsLinkWords": "Refunds rules",
+  "shared.consent.join.privacyLinkWords": "Privacy Policy",
   "shared.consent.termsLinkWords": "Terms of Use",
   "shared.consent.refundsLinkWords": "Refunds rules",
   "shared.consent.termsUpdated": "The terms have been updated. Review the current version and confirm it to continue.",
@@ -71,5 +76,11 @@
   "shared.packages.opening": "Opening the checkout page…",
   "shared.packages.buy": "Buy",
   "shared.packages.pricesNote": "Package prices are in euros. Prices are shown excluding taxes, which may be charged in addition depending on the laws of your country of tax residence; the final amount is shown on the checkout page before payment.",
-  "shared.packages.sellerNote": "Payment is accepted by our merchant of record; its name is shown on the checkout page. After payment, you will return to this page."
+  "shared.packages.sellerNote": "Payment is accepted by our merchant of record; its name is shown on the checkout page. After payment, you will return to this page.",
+  "shared.serviceStatus.updatingTitle": "The service is updating",
+  "shared.serviceStatus.updatingBody": "We are constantly working to improve the service and are installing an update right now; it usually takes up to 10 minutes. The page will try again by itself in {seconds} s — there is nothing you need to do, and your data is safe. We apologise for the inconvenience!",
+  "shared.serviceStatus.unreachableTitle": "Cannot reach the server",
+  "shared.serviceStatus.unreachableBody": "We may be installing an update right now, or the internet connection may have dropped. The page will try again by itself in {seconds} s — there is nothing you need to do, and your data is safe. We apologise for the inconvenience!",
+  "shared.serviceStatus.retryNow": "Try now",
+  "shared.serviceStatus.longWait": "This time the update is taking longer than usual. The page keeps trying by itself; if nothing changes within a few minutes, please write to our support: {email}. Thank you for your patience, and we apologise for the inconvenience!"
 }

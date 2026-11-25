@@ -1,4 +1,9 @@
 import { useAuthStore } from '../stores/auth'
+import {
+  reportHttpFailure,
+  reportNetworkError,
+  useServiceStatus,
+} from '../serviceStatus/store'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
@@ -69,11 +74,27 @@ async function send(
   }
   if (contentType) headers['Content-Type'] = contentType
 
-  const res = await fetch(apiUrl(path), { ...init, headers })
+  let res: Response
+  try {
+    res = await fetch(apiUrl(path), { ...init, headers })
+  } catch (err) {
+    reportNetworkError(err)
+    throw err
+  }
 
   if (!res.ok) {
-    throw apiErrorFromBody(res.status, await res.text().catch(() => null))
+    const apiError = apiErrorFromBody(
+      res.status,
+      await res.text().catch(() => null),
+    )
+    reportHttpFailure(
+      res.status,
+      apiError.body,
+      res.headers?.get?.('Retry-After'),
+    )
+    throw apiError
   }
+  useServiceStatus.getState().recover()
   return res
 }
 

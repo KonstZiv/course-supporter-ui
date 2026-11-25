@@ -10,6 +10,7 @@ import { NodeDetailPanel } from '../components/flow/NodeDetailPanel'
 import { RunStatePanel } from '../components/flow/RunStatePanel'
 import { RejectionNotice } from '../components/flow/RejectionNotice'
 import { SummaryModal } from '../components/flow/SummaryModal'
+import { MethodistRunDialog } from '../components/flow/MethodistRunDialog'
 import { ArrowLeft, Loader2, AlertTriangle, Pencil, Check, X } from 'lucide-react'
 import { LanguageSelect, LanguageBadge } from '../components/ui/LanguageSelect'
 import { EnrollmentLinkControl } from '../components/course/EnrollmentLinkControl'
@@ -100,10 +101,17 @@ export function CoursePage() {
 
   const handleGenerate = useCallback(
     (nodeId: string, nodeTitle: string) => {
-      void runGeneration(nodeId, nodeTitle, false)
+      setMethodistRun({ nodeId, nodeTitle, force: false })
     },
-    [runGeneration],
+    [],
   )
+
+  const [methodistRun, setMethodistRun] = useState<{
+    nodeId: string
+    nodeTitle: string
+    force: boolean
+  } | null>(null)
+  const [methodistBusy, setMethodistBusy] = useState(false)
 
   // The run row from the shared store (Д1/В2 fold) — no own poll. Undefined
   // until the woken loop's read lands (one round-trip, Д10); the card then
@@ -292,9 +300,34 @@ export function CoursePage() {
           nodeTitle={slot.nodeTitle}
           onNavigate={(id) => useCourseStore.getState().setSelectedNodeId(id)}
           onRetryForce={() =>
-            void runGeneration(slot.nodeId, slot.nodeTitle, true)
+            setMethodistRun({
+              nodeId: slot.nodeId,
+              nodeTitle: slot.nodeTitle,
+              force: true,
+            })
           }
           onDismiss={() => setSlot(null)}
+        />
+      )}
+
+      {methodistRun && (
+        <MethodistRunDialog
+          open={Boolean(methodistRun)}
+          nodeId={methodistRun.nodeId}
+          nodeTitle={methodistRun.nodeTitle}
+          force={methodistRun.force}
+          busy={methodistBusy}
+          onCancel={() => setMethodistRun(null)}
+          onConfirm={async () => {
+            const { nodeId, nodeTitle, force } = methodistRun
+            setMethodistBusy(true)
+            try {
+              await runGeneration(nodeId, nodeTitle, force)
+              setMethodistRun(null)
+            } finally {
+              setMethodistBusy(false)
+            }
+          }}
         />
       )}
 

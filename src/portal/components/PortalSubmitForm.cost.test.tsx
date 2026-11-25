@@ -240,13 +240,13 @@ describe('table 5.1 — what the student sees before sending', () => {
         'Перевірка цього завдання коштує приблизно 5 юнітів. У вас доступно 20 юнітів.',
       ),
     ).toBeInTheDocument()
-    expect(mockedEstimate).toHaveBeenLastCalledWith('task-1', null)
+    expect(mockedEstimate).toHaveBeenLastCalledWith('task-1', null, null)
 
     const file = pickFile()
     const line = await screen.findByText(
       'Перевірка цього завдання коштує приблизно 8 юнітів. У вас доступно 20 юнітів.',
     )
-    expect(mockedEstimate).toHaveBeenLastCalledWith('task-1', file)
+    expect(mockedEstimate).toHaveBeenLastCalledWith('task-1', file, null)
     expect(line.closest('.bg-sun-pale')).not.toBeNull()
     expect(submitBtn()).toBeEnabled()
   })
@@ -275,7 +275,53 @@ describe('table 5.1 — what the student sees before sending', () => {
     fireEvent.change(screen.getByLabelText('Файл рішення'), { target: { files: [] } })
     await settle()
     expect(mockedEstimate).toHaveBeenCalledTimes(3)
-    expect(mockedEstimate).toHaveBeenLastCalledWith('task-1', null)
+    expect(mockedEstimate).toHaveBeenLastCalledWith('task-1', null, null)
+  })
+
+  it('switching review language re-estimates with the exact language submitted', async () => {
+    vi.mocked(portalApi.languages).mockResolvedValue({
+      items: [
+        { code: 'ukr', name_en: 'Ukrainian', name_native: 'українська' },
+        { code: 'eng', name_en: 'English', name_native: 'English' },
+      ],
+      total: 2,
+    })
+    mockedEstimate.mockResolvedValue(estimate())
+    mockedSubmit.mockResolvedValue({ submission_id: 's', status: 'received', duplicate: false })
+
+    render(
+      <MemoryRouter initialEntries={[`/${T}/courses/root-1`]}>
+        <Routes>
+          <Route
+            path="/:tenantId/courses/:rootId"
+            element={
+              <PortalSubmitForm
+                taskId="task-1"
+                taskType="task"
+                courseLanguage="ukr"
+                onSubmitted={vi.fn()}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    await screen.findByRole('option', { name: 'English' })
+    expect(mockedEstimate).toHaveBeenLastCalledWith('task-1', null, 'ukr')
+
+    const file = pickFile()
+    await settle()
+    expect(mockedEstimate).toHaveBeenLastCalledWith('task-1', file, 'ukr')
+
+    fireEvent.change(screen.getByLabelText('Мова рецензії'), { target: { value: 'eng' } })
+    await settle()
+    expect(mockedEstimate).toHaveBeenLastCalledWith('task-1', file, 'eng')
+
+    fireEvent.click(submitBtn()!)
+    await waitFor(() => expect(mockedSubmit).toHaveBeenCalledTimes(1))
+    const body = mockedSubmit.mock.calls[0]![1] as FormData
+    expect(body.get('response_language')).toBe('eng')
   })
 
   it('only the last request counts: an older answer that comes later is dropped', async () => {
@@ -356,7 +402,7 @@ describe('5.2 — the not-enough panel and the way back after buying', () => {
     await settle()
     expect(mockedBalance).toHaveBeenCalledTimes(3)
     expect(mockedEstimate).toHaveBeenCalledTimes(3)
-    expect(mockedEstimate).toHaveBeenLastCalledWith('task-1', file)
+    expect(mockedEstimate).toHaveBeenLastCalledWith('task-1', file, null)
 
     expect(screen.getByText('Юнітів тепер вистачає.')).toBeInTheDocument()
     expect(submitBtn()).toBeEnabled()

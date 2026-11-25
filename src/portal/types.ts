@@ -446,6 +446,47 @@ export interface ReviewRemark {
   todo: string
   read: ReviewReference[]
   position: ReviewPosition | null
+  item_id?: string | null
+}
+
+// Task 12a: Comments and replies on review remarks
+export type RemarkCommentAuthor = 'student' | 'mentor'
+
+export type RemarkCommentKind =
+  | 'question'
+  | 'objection'
+  | 'comment'
+  | 'answer'
+
+export type StudentRemarkCommentKind = 'question' | 'objection' | 'comment'
+
+export interface RemarkComment {
+  id: string
+  submission_id: string
+  item_id: string
+  parent_id: string | null
+  author: RemarkCommentAuthor
+  kind: RemarkCommentKind
+  body: string
+  created_at: string
+  answered_in_submission_id: string | null
+}
+
+export interface RemarkThread {
+  item_id: string
+  comments: RemarkComment[]
+}
+
+export interface RemarkThreads {
+  accepting_replies: boolean
+  threads: RemarkThread[]
+}
+
+export interface CreateRemarkComment {
+  item_id: string
+  kind: StudentRemarkCommentKind
+  body: string
+  parent_id?: string | null
 }
 
 export type ReviewReplyKind = 'question' | 'objection' | 'comment'
@@ -765,4 +806,114 @@ export interface PortalUnitsShortfall {
   price_units: number
   available_units: number
   missing_units: number
+}
+
+// --- Open courses (O-1): enrollment by a course link, login by email ---
+// Backend ``api/routes/portal_join.py`` (schemas ``Join*``, ``PortalCourseJoin*``,
+// ``PortalEmailLogin*`` in ``api/schemas.py``), synced by hand against the
+// OpenAPI of the backend's open-courses branch. Every refusal is coded —
+// ``{ detail: { code, details } }`` — and never echoes what was sent; a 429
+// carries ``Retry-After`` (seconds). The portal picks its words by ``code``.
+
+// GET /portal/join/{tenant_id}/{key}: the course the link leads to.
+export interface JoinCourseCard {
+  course_id: string
+  course_title: string
+  author_name: string
+  // ISO 639-3: the course's own language first, then those of its materials.
+  languages: string[]
+  // The revision of the billing terms in force (YYYY-MM-DD): a join consents
+  // to it and sends it back as ``terms_version``.
+  terms_version: string
+}
+
+// What a join records besides the request itself: the "18 or older" mark
+// (only ``true`` is accepted) and the consent to the billing terms — the
+// revision in force and the fingerprint of the lines shown.
+interface JoinMarks {
+  adult: boolean
+  terms_version: string
+  text_sha256: string
+}
+
+// POST /portal/join/{tenant_id}/{key}/signup.
+export interface JoinSignupRequest extends JoinMarks {
+  login: string
+  // At least the minimum length (422 otherwise).
+  password: string
+  email: string
+  display_name?: string | null
+  // The language of the pages and of the confirm email (ISO 639-1 or 639-3).
+  interface_language?: string | null
+}
+
+// 202 of signup and of resend: the request waits for the mailed link.
+export interface JoinSignupResponse {
+  signup_id: string
+  // a***@d***.com
+  email_masked: string
+  // Confirm before this, or the request is void (7 days).
+  expires_at: string
+}
+
+// POST /portal/join/resend: a new link; the previous one stops working.
+export interface JoinResendRequest {
+  signup_id: string
+}
+
+// POST /portal/join/confirm.
+export interface JoinConfirmRequest {
+  token: string
+}
+
+// 200 of confirm: a session, as the sign-in gives, and the course.
+export interface JoinConfirmResponse extends PortalLoginResponse {
+  tenant_id: string
+  course_id: string
+}
+
+// POST /portal/join/{signup_id}/login (204): another login for a request whose
+// own was taken before it was confirmed; the mailed token proves the request.
+export interface JoinChangeLoginRequest {
+  login: string
+  token: string
+}
+
+// POST /portal/courses/join, with the session: a student with a login joins.
+export interface PortalCourseJoinRequest extends JoinMarks {
+  tenant_id: string
+  key: string
+}
+
+// 201 enrolled / 200 already_enrolled.
+export interface PortalCourseJoinResponse {
+  status: 'enrolled' | 'already_enrolled'
+  course_id: string
+}
+
+// POST /portal/login-by-email (variant A): a confirmed email and the password;
+// ``tenant_id`` and ``login`` only when sent again with a choice from ``choose``.
+export interface PortalEmailLoginRequest {
+  email: string
+  password: string
+  tenant_id?: string | null
+  login?: string | null
+}
+
+// 200, one match: a session, as the sign-in gives, and its tenant.
+export interface PortalEmailLoginResponse extends PortalLoginResponse {
+  tenant_id: string
+}
+
+// A login the password matched: the portal asks which one.
+export interface PortalEmailLoginChoice {
+  tenant_id: string
+  // The author's name.
+  tenant_name: string
+  login: string
+}
+
+// 200, several matches: no session.
+export interface PortalEmailLoginChoiceResponse {
+  choose: PortalEmailLoginChoice[]
 }

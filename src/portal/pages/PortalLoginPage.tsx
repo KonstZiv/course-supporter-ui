@@ -13,8 +13,10 @@ import { isUuid } from '../uuid'
 import { InvalidPortalLink } from '../components/InvalidPortalLink'
 import { PublicPage } from '../components/PublicPage'
 import { afterSignIn, nextOf } from '../signInReturn'
+import { emailLoginAddress } from '../openCourses'
 import { useT } from '../../i18n/LanguageContext'
 import { applySignInLanguage } from '../stores/language'
+import { isServiceUpdatingBody } from '../../serviceStatus/store'
 
 // Student portal login (Phase 6 / T4b, c1). The tenant comes from the URL
 // segment (ratify Q3) and is sent as ``tenant_id`` in the unauthenticated
@@ -75,6 +77,12 @@ export function PortalLoginPage() {
         setError(t('portal.login.wrongCredentials'))
       } else if (err instanceof PortalApiError && err.status === 429) {
         setError(t('portal.login.rateLimited'))
+      } else if (
+        err instanceof PortalApiError &&
+        err.status === 503 &&
+        isServiceUpdatingBody(err.body)
+      ) {
+        setError(t('portal.login.error.updating'))
       } else {
         setError(t('portal.login.network'))
       }
@@ -155,6 +163,12 @@ export function PortalLoginPage() {
             )}
           </button>
         </form>
+
+        <p className="mt-6 text-center">
+          <Link to={emailLoginAddress(nextOf(search))} className="text-sm text-ink-muted hover:text-ink">
+            {t('portal.login.byEmail')}
+          </Link>
+        </p>
       </div>
     </PublicPage>
   )

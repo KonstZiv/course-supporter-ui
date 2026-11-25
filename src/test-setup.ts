@@ -6,6 +6,7 @@ import '@testing-library/jest-dom/vitest'
 
 import { afterEach } from 'vitest'
 import { cleanup } from '@testing-library/react'
+import { useServiceStatus } from './serviceStatus/store'
 
 // Global RTL DOM cleanup after every test. With vitest globals=false, RTL
 // does not auto-cleanup, so each mounted tree would otherwise leak across
@@ -14,4 +15,12 @@ import { cleanup } from '@testing-library/react'
 // global hooks (e.g. MSW server lifecycle) belong here too.
 afterEach(() => {
   cleanup()
+  useServiceStatus.setState({
+    status: 'ok',
+    since: null,
+    retryAfter: 15,
+    hasSucceeded: false,
+    recoveryCount: 0,
+    unsaved: false,
+  })
 })

@@ -1190,7 +1190,11 @@ export interface AuthorEstimateResponse {
  * Why an author's action has no price: the request lacks a feature its kind
  * needs, or the estimate itself failed.
  */
-export type EstimateUnpricedReason = 'missing_features' | 'estimate_failed'
+export type EstimateUnpricedReason =
+  | 'missing_features'
+  | 'estimate_failed'
+  // The price is 0 because there is no work to do.
+  | 'nothing_to_do'
 
 export interface BillingSpendingUnits {
   /** Charged to the author. */
