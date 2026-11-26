@@ -28,6 +28,7 @@
   "portal.billing.returnToTaskTab": "If you came here from an assignment page, go back to that tab: your selected file is waiting there.",
   "portal.nav.courses": "My courses",
   "portal.nav.units": "Units",
+  "portal.nav.help": "Help",
   "portal.nav.logout": "Sign out",
   "portal.nav.label": "Portal sections",
   "portal.header.name": "Student portal",
