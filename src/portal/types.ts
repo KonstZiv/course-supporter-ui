@@ -845,6 +845,8 @@ export interface JoinSignupRequest extends JoinMarks {
   display_name?: string | null
   // The language of the pages and of the confirm email (ISO 639-1 or 639-3).
   interface_language?: string | null
+  // Campaign source tag from `?src=<tag>` per billing contract (^[a-z0-9_-]{1,40}$).
+  source_tag?: string
 }
 
 // 202 of signup and of resend: the request waits for the mailed link.

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowRight, Loader2 } from 'lucide-react'
 import { doorRefusal, portalApi, PortalApiError } from '../api/portalClient'
 import type { JoinCourseCard } from '../types'
@@ -16,6 +16,7 @@ import {
   joinSentAddress,
   rateLimitedText,
   signupFieldFailure,
+  sourceTagFrom,
   type JoinSentState,
 } from '../openCourses'
 import { InvalidPortalLink } from '../components/InvalidPortalLink'
@@ -295,6 +296,8 @@ function SignupForm({
   const t = useT()
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const [searchParams] = useSearchParams()
+  const sourceTag = sourceTagFrom(searchParams)
   const { marks, ready, askAgain } = useJoinMarks()
 
   const [login, setLogin] = useState('')
@@ -331,6 +334,7 @@ function SignupForm({
         adult: true,
         terms_version: termsVersion,
         text_sha256: await consentSha256(joinConsentLines(language)),
+        ...(sourceTag !== undefined ? { source_tag: sourceTag } : {}),
       })
       const sent: JoinSentState = { emailMasked: res.email_masked }
       navigate(joinSentAddress(tenantId, courseKey, res.signup_id), {

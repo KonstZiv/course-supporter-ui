@@ -95,3 +95,16 @@ export function joinSentAddress(tenantId: string, key: string, signupId: string)
 export function emailLoginAddress(next?: string | null): string {
   return next ? `/login?next=${encodeURIComponent(next)}` : '/login'
 }
+
+const SOURCE_TAG_PARAM = 'src'
+const SOURCE_TAG_RE = /^[a-z0-9_-]{1,40}$/
+
+/**
+ * Campaign source tag from the join page's query (`?src=<tag>`),
+ * returned only when it matches the billing contract (`^[a-z0-9_-]{1,40}$`).
+ */
+export function sourceTagFrom(search: string | URLSearchParams): string | undefined {
+  const params = typeof search === 'string' ? new URLSearchParams(search) : search
+  const value = params.get(SOURCE_TAG_PARAM)
+  return value !== null && SOURCE_TAG_RE.test(value) ? value : undefined
+}

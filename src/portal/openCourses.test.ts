@@ -8,6 +8,7 @@ import {
   rateLimitedText,
   retryMinutes,
   signupFieldFailure,
+  sourceTagFrom,
 } from './openCourses'
 
 const limited = (retryAfter: number | null) =>
@@ -53,5 +54,21 @@ describe('open courses: names and addresses', () => {
     expect(joinSentAddress(T, 'k', 's-1')).toBe(`/${T}/join/k/sent?signup=s-1`)
     expect(emailLoginAddress()).toBe('/login')
     expect(emailLoginAddress(`/${T}/join/k`)).toBe(`/login?next=%2F${T}%2Fjoin%2Fk`)
+  })
+})
+
+describe('open courses: source tag', () => {
+  it('accepts valid tags up to 40 chars and rejects invalid or missing ones', () => {
+    const forty = 'a1_-'.repeat(10)
+    expect(forty).toHaveLength(40)
+    expect(sourceTagFrom('?src=fb-dec-ads')).toBe('fb-dec-ads')
+    expect(sourceTagFrom('?src=a')).toBe('a')
+    expect(sourceTagFrom(`?src=${forty}`)).toBe(forty)
+    expect(sourceTagFrom(`?src=${'a'.repeat(41)}`)).toBeUndefined()
+    expect(sourceTagFrom('?src=Bad%20Tag!')).toBeUndefined()
+    expect(sourceTagFrom(`?src=${encodeURIComponent('реклама')}`)).toBeUndefined()
+    expect(sourceTagFrom('?src=')).toBeUndefined()
+    expect(sourceTagFrom('')).toBeUndefined()
+    expect(sourceTagFrom('?other=value')).toBeUndefined()
   })
 })

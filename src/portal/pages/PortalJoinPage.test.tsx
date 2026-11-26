@@ -338,6 +338,42 @@ describe('the signup', () => {
     expect(await screen.findByLabelText('Логін')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Записатися на курс' })).not.toBeInTheDocument()
   })
+
+  it('forwards valid src query param as source_tag in signup request', async () => {
+    api.joinSignup.mockResolvedValue({ signup_id: SIGNUP, email_masked: 'o***@e***.com', expires_at: 'x' })
+    renderAt(`/${T}/join/${KEY}?src=fb-dec-ads`)
+    await screen.findByLabelText('Логін')
+    fillSignup()
+    checkMarks()
+    fireEvent.click(joinButton())
+    await waitFor(() => expect(api.joinSignup).toHaveBeenCalled())
+    const [, , req] = api.joinSignup.mock.calls[0]!
+    expect(req.source_tag).toBe('fb-dec-ads')
+  })
+
+  it('omits source_tag when src query param is invalid', async () => {
+    api.joinSignup.mockResolvedValue({ signup_id: SIGNUP, email_masked: 'o***@e***.com', expires_at: 'x' })
+    renderAt(`/${T}/join/${KEY}?src=Bad%20Tag`)
+    await screen.findByLabelText('Логін')
+    fillSignup()
+    checkMarks()
+    fireEvent.click(joinButton())
+    await waitFor(() => expect(api.joinSignup).toHaveBeenCalled())
+    const [, , req] = api.joinSignup.mock.calls[0]!
+    expect('source_tag' in req).toBe(false)
+  })
+
+  it('omits source_tag when src query param is absent', async () => {
+    api.joinSignup.mockResolvedValue({ signup_id: SIGNUP, email_masked: 'o***@e***.com', expires_at: 'x' })
+    renderAt(`/${T}/join/${KEY}`)
+    await screen.findByLabelText('Логін')
+    fillSignup()
+    checkMarks()
+    fireEvent.click(joinButton())
+    await waitFor(() => expect(api.joinSignup).toHaveBeenCalled())
+    const [, , req] = api.joinSignup.mock.calls[0]!
+    expect('source_tag' in req).toBe(false)
+  })
 })
 
 describe('joining with a session of this author', () => {
