@@ -885,6 +885,8 @@ export interface JoinChangeLoginRequest {
 export interface PortalCourseJoinRequest extends JoinMarks {
   tenant_id: string
   key: string
+  // Campaign source tag from `?src=<tag>` per billing contract (^[a-z0-9_-]{1,40}$).
+  source_tag?: string
 }
 
 // 201 enrolled / 200 already_enrolled.

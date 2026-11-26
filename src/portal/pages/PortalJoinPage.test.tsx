@@ -332,6 +332,20 @@ describe('the signup', () => {
     )
   })
 
+  it('"already have a sign-in" preserves src query param in the return URL', async () => {
+    const router = renderAt(`/${T}/join/${KEY}?src=fb-dec-ads`)
+    await screen.findByLabelText('Логін')
+    fireEvent.click(screen.getByRole('link', { name: 'Увійти' }))
+    await screen.findByRole('heading', { name: 'Вхід' })
+    const expectedNext = `/${T}/join/${KEY}?src=fb-dec-ads`
+    expect(router.state.location.pathname).toBe(`/${T}/login`)
+    expect(router.state.location.search).toBe(`?next=${encodeURIComponent(expectedNext)}`)
+    expect(screen.getByRole('link', { name: 'Увійти за поштою' })).toHaveAttribute(
+      'href',
+      `/login?next=${encodeURIComponent(expectedNext)}`,
+    )
+  })
+
   it('a session of another author is no session here: the signup is shown', async () => {
     signIn(OTHER)
     renderAt(`/${T}/join/${KEY}`)
@@ -462,6 +476,42 @@ describe('joining with a session of this author', () => {
     checkMarks()
     fireEvent.click(joinWithLogin())
     expect(await screen.findByText('Забагато спроб. Спробуйте через 1 хв.')).toBeInTheDocument()
+  })
+
+  it('forwards valid src query param as source_tag in joinCourse request', async () => {
+    signIn()
+    api.joinCourse.mockResolvedValue({ status: 'enrolled', course_id: COURSE })
+    renderAt(`/${T}/join/${KEY}?src=fb-dec-ads`)
+    await screen.findByRole('heading', { name: 'Python із нуля' })
+    checkMarks()
+    fireEvent.click(joinWithLogin())
+    await waitFor(() => expect(api.joinCourse).toHaveBeenCalled())
+    const [req] = api.joinCourse.mock.calls[0]!
+    expect(req.source_tag).toBe('fb-dec-ads')
+  })
+
+  it('omits source_tag in joinCourse when src query param is invalid', async () => {
+    signIn()
+    api.joinCourse.mockResolvedValue({ status: 'enrolled', course_id: COURSE })
+    renderAt(`/${T}/join/${KEY}?src=Bad%20Tag`)
+    await screen.findByRole('heading', { name: 'Python із нуля' })
+    checkMarks()
+    fireEvent.click(joinWithLogin())
+    await waitFor(() => expect(api.joinCourse).toHaveBeenCalled())
+    const [req] = api.joinCourse.mock.calls[0]!
+    expect('source_tag' in req).toBe(false)
+  })
+
+  it('omits source_tag in joinCourse when src query param is absent', async () => {
+    signIn()
+    api.joinCourse.mockResolvedValue({ status: 'enrolled', course_id: COURSE })
+    renderAt(`/${T}/join/${KEY}`)
+    await screen.findByRole('heading', { name: 'Python із нуля' })
+    checkMarks()
+    fireEvent.click(joinWithLogin())
+    await waitFor(() => expect(api.joinCourse).toHaveBeenCalled())
+    const [req] = api.joinCourse.mock.calls[0]!
+    expect('source_tag' in req).toBe(false)
   })
 })
 
