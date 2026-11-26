@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { BookOpen, LogOut, Package } from 'lucide-react'
+import { BookOpen, HelpCircle, LogOut, Package } from 'lucide-react'
 import { clsx } from 'clsx'
 import { usePortalSession } from '../stores/session'
 import { portalApi } from '../api/portalClient'
 import type { PortalBillingOutlook } from '../types'
-import { useT } from '../../i18n/LanguageContext'
+import { docsUrl } from '../../components/site/siteLinks'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 import { LanguageSwitcher } from './LanguageSwitcher'
 
 /** The portal's sections; the header marks the one a page belongs to. */
@@ -49,6 +50,7 @@ export function PortalHeader({ current }: { current: PortalSection }) {
   const clear = usePortalSession((s) => s.clear)
   const navigate = useNavigate()
   const paidBy = usePaidBy()
+  const language = useLanguage()
   const t = useT()
 
   const items: { section: PortalSection; label: string; to: string; icon?: React.ReactNode }[] = [
@@ -99,6 +101,17 @@ export function PortalHeader({ current }: { current: PortalSection }) {
                 </li>
               )
             })}
+            <li>
+              <a
+                href={docsUrl(language, 'students/')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={clsx(ITEM, 'text-ink no-underline hover:underline')}
+              >
+                <HelpCircle size={16} aria-hidden />
+                {t('portal.nav.help')}
+              </a>
+            </li>
           </ul>
         </nav>
         <LanguageSwitcher className="ms-auto" />
