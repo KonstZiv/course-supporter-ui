@@ -18,6 +18,7 @@ import { presentationStateKey } from '../components/students/submissionHelpers'
 import { useLanguage, useT } from '../i18n/LanguageContext'
 import type { MessageKey } from '../i18n/translate'
 import { languageDisplayName } from '../utils/languages'
+import { stripLeadingReviewHeading } from '../utils/reviewMarkdown'
 import { formatDate } from '../utils/units'
 
 const WEIGHT_KEYS: Record<CriteriaWeight, MessageKey> = {
@@ -408,7 +409,9 @@ export function StudentSubmissionPage() {
           {t('panel.submission.reviewTitle')}
         </h2>
         {detail.review_markdown ? (
-          <MarkdownContent markdown={detail.review_markdown} />
+          <MarkdownContent
+            markdown={stripLeadingReviewHeading(detail.review_markdown)}
+          />
         ) : (
           <p className="text-sm text-ink-muted">{t('panel.submission.noReview')}</p>
         )}

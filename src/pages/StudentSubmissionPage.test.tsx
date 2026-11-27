@@ -419,4 +419,21 @@ describe('StudentSubmissionPage', () => {
     const codes = await screen.findAllByText('binary_search()', { selector: 'code' })
     expect(codes).toHaveLength(2)
   })
+
+  it('omits a duplicate leading "Рецензія" / "Review" heading from review_markdown while keeping other headings', async () => {
+    vi.mocked(studentsApi.submission).mockResolvedValueOnce(
+      makeDetail({
+        review_markdown: '# Рецензія\n\n## Підсумок\n\nДобре виконано.',
+      }),
+    )
+    renderPage()
+
+    expect(
+      await screen.findByRole('heading', { name: 'Підсумок' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getAllByRole('heading', { name: 'Рецензія' }),
+    ).toHaveLength(1)
+    expect(screen.getByText('Добре виконано.')).toBeInTheDocument()
+  })
 })
