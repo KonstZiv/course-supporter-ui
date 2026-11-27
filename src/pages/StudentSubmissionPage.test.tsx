@@ -373,4 +373,50 @@ describe('StudentSubmissionPage', () => {
     expect(screen.queryByRole('heading', { name: 'Переписка' })).toBeNull()
     expect(screen.queryByText(/Comments unavailable/)).toBeNull()
   })
+
+  it('renders backtick code spans in criterion text in breakdown and thread headers', async () => {
+    vi.mocked(studentsApi.submission).mockResolvedValue(
+      makeDetail({
+        criteria: [
+          {
+            item_id: 'c1',
+            item_kind: 'criterion',
+            text: 'Use `binary_search()` helper',
+            weight: 'must',
+            must_by_author: true,
+            verdict: 'met',
+            quote: null,
+            quote_line_start: null,
+            missing: null,
+            remark_state: null,
+          },
+        ],
+      }),
+    )
+    vi.mocked(studentsApi.submissionComments).mockResolvedValueOnce({
+      accepting_replies: true,
+      threads: [
+        {
+          item_id: 'c1',
+          comments: [
+            {
+              id: 'cm-1',
+              submission_id: 'sub-2',
+              item_id: 'c1',
+              parent_id: null,
+              author: 'student',
+              kind: 'question',
+              body: 'Why?',
+              created_at: '2026-11-12T10:00:00Z',
+              answered_in_submission_id: null,
+            },
+          ],
+        },
+      ],
+    })
+
+    renderPage()
+    const codes = await screen.findAllByText('binary_search()', { selector: 'code' })
+    expect(codes).toHaveLength(2)
+  })
 })

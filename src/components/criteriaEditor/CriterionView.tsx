@@ -1,4 +1,5 @@
 import { useT } from '../../i18n/LanguageContext'
+import { InlineCodeText } from '../ui/InlineCodeText'
 import type { CriteriaLayer, CriteriaWeight, CriteriaCheckMethod, Criterion } from '../../types/api'
 import type { MessageKey } from '../../i18n/translate'
 
@@ -71,7 +72,9 @@ export function CriterionView({
           <span className="block text-xs font-semibold text-ink-muted uppercase tracking-wider mb-1">
             {t('panel.criteria.field.text')}
           </span>
-          <p className="text-body text-ink whitespace-pre-wrap">{criterion.text}</p>
+          <p className="text-body text-ink whitespace-pre-wrap">
+            <InlineCodeText text={criterion.text} />
+          </p>
         </div>
 
         <div>
