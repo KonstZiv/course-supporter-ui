@@ -28,7 +28,7 @@ export const IconButton = forwardRef<
       onClick={onClick}
       className={clsx(
         'p-2 rounded-lg transition-colors shrink-0',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-navy/30',
+        'focus-visible:ring-2 focus-visible:ring-navy/30',
         'disabled:opacity-40 disabled:cursor-not-allowed',
         danger
           ? 'text-coral hover:bg-coral-pale disabled:hover:bg-transparent'

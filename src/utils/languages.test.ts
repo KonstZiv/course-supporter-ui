@@ -72,4 +72,24 @@ describe('utils/languages — singleton + error-path invariant', () => {
     expect(findLanguage('ukr')).toBeNull()
     expect(findLanguage(null)).toBeNull()
   })
+
+  it('languageDisplayName formats known codes in the interface language and falls back to name_en for unknown codes', async () => {
+    mockGetLanguages.mockResolvedValueOnce({
+      items: [
+        { code: 'ukr', name_en: 'Ukrainian', name_native: 'Українська' },
+        { code: 'zzz', name_en: 'Customlang', name_native: null },
+      ],
+      total: 2,
+    })
+    const { getLanguages, languageDisplayName } = await import('./languages')
+    await getLanguages()
+
+    expect(languageDisplayName('uk', 'uk')).toBe('українська')
+    expect(languageDisplayName('uk', 'en')).toBe('Ukrainian')
+    expect(languageDisplayName('ukr', 'uk')).toBe('українська')
+    expect(languageDisplayName('ukr', 'en')).toBe('Ukrainian')
+    expect(languageDisplayName('zzz', 'uk', 'Customlang')).toBe('Customlang')
+    expect(languageDisplayName('zzz', 'uk')).toBe('Customlang')
+    expect(languageDisplayName('123', 'uk', 'Fallback Name')).toBe('Fallback Name')
+  })
 })

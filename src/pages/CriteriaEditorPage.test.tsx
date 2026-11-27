@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, RouterProvider, createMemoryRouter } from 'react-router-dom'
 import { CriteriaEditorPage } from './CriteriaEditorPage'
 import { documentsApi } from '../api/documents'
 import { criteriaApi } from '../api/criteria'
@@ -622,5 +622,26 @@ describe('CriteriaEditorPage (spec §3, A2)', () => {
       ).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Закрити повідомлення' })).toBeNull()
     })
+  })
+
+  it('renders inline code in criterion view mode and keeps raw backticks in edit mode', async () => {
+    vi.mocked(criteriaApi.read).mockResolvedValue({
+      status: 'ready',
+      in_force: {
+        layer: 'model',
+        criteria: [makeCriterion({ text: 'Call `sort()` first' })],
+      },
+    })
+    const router = createMemoryRouter(
+      [{ path: '/task/:documentId/criteria', element: <CriteriaEditorPage /> }],
+      { initialEntries: ['/task/doc-1/criteria'] },
+    )
+    render(<RouterProvider router={router} />)
+
+    const code = await screen.findByText('sort()', { selector: 'code' })
+    expect(code).toHaveClass('bg-canvas-dark', 'px-1', 'rounded')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Правити перелік' }))
+    expect(await screen.findByDisplayValue('Call `sort()` first')).toBeInTheDocument()
   })
 })

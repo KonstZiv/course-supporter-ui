@@ -105,4 +105,27 @@ describe('PortalHomePage (course list)', () => {
       expect(screen.getByText('Не вдалося завантажити курси.')).toBeInTheDocument()
     })
   })
+
+  it('reads billingOutlook once on mount and reloads when the tab becomes visible again', async () => {
+    mockedCourses.mockResolvedValue([])
+    vi.mocked(portalApi.billingOutlook).mockResolvedValue({
+      reviews_left: null,
+      warning: null,
+      expiring_soon: null,
+      paid_by: 'author',
+      charging_enabled: true,
+    })
+    renderHome()
+    await waitFor(() => {
+      expect(screen.queryByRole('link', { name: 'Юніти' })).toBeNull()
+    })
+    expect(portalApi.billingOutlook).toHaveBeenCalledTimes(1)
+
+    const visSpy = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible')
+    document.dispatchEvent(new Event('visibilitychange'))
+    await waitFor(() => {
+      expect(portalApi.billingOutlook).toHaveBeenCalledTimes(2)
+    })
+    visSpy.mockRestore()
+  })
 })

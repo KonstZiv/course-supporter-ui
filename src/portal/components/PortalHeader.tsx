@@ -16,10 +16,15 @@ export type PortalSection = 'courses' | 'units'
  * Who pays for this student's reviews, by the outlook without a course: only
  * a payment rule for the student counts (a course's own rule is the task
  * page's business). Null while there is no answer, or the ask failed.
+ * When ``override`` is passed (including ``null`` while the parent's own
+ * outlook request is still in flight), no duplicate request is made.
  */
-function usePaidBy(): PortalBillingOutlook['paid_by'] | null {
+function usePaidBy(
+  override?: PortalBillingOutlook['paid_by'] | null,
+): PortalBillingOutlook['paid_by'] | null {
   const [paidBy, setPaidBy] = useState<PortalBillingOutlook['paid_by'] | null>(null)
   useEffect(() => {
+    if (override !== undefined) return
     let cancelled = false
     portalApi
       .billingOutlook()
@@ -32,8 +37,8 @@ function usePaidBy(): PortalBillingOutlook['paid_by'] | null {
     return () => {
       cancelled = true
     }
-  }, [])
-  return paidBy
+  }, [override])
+  return override !== undefined ? override : paidBy
 }
 
 const ITEM =
@@ -44,12 +49,18 @@ const ITEM =
  * "Юніти" (unless the author pays for the student's reviews), the language
  * switcher and "Вийти".
  */
-export function PortalHeader({ current }: { current: PortalSection }) {
+export function PortalHeader({
+  current,
+  paidBy: paidByOverride,
+}: {
+  current: PortalSection
+  paidBy?: PortalBillingOutlook['paid_by'] | null
+}) {
   const { tenantId } = useParams()
   const { pathname } = useLocation()
   const clear = usePortalSession((s) => s.clear)
   const navigate = useNavigate()
-  const paidBy = usePaidBy()
+  const paidBy = usePaidBy(paidByOverride)
   const language = useLanguage()
   const t = useT()
 

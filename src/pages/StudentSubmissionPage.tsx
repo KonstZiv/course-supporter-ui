@@ -13,10 +13,12 @@ import type {
   RemarkThread,
 } from '../types/api'
 import { MarkdownContent } from '../portal/components/MarkdownContent'
+import { InlineCodeText } from '../components/ui/InlineCodeText'
 import { presentationStateKey } from '../components/students/submissionHelpers'
 import { useLanguage, useT } from '../i18n/LanguageContext'
 import type { MessageKey } from '../i18n/translate'
-import { findLanguage } from '../utils/languages'
+import { languageDisplayName } from '../utils/languages'
+import { stripLeadingReviewHeading } from '../utils/reviewMarkdown'
 import { formatDate } from '../utils/units'
 
 const WEIGHT_KEYS: Record<CriteriaWeight, MessageKey> = {
@@ -179,7 +181,7 @@ export function StudentSubmissionPage() {
 
   const isTest = detail.task_type === 'test'
   const reviewLangName = detail.review_language
-    ? (findLanguage(detail.review_language)?.name_en ?? detail.review_language)
+    ? languageDisplayName(detail.review_language, language)
     : null
   const stateKey = !detail.reviewed_at ? presentationStateKey(detail.presentation) : null
   const feedbackKey = detail.own_feedback
@@ -370,7 +372,9 @@ export function StudentSubmissionPage() {
                     )}
                   </div>
 
-                  <p className="text-body text-ink whitespace-pre-wrap">{c.text}</p>
+                  <p className="text-body text-ink whitespace-pre-wrap">
+                    <InlineCodeText text={c.text} />
+                  </p>
 
                   {c.quote && (
                     <div>
@@ -405,7 +409,9 @@ export function StudentSubmissionPage() {
           {t('panel.submission.reviewTitle')}
         </h2>
         {detail.review_markdown ? (
-          <MarkdownContent markdown={detail.review_markdown} />
+          <MarkdownContent
+            markdown={stripLeadingReviewHeading(detail.review_markdown)}
+          />
         ) : (
           <p className="text-sm text-ink-muted">{t('panel.submission.noReview')}</p>
         )}
@@ -428,7 +434,7 @@ export function StudentSubmissionPage() {
                 <div key={thread.item_id} className="card p-5 space-y-3">
                   {criterionText && (
                     <p className="text-sm font-medium text-ink border-b border-canvas-dark/40 pb-2 whitespace-pre-wrap">
-                      {criterionText}
+                      <InlineCodeText text={criterionText} />
                     </p>
                   )}
                   <div className="space-y-3">
