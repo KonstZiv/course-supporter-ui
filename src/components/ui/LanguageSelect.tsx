@@ -14,8 +14,12 @@
  */
 
 import type { ChangeEvent } from 'react'
-import { findLanguage, getCachedLanguages } from '../../utils/languages'
-import { useT } from '../../i18n/LanguageContext'
+import {
+  findLanguage,
+  getCachedLanguages,
+  languageDisplayName,
+} from '../../utils/languages'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 
 interface Props {
   value: string | null
@@ -39,6 +43,7 @@ export function LanguageSelect({
   disabled = false,
   className = '',
 }: Props) {
+  const language = useLanguage()
   const t = useT()
   const resolvedAutoLabel = autoLabel ?? t('panel.languageSelect.autoDetect')
   const handleChange = (e: ChangeEvent<HTMLSelectElement>) => {
@@ -72,7 +77,7 @@ export function LanguageSelect({
         )}
         {languages.map((lang) => (
           <option key={lang.code} value={lang.code}>
-            {lang.name_en}
+            {languageDisplayName(lang.code, language, lang.name_en)}
           </option>
         ))}
       </select>
@@ -80,8 +85,9 @@ export function LanguageSelect({
   )
 }
 
-/** Compact read-only badge showing the language's English name. */
+/** Compact read-only badge showing the language's localized name. */
 export function LanguageBadge({ code }: { code: string | null | undefined }) {
+  const language = useLanguage()
   const t = useT()
   const lang = findLanguage(code)
   if (!lang) {
@@ -94,7 +100,7 @@ export function LanguageBadge({ code }: { code: string | null | undefined }) {
   }
   return (
     <span className="inline-flex items-center gap-1 text-xs text-ink-muted">
-      <span>{lang.name_en}</span>
+      <span>{languageDisplayName(lang.code, language, lang.name_en)}</span>
     </span>
   )
 }

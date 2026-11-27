@@ -16,7 +16,7 @@ import { MarkdownContent } from '../portal/components/MarkdownContent'
 import { presentationStateKey } from '../components/students/submissionHelpers'
 import { useLanguage, useT } from '../i18n/LanguageContext'
 import type { MessageKey } from '../i18n/translate'
-import { findLanguage } from '../utils/languages'
+import { languageDisplayName } from '../utils/languages'
 import { formatDate } from '../utils/units'
 
 const WEIGHT_KEYS: Record<CriteriaWeight, MessageKey> = {
@@ -179,7 +179,7 @@ export function StudentSubmissionPage() {
 
   const isTest = detail.task_type === 'test'
   const reviewLangName = detail.review_language
-    ? (findLanguage(detail.review_language)?.name_en ?? detail.review_language)
+    ? languageDisplayName(detail.review_language, language)
     : null
   const stateKey = !detail.reviewed_at ? presentationStateKey(detail.presentation) : null
   const feedbackKey = detail.own_feedback

@@ -14,11 +14,15 @@ vi.mock('../api/students', () => ({
   },
 }))
 
-vi.mock('../utils/languages', () => ({
-  findLanguage: vi.fn((code: string | null | undefined) =>
-    code === 'ukr' ? { code: 'ukr', name_en: 'Ukrainian', name_native: 'Українська' } : null,
-  ),
-}))
+vi.mock('../utils/languages', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../utils/languages')>()
+  return {
+    ...actual,
+    findLanguage: vi.fn((code: string | null | undefined) =>
+      code === 'ukr' ? { code: 'ukr', name_en: 'Ukrainian', name_native: 'Українська' } : null,
+    ),
+  }
+})
 
 function makeDetail(
   overrides: Partial<AuthorSubmissionDetail> = {},
@@ -123,7 +127,7 @@ describe('StudentSubmissionPage', () => {
     ).toBeInTheDocument()
     expect(screen.getByText('Alice')).toBeInTheDocument()
     expect(screen.getByText('Спроба 2')).toBeInTheDocument()
-    expect(screen.getByText('Мова рецензії: Ukrainian')).toBeInTheDocument()
+    expect(screen.getByText('Мова рецензії: українська')).toBeInTheDocument()
 
     expect(screen.getByRole('link', { name: '← Здачі студента' })).toHaveAttribute(
       'href',
