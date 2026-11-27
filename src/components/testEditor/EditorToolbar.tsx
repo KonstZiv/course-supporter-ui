@@ -79,7 +79,7 @@ export function EditorToolbar({
             to={backTo}
             aria-label={texts.back}
             title={texts.back}
-            className="p-2 rounded-lg hover:bg-canvas-dark transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy/30"
+            className="p-2 rounded-lg hover:bg-canvas-dark transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-navy/30"
           >
             <ArrowLeft size={18} className="text-ink-muted" />
           </Link>
