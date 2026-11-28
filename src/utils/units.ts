@@ -129,6 +129,44 @@ export function formatPriceEur(language: Language, minor: number): string {
   return `${grouped(MINOR_UNITS(language), minor / 100)} EUR`
 }
 
+const CURRENCY_FORMATTERS = new Map<string, Intl.NumberFormat>()
+
+function currencyFormatter(
+  language: Language,
+  currency: string,
+): Intl.NumberFormat | null {
+  const locale = localeOf(language)
+  const key = `${locale}:${currency}`
+  let formatter = CURRENCY_FORMATTERS.get(key)
+  if (!formatter) {
+    try {
+      formatter = new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency,
+      })
+      CURRENCY_FORMATTERS.set(key, formatter)
+    } catch {
+      return null
+    }
+  }
+  return formatter
+}
+
+/**
+ * Format an integer minor-unit amount in the interface locale using `Intl`'s
+ * currency fraction digits (0 for JPY, 2 for EUR/USD, 3 for KWD, etc.).
+ */
+export function formatMoneyAmount(
+  language: Language,
+  currency: string,
+  amountMinor: number,
+): string {
+  const formatter = currencyFormatter(language, currency)
+  if (!formatter) return `${formatNumber(language, amountMinor)} ${currency}`
+  const digits = formatter.resolvedOptions().maximumFractionDigits ?? 2
+  return formatter.format(amountMinor / 10 ** digits)
+}
+
 const DATE_PARTS = perLocale(
   (locale) =>
     new Intl.DateTimeFormat(locale, {

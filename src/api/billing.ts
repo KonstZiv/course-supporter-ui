@@ -9,6 +9,7 @@ import type {
   BillingPackagesResponse,
   BillingSpendingResponse,
   BillingStatementResponse,
+  BillingStudentsMoneyResponse,
   BillingTermsResponse,
   ProcessingEstimateRequest,
 } from '../types/api'
@@ -58,19 +59,29 @@ export const getStatement = (cursor?: string | null) => {
 export const billingOutlook = () =>
   api.get<BillingOutlookResponse>(`${BASE}/outlook`)
 
-/**
- * The spending in units of a period: inclusive UTC days, YYYY-MM-DD. Without
- * them the server takes the current month.
- */
-export const billingSpending = (from?: string, to?: string) => {
+function periodQuery(from?: string, to?: string): string {
   const query = new URLSearchParams()
   if (from) query.set('from', from)
   if (to) query.set('to', to)
   const search = query.toString()
-  return api.get<BillingSpendingResponse>(
-    `${BASE}/spending${search ? `?${search}` : ''}`,
-  )
+  return search ? `?${search}` : ''
 }
+
+/**
+ * The spending in units of a period: inclusive UTC days, YYYY-MM-DD. Without
+ * them the server takes the current month.
+ */
+export const billingSpending = (from?: string, to?: string) =>
+  api.get<BillingSpendingResponse>(`${BASE}/spending${periodQuery(from, to)}`)
+
+/**
+ * What the author's students paid for reviews from their own accounts:
+ * inclusive UTC days, YYYY-MM-DD. Without them the server takes the current month.
+ */
+export const billingStudentsMoney = (from?: string, to?: string) =>
+  api.get<BillingStudentsMoneyResponse>(
+    `${BASE}/students-money${periodQuery(from, to)}`,
+  )
 
 /** The price of processing a material of the node, from its features. */
 export const estimateProcessing = (

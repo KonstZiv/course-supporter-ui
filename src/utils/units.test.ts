@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   formatDate,
   formatDays,
+  formatMoneyAmount,
   formatNumber,
   formatPackageName,
   formatPriceEur,
@@ -43,6 +44,17 @@ describe('formatPriceEur', () => {
     [1500, '15,00 EUR'],
   ])('%i cents → %s', (minor, text) => {
     expect(formatPriceEur('uk', minor)).toBe(text)
+  })
+})
+
+describe('formatMoneyAmount', () => {
+  it('uses Intl currency fraction digits rather than dividing by 100 blindly', () => {
+    expect(formatMoneyAmount('uk', 'EUR', 999)).toBe(`9,99${NB}EUR`)
+    expect(formatMoneyAmount('uk', 'USD', 123456)).toBe(`1${NB}234,56${NB}USD`)
+    expect(formatMoneyAmount('uk', 'JPY', 500)).toBe(`500${NB}¥`)
+    expect(formatMoneyAmount('uk', 'KWD', 1500)).toBe(`1,500${NB}KWD`)
+    expect(formatMoneyAmount('en', 'EUR', 999)).toBe('€9.99')
+    expect(formatMoneyAmount('en', 'JPY', 500)).toBe('JP¥500')
   })
 })
 

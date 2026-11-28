@@ -50,6 +50,23 @@ describe('App — /history under the shared auth guard (§3 c7, clar.3)', () => 
     ).toBeInTheDocument()
     expect(screen.queryByText(HISTORY_MARK)).toBeNull()
   })
+
+  it('redirects /students/money to login without a key', async () => {
+    useAuthStore.setState({ apiKey: null })
+    renderAt('/students/money')
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Вхід для авторів курсів' }),
+    ).toBeInTheDocument()
+  })
+
+  it('renders /students/money when authenticated and does not add it to the header', async () => {
+    useAuthStore.setState({ apiKey: 'cs_live_key' })
+    renderAt('/students/money')
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Гроші студентів за перевірки' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Гроші студентів' })).toBeNull()
+  })
 })
 
 describe('App — /help route renders the seam stub (Є3, Р10)', () => {

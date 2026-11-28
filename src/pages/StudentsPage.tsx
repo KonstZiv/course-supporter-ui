@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { AlertCircle, Copy, Loader2, UserPlus, Users } from 'lucide-react'
 import { studentsApi } from '../api/students'
 import { nodesApi } from '../api/nodes'
@@ -97,6 +98,9 @@ export function StudentsPage() {
           </p>
         </div>
         <div className="flex flex-wrap sm:flex-nowrap gap-2">
+          <Link to="/students/money" className="btn-ghost">
+            {t('panel.studentsMoney.link')}
+          </Link>
           <button
             className="btn-ghost"
             disabled={!portalLink}
