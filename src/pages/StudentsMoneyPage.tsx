@@ -244,7 +244,7 @@ export function StudentsMoneyPage() {
         <div className="space-y-4">
           <p className="text-lg font-semibold text-ink">
             {t('panel.studentsMoney.summary', {
-              month: monthLabel(month),
+              month: monthLabel(month, language),
               reviews: t('panel.studentsMoney.reviewsCount', {
                 count: Math.abs(loaded.totals.reviews),
                 n: formatNumber(language, loaded.totals.reviews),

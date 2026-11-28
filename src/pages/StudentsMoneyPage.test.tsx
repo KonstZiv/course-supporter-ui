@@ -11,6 +11,8 @@ vi.mock('../api/billing', async (importOriginal) => ({
 }))
 
 import { StudentsMoneyPage } from './StudentsMoneyPage'
+import { LanguageProvider } from '../i18n/LanguageProvider'
+import { loadPanelLanguage } from '../i18n/panelCatalogs'
 
 const NB = '\u00a0'
 
@@ -96,14 +98,15 @@ const EMPTY: BillingStudentsMoneyResponse = {
   unlinked: { reviews: 0, units: 0, money: [], gift_units: 0 },
 }
 
-function renderPage() {
-  return render(
+function renderPage(language?: 'uk' | 'en') {
+  const tree = (
     <MemoryRouter initialEntries={['/students/money']}>
       <Routes>
         <Route path="/students/money" element={<StudentsMoneyPage />} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
   )
+  return render(language ? <LanguageProvider language={language}>{tree}</LanguageProvider> : tree)
 }
 
 describe('StudentsMoneyPage', () => {
@@ -176,6 +179,17 @@ describe('StudentsMoneyPage', () => {
     ])
 
     expect(studentRows.length).toBeGreaterThan(3)
+  })
+
+  it('shows the month name in English in the summary and MonthPicker', async () => {
+    await loadPanelLanguage('en')
+    api.billingStudentsMoney.mockResolvedValue(DATA)
+    renderPage('en')
+
+    expect(
+      await screen.findByText(/^November 2026: 5 reviews, 420 units,/),
+    ).toBeInTheDocument()
+    expect(screen.getByText('November 2026')).toBeInTheDocument()
   })
 
   it('shows empty-month copy when no reviews were paid by students', async () => {

@@ -87,7 +87,7 @@ function MonthSpending({
       <div className="space-y-1 text-ink">
         <p className="text-lg font-semibold">
           {t('panel.cost.spentInMonth', {
-            month: monthLabel(month),
+            month: monthLabel(month, language),
             units: formatUnits(language, billed),
           })}
         </p>
