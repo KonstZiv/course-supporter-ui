@@ -1521,3 +1521,85 @@ export type {
   RemarkThreads,
 } from '../portal/types'
 
+// ─── Course homework progress overview (PR #746, М-10) ───
+
+export type CourseHomeworkAssignmentType =
+  | 'test'
+  | 'short_task'
+  | 'task'
+  | 'project'
+
+export type CourseHomeworkCriterionWeight = 'must' | 'should'
+
+export interface CourseHomeworkCriterion {
+  criterion_id: string
+  text: string
+  weight: CourseHomeworkCriterionWeight
+  not_met_students: number
+  judged_students: number
+  share: number
+}
+
+export interface CourseHomeworkAttemptsToPass {
+  median: number
+  mean: number
+}
+
+export interface CourseHomeworkTaskRef {
+  task_id: string
+  title: string
+  task_type: CourseHomeworkAssignmentType
+  node_id: string
+  node_title: string
+}
+
+export interface CourseHomeworkTaskSummary extends CourseHomeworkTaskRef {
+  students_submitted: number
+  submissions: number
+  pass_share: number | null
+  average_score: number | null
+  attempts_to_pass: CourseHomeworkAttemptsToPass | null
+  hardest_criteria: CourseHomeworkCriterion[]
+}
+
+export interface CourseHomeworkSummary {
+  course_id: string
+  course_title: string
+  include_test_students: boolean
+  excluded_test_students: number
+  tasks: CourseHomeworkTaskSummary[]
+}
+
+export type CourseHomeworkCellState =
+  | 'not_submitted'
+  | 'in_review'
+  | 'passed'
+  | 'not_passed'
+
+export interface CourseHomeworkCell {
+  state: CourseHomeworkCellState
+  best_score: number | null
+  attempts: number
+  last_submitted_at: string | null
+}
+
+export interface CourseHomeworkStudentRow {
+  student_id: string
+  display_name: string | null
+  login: string | null
+  cells: Record<string, CourseHomeworkCell>
+}
+
+export interface CourseHomeworkTable {
+  course_id: string
+  course_title: string
+  include_test_students: boolean
+  excluded_test_students: number
+  tasks: CourseHomeworkTaskRef[]
+  students: CourseHomeworkStudentRow[]
+  total: number
+  limit: number
+  offset: number
+}
+
+
