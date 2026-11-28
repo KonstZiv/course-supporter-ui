@@ -13,7 +13,7 @@ import { translate } from '../i18n/translate'
 const GROUP_SEPARATOR = '\u00a0'
 
 /** One formatter per locale, made on first use. */
-function perLocale<T>(make: (locale: string) => T): (language: Language) => T {
+export function perLocale<T>(make: (locale: string) => T): (language: Language) => T {
   const made = new Map<string, T>()
   return (language) => {
     const locale = localeOf(language)

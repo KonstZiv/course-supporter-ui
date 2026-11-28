@@ -20,6 +20,8 @@ vi.mock('../api/cost', () => ({
 }))
 
 import { CostPage } from './CostPage'
+import { LanguageProvider } from '../i18n/LanguageProvider'
+import { loadPanelLanguage } from '../i18n/panelCatalogs'
 
 const NB = '\u00a0'
 
@@ -129,6 +131,20 @@ describe('CostPage — spending in units', () => {
       '20',
       '0',
     ])
+  })
+
+  it('the month, the totals and the table of courses in English', async () => {
+    await loadPanelLanguage('en')
+    api.billingSpending.mockResolvedValue(SPENT)
+    render(
+      <LanguageProvider language="en">
+        <CostPage />
+      </LanguageProvider>,
+    )
+    expect(
+      await screen.findByText('Spent in November 2026: 1 820 units.'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('November 2026')).toBeInTheDocument()
   })
 
   it('"Без курсу" only when something leads to no course; no covered line at 0', async () => {

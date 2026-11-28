@@ -5,7 +5,7 @@ import {
   shiftMonth,
   type Month,
 } from '../../utils/spendingPeriod'
-import { useT } from '../../i18n/LanguageContext'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 
 /** "‹ листопад 2026 ›": the month of the spending; none after the current one. */
 export function MonthPicker({
@@ -19,6 +19,7 @@ export function MonthPicker({
   onChange: (month: Month) => void
 }) {
   const next = shiftMonth(month, 1)
+  const language = useLanguage()
   const t = useT()
 
   return (
@@ -32,7 +33,7 @@ export function MonthPicker({
         <ChevronLeft size={16} />
       </button>
       <span className="text-ink font-medium min-w-[9rem] text-center" aria-live="polite">
-        {monthLabel(month)}
+        {monthLabel(month, language)}
       </span>
       <button
         type="button"

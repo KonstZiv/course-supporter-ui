@@ -2,16 +2,22 @@
 // bounds as inclusive UTC days, its name, the step to the next or previous
 // one. Pure — the clock is the caller's.
 
+import type { Language } from '../i18n/languages'
+import { perLocale } from './units'
+
 export interface Month {
   year: number
   /** 0-based, as `Date` counts months. */
   month: number
 }
 
-const MONTH_NAME = new Intl.DateTimeFormat('uk-UA', {
-  month: 'long',
-  timeZone: 'UTC',
-})
+const MONTH_NAME = perLocale(
+  (locale) =>
+    new Intl.DateTimeFormat(locale, {
+      month: 'long',
+      timeZone: 'UTC',
+    }),
+)
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
@@ -38,7 +44,7 @@ export function monthBounds(m: Month): { from: string; to: string } {
   return { from: `${head}-01`, to: `${head}-${pad(last)}` }
 }
 
-/** "листопад 2026". */
-export function monthLabel(m: Month): string {
-  return `${MONTH_NAME.format(new Date(Date.UTC(m.year, m.month, 1)))} ${m.year}`
+/** "листопад 2026" / "November 2026". */
+export function monthLabel(m: Month, language: Language): string {
+  return `${MONTH_NAME(language).format(new Date(Date.UTC(m.year, m.month, 1)))} ${m.year}`
 }
