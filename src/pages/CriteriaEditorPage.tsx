@@ -316,6 +316,17 @@ export function CriteriaEditorPage() {
     is5xx?: boolean
   } | null>(null)
   const [resetRateLimited, setResetRateLimited] = useState(false)
+  const [showComposeConfirm, setShowComposeConfirm] = useState(false)
+  const [composing, setComposing] = useState(false)
+  const [composeError, setComposeError] = useState<{
+    kind:
+      | 'insufficientUnits'
+      | 'taskNotReady'
+      | 'noAccess'
+      | 'tooManyRequests'
+      | 'failedCompose'
+    is5xx?: boolean
+  } | null>(null)
 
   useEffect(() => {
     if (!resetRateLimited) return
@@ -329,6 +340,7 @@ export function CriteriaEditorPage() {
     if (!documentId) return
     setLoading(true)
     setError(null)
+    setComposeError(null)
 
     try {
       const [docSettled, criteriaSettled] = await Promise.allSettled([
@@ -380,14 +392,24 @@ export function CriteriaEditorPage() {
     void load()
   }, [load])
 
-  // Periodic polling every 15s while criteria composing (spec 3.К2)
+  const pollCriteria = useCallback(async () => {
+    if (!documentId) return
+    try {
+      const updated = await criteriaApi.read(documentId)
+      setCriteria(updated)
+    } catch {
+      // Keep polling on transient read failure; manual refresh remains available.
+    }
+  }, [documentId])
+
+  // Periodic polling every 10s while criteria composing
   useEffect(() => {
     if (criteria?.status !== 'composing' || !documentId) return
     const timer = setInterval(() => {
-      void load()
-    }, 15000)
+      void pollCriteria()
+    }, 10000)
     return () => clearInterval(timer)
-  }, [criteria?.status, documentId, load])
+  }, [criteria?.status, documentId, pollCriteria])
 
   const refreshConcepts = useCallback(async () => {
     if (!documentId) return
@@ -456,6 +478,49 @@ export function CriteriaEditorPage() {
       setResetting(false)
     }
   }, [documentId, resetting, resetRateLimited])
+
+  const handleCompose = useCallback(async () => {
+    if (!documentId || composing) return
+    setComposing(true)
+    setComposeError(null)
+
+    try {
+      const updatedView = await criteriaApi.compose(documentId)
+      setShowComposeConfirm(false)
+      setCriteria(updatedView)
+    } catch (err) {
+      setShowComposeConfirm(false)
+      if (err instanceof ApiError) {
+        if (err.status === 402) {
+          setComposeError({ kind: 'insufficientUnits' })
+        } else if (err.status === 404) {
+          setError({ kind: 'notFound' })
+        } else if (err.status === 403) {
+          setComposeError({ kind: 'noAccess' })
+        } else if (err.status === 429) {
+          setComposeError({ kind: 'tooManyRequests' })
+        } else if (err.status === 422) {
+          const refusal = criteriaRefusal(err.body)
+          if (refusal?.kind === 'coded' && refusal.code === 'NOT_A_TEXT_TASK') {
+            setError({ kind: 'notATextTask' })
+          } else if (refusal?.kind === 'coded' && refusal.code === 'TASK_NOT_READY') {
+            setComposeError({ kind: 'taskNotReady' })
+          } else {
+            setComposeError({ kind: 'failedCompose' })
+          }
+        } else if (err.status >= 500) {
+          setComposeError({ kind: 'failedCompose', is5xx: true })
+        } else {
+          // Covers 409 GENERATION_IN_PROGRESS and any other unexpected 4xx refusal.
+          setComposeError({ kind: 'failedCompose' })
+        }
+      } else {
+        setComposeError({ kind: 'failedCompose' })
+      }
+    } finally {
+      setComposing(false)
+    }
+  }, [documentId, composing])
 
   const backPath = doc?.course_root_id
     ? `/course/${doc.course_root_id}${doc.course_node_id ? `?selected=${doc.course_node_id}` : ''}`
@@ -565,17 +630,104 @@ export function CriteriaEditorPage() {
             </div>
           </div>
         ) : criteria?.status !== 'ready' && criteria ? (
-          <CriteriaStatusCard
-            status={criteria.status}
-            reasonCode={criteria.reason_code}
-            waitingSubmissions={criteria.waiting_submissions}
-            contradictions={criteria.contradictions}
-            courseRootId={doc?.course_root_id}
-            courseNodeId={doc?.course_node_id}
-            courseTitle={tree?.title}
-            taskTitle={docTitle}
-            onRefresh={() => void load()}
-          />
+          <div className="space-y-6">
+            {composeError && composeError.kind !== 'insufficientUnits' && (
+              <div className="card p-4 border border-coral bg-coral-pale/40 text-ink space-y-2">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                    <AlertCircle size={20} className="text-coral shrink-0 mt-0.5" />
+                    <div className="space-y-2 min-w-0 flex-1">
+                      {composeError.kind === 'taskNotReady' && (
+                        <p className="text-sm">
+                          {t('panel.criteria.refusal.taskNotReady')}
+                        </p>
+                      )}
+                      {composeError.kind === 'noAccess' && (
+                        <p className="text-sm">
+                          {t('panel.criteria.refusal.noAccess')}
+                        </p>
+                      )}
+                      {composeError.kind === 'tooManyRequests' && (
+                        <p className="text-sm">
+                          {t('panel.criteria.refusal.tooManyRequests')}
+                        </p>
+                      )}
+                      {composeError.kind === 'failedCompose' && (
+                        <p className="text-sm">
+                          {t('panel.billing.actionFailed')}
+                        </p>
+                      )}
+
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        {composeError.kind === 'taskNotReady' && (
+                          <button
+                            type="button"
+                            onClick={() => void load()}
+                            className="btn-secondary text-xs px-3 py-1.5"
+                          >
+                            {t('panel.criteria.refresh')}
+                          </button>
+                        )}
+                        {composeError.kind === 'failedCompose' &&
+                          composeError.is5xx && (
+                            <ContactAdmin
+                              fallback="after-click"
+                              context={{
+                                course: tree?.title ?? null,
+                                material: docTitle || null,
+                              }}
+                            />
+                          )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setComposeError(null)}
+                    aria-label={t('panel.criteria.closeMessage')}
+                    title={t('panel.criteria.closeMessage')}
+                    className="text-ink-muted hover:text-ink p-1 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-navy/30 shrink-0"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <CriteriaStatusCard
+              status={criteria.status}
+              reasonCode={criteria.reason_code}
+              waitingSubmissions={criteria.waiting_submissions}
+              contradictions={criteria.contradictions}
+              courseRootId={doc?.course_root_id}
+              courseNodeId={doc?.course_node_id}
+              courseTitle={tree?.title}
+              taskTitle={docTitle}
+              onRefresh={() => void load()}
+              onCompose={() => {
+                setComposeError(null)
+                setShowComposeConfirm(true)
+              }}
+              composeBusy={composing}
+              insufficientUnits={composeError?.kind === 'insufficientUnits'}
+            />
+
+            <ConfirmDialog
+              open={showComposeConfirm}
+              title={t('panel.criteria.compose.title')}
+              cancelLabel={t('panel.criteria.cancel')}
+              confirmLabel={t('panel.criteria.compose.confirm')}
+              confirmClass="btn-primary"
+              busy={composing}
+              onCancel={() => {
+                if (!composing) setShowComposeConfirm(false)
+              }}
+              onConfirm={() => void handleCompose()}
+            >
+              <p>{t('panel.criteria.compose.text')}</p>
+            </ConfirmDialog>
+          </div>
         ) : criteria?.in_force ? (
           isEditing ? (
             <CriteriaEditorForm

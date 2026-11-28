@@ -23,6 +23,7 @@ vi.mock('../api/criteria', async (importOriginal) => {
     ...actual,
     criteriaApi: {
       read: vi.fn(),
+      compose: vi.fn(),
       replace: vi.fn(),
       reset: vi.fn(),
     },
@@ -100,7 +101,7 @@ describe('CriteriaEditorPage (spec §3, A2)', () => {
   })
 
   describe('К2. Переліку немає (status ≠ ready)', () => {
-    it('handles awaiting_first_submission without action buttons', async () => {
+    it('handles awaiting_first_submission with compose-now button and without edit/reset/refresh buttons', async () => {
       vi.mocked(criteriaApi.read).mockResolvedValue({
         status: 'awaiting_first_submission',
       })
@@ -108,9 +109,10 @@ describe('CriteriaEditorPage (spec §3, A2)', () => {
 
       expect(
         await screen.findByText(
-          /Перелік критеріїв буде складено після першої подачі роботи/,
+          'Перелік критеріїв ще не складено. Його складе перша подача роботи студента — або складіть його зараз, щоб переглянути й поправити до того, як студенти почнуть здавати роботи.',
         ),
       ).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Скласти перелік зараз' })).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Оновити' })).toBeNull()
       expect(screen.queryByRole('button', { name: 'Правити перелік' })).toBeNull()
       expect(screen.queryByRole('button', { name: 'Повернути перелік системи' })).toBeNull()
@@ -135,7 +137,7 @@ describe('CriteriaEditorPage (spec §3, A2)', () => {
       })
     })
 
-    it('polls reload every 15s while composing', async () => {
+    it('polls reload every 10s while composing', async () => {
       vi.useFakeTimers()
       vi.mocked(criteriaApi.read).mockResolvedValue({
         status: 'composing',
@@ -145,7 +147,7 @@ describe('CriteriaEditorPage (spec §3, A2)', () => {
       await vi.runOnlyPendingTimersAsync()
       expect(criteriaApi.read).toHaveBeenCalledTimes(1)
 
-      await vi.advanceTimersByTimeAsync(15000)
+      await vi.advanceTimersByTimeAsync(10000)
       expect(criteriaApi.read).toHaveBeenCalledTimes(2)
     })
 
@@ -586,7 +588,7 @@ describe('CriteriaEditorPage (spec §3, A2)', () => {
       fireEvent.click(refreshBtn)
 
       expect(
-        await screen.findByText(/Перелік критеріїв буде складено/),
+        await screen.findByText(/Перелік критеріїв ще не складено/),
       ).toBeInTheDocument()
     })
 
@@ -609,7 +611,7 @@ describe('CriteriaEditorPage (spec §3, A2)', () => {
       fireEvent.click(retryBtn)
 
       expect(
-        await screen.findByText(/Перелік критеріїв буде складено/),
+        await screen.findByText(/Перелік критеріїв ще не складено/),
       ).toBeInTheDocument()
     })
 

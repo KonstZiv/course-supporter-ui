@@ -16,6 +16,20 @@ interface CriteriaStatusCardProps {
   courseTitle?: string | null
   taskTitle?: string | null
   onRefresh?: () => void
+  onCompose?: () => void
+  composeBusy?: boolean
+  insufficientUnits?: boolean
+}
+
+function canComposeNow(
+  status: CriteriaStatus,
+  reasonCode?: CriteriaReasonCode | null,
+): boolean {
+  if (status === 'awaiting_first_submission') return true
+  return (
+    status === 'not_composed' &&
+    (reasonCode === 'models_unavailable' || reasonCode === 'not_attempted')
+  )
 }
 
 function resolveStatusKey(
@@ -57,16 +71,22 @@ export function CriteriaStatusCard({
   courseTitle,
   taskTitle,
   onRefresh,
+  onCompose,
+  composeBusy = false,
+  insufficientUnits = false,
 }: CriteriaStatusCardProps) {
   const t = useT()
   const key = resolveStatusKey(status, reasonCode)
-  const message = t(key)
+  const message = insufficientUnits
+    ? t('panel.criteria.compose.insufficientUnits')
+    : t(key)
 
   const backTo = courseRootId
     ? `/course/${courseRootId}${courseNodeId ? `?selected=${courseNodeId}` : ''}`
     : '/'
 
   const needsAdmin =
+    !insufficientUnits &&
     status === 'not_composed' &&
     (reasonCode === 'models_unavailable' ||
       reasonCode === 'limit_reached' ||
@@ -74,10 +94,17 @@ export function CriteriaStatusCard({
       reasonCode === 'not_attempted' ||
       key === 'panel.criteria.status.unknown')
 
+  const showCompose = canComposeNow(status, reasonCode) && onCompose !== undefined
+
   return (
     <div className="space-y-6">
       <div className="card p-6 space-y-4">
-        <p className="text-body text-ink leading-relaxed">{message}</p>
+        <p
+          role={insufficientUnits ? 'alert' : undefined}
+          className="text-body text-ink leading-relaxed"
+        >
+          {message}
+        </p>
 
         {waitingSubmissions !== undefined && waitingSubmissions > 0 && (
           <p className="text-sm font-medium text-ink">
@@ -86,6 +113,26 @@ export function CriteriaStatusCard({
         )}
 
         <div className="flex flex-wrap items-center gap-3 pt-2">
+          {showCompose && (
+            <button
+              type="button"
+              disabled={composeBusy}
+              onClick={onCompose}
+              className="btn-primary text-sm px-4 py-2"
+            >
+              {t('panel.criteria.compose.button')}
+            </button>
+          )}
+
+          {insufficientUnits && (
+            <Link
+              to="/billing"
+              className="btn-secondary text-sm px-4 py-2"
+            >
+              {t('panel.billing.buyUnits')}
+            </Link>
+          )}
+
           {status === 'composing' && onRefresh && (
             <button
               type="button"

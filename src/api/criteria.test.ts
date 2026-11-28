@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CriteriaOverrideRequest } from '../types/api'
 
-const { getMock, putMock, deleteMock } = vi.hoisted(() => ({
+const { getMock, postMock, putMock, deleteMock } = vi.hoisted(() => ({
   getMock: vi.fn(),
+  postMock: vi.fn(),
   putMock: vi.fn(),
   deleteMock: vi.fn(),
 }))
@@ -10,6 +11,7 @@ const { getMock, putMock, deleteMock } = vi.hoisted(() => ({
 vi.mock('./client', () => ({
   api: {
     get: getMock,
+    post: postMock,
     put: putMock,
     delete: deleteMock,
   },
@@ -25,6 +27,11 @@ describe('criteriaApi', () => {
   it('calls read with GET /api/v1/documents/{documentId}/criteria', async () => {
     criteriaApi.read('doc-123')
     expect(getMock).toHaveBeenCalledWith('/api/v1/documents/doc-123/criteria')
+  })
+
+  it('calls compose with POST /api/v1/documents/{documentId}/criteria/compose', async () => {
+    criteriaApi.compose('doc-123')
+    expect(postMock).toHaveBeenCalledWith('/api/v1/documents/doc-123/criteria/compose')
   })
 
   it('calls replace with PUT /api/v1/documents/{documentId}/criteria/override', async () => {

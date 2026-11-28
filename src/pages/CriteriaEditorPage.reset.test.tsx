@@ -305,7 +305,7 @@ describe('CriteriaEditorPage — A4 Скидання та блокування 4
       fireEvent.click(within(dialog).getByRole('button', { name: 'Повернути' }))
 
       expect(
-        await screen.findByText(/Перелік критеріїв буде складено після першої подачі/),
+        await screen.findByText(/Перелік критеріїв ще не складено/),
       ).toBeInTheDocument()
       expect(screen.queryByText('Ваш перелік')).toBeNull()
     })
