@@ -1341,7 +1341,7 @@ export interface CriteriaInForce {
 
 /**
  * What the author sees about a task's criteria (OpenAPI: CriteriaViewResponse).
- * Returned by GET, PUT, and DELETE criteria routes.
+ * Returned by GET, POST compose, PUT, and DELETE criteria routes.
  */
 export interface CriteriaView {
   status: CriteriaStatus

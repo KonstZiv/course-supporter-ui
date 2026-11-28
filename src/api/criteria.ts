@@ -28,6 +28,9 @@ export const criteriaApi = {
   read: (documentId: string) =>
     api.get<CriteriaView>(`/api/v1/documents/${documentId}/criteria`),
 
+  compose: (documentId: string) =>
+    api.post<CriteriaView>(`/api/v1/documents/${documentId}/criteria/compose`),
+
   replace: (documentId: string, body: CriteriaOverrideRequest) =>
     api.put<CriteriaView>(`/api/v1/documents/${documentId}/criteria/override`, body),
 
