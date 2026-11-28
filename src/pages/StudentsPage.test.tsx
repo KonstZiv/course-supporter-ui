@@ -162,4 +162,11 @@ describe('StudentsPage', () => {
     expect(within(selfItem).getByText('записався сам')).toBeInTheDocument()
     expect(within(authorItem).queryByText('записався сам')).toBeNull()
   })
+
+  it('links to the students money page', async () => {
+    renderPage()
+    await screen.findByText('Alice')
+    const link = screen.getByRole('link', { name: 'Гроші студентів' })
+    expect(link).toHaveAttribute('href', '/students/money')
+  })
 })

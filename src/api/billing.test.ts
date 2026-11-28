@@ -14,6 +14,7 @@ vi.mock('./client', async (importOriginal) => {
 import { ApiError } from './client'
 import {
   billingReason,
+  billingStudentsMoney,
   getBalance,
   getCheckout,
   getPackages,
@@ -76,6 +77,15 @@ describe('billing requests', () => {
     expect(postMock.mock.calls).toEqual([
       ['/api/v1/nodes/node-123/summary/estimate', { force: false }],
       ['/api/v1/nodes/node-456/summary/estimate', { force: true }],
+    ])
+  })
+
+  it('reads students money with optional from/to period', () => {
+    void billingStudentsMoney()
+    void billingStudentsMoney('2026-11-01', '2026-11-30')
+    expect(getMock.mock.calls).toEqual([
+      ['/api/v1/billing/students-money'],
+      ['/api/v1/billing/students-money?from=2026-11-01&to=2026-11-30'],
     ])
   })
 })

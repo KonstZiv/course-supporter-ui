@@ -1228,6 +1228,46 @@ export interface BillingSpendingResponse {
   unlinked: BillingSpendingUnits
 }
 
+export interface BillingMoneyAmount {
+  /** ISO 4217 code of the batch's currency. */
+  currency: string
+  /** Whole minor units, rounded once, half up. */
+  amount_minor: number
+}
+
+export interface BillingMoneyFigures {
+  reviews: number
+  units: number
+  money: BillingMoneyAmount[]
+  gift_units: number
+}
+
+export interface BillingMoneyStudent extends BillingMoneyFigures {
+  student_id: string
+  /** Null for a deleted student. */
+  display_name: string | null
+  deleted: boolean
+}
+
+export interface BillingMoneyCourse extends BillingMoneyFigures {
+  course_node_id: string
+  title: string | null
+  students: BillingMoneyStudent[]
+}
+
+export interface BillingMoneyTotals extends BillingMoneyFigures {
+  excluded_test_reviews: number
+}
+
+/** GET /billing/students-money?from&to (inclusive UTC days). */
+export interface BillingStudentsMoneyResponse {
+  from: string
+  to: string
+  totals: BillingMoneyTotals
+  courses: BillingMoneyCourse[]
+  unlinked: BillingMoneyFigures
+}
+
 // ── Criteria (mentor-rebuild task 08 / spec CRITERIA-EDITOR) ──
 
 /**
