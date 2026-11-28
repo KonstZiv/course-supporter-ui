@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowRight, Loader2 } from 'lucide-react'
 import { doorRefusal, portalApi, PortalApiError } from '../api/portalClient'
 import type { JoinCourseCard } from '../types'
@@ -16,6 +16,7 @@ import {
   joinSentAddress,
   rateLimitedText,
   signupFieldFailure,
+  sourceTagFrom,
   type JoinSentState,
 } from '../openCourses'
 import { InvalidPortalLink } from '../components/InvalidPortalLink'
@@ -56,6 +57,8 @@ export function PortalJoinPage() {
 
 function JoinPage({ tenantId, courseKey }: { tenantId: string; courseKey: string }) {
   const t = useT()
+  const [searchParams] = useSearchParams()
+  const sourceTag = sourceTagFrom(searchParams)
   const token = usePortalSession((s) => s.token)
   const sessionTenant = usePortalSession((s) => s.tenantId)
   const [state, setState] = useState<CardState>({ kind: 'loading' })
@@ -112,6 +115,7 @@ function JoinPage({ tenantId, courseKey }: { tenantId: string; courseKey: string
     tenantId,
     courseKey,
     termsVersion: state.card.terms_version,
+    sourceTag,
     onInvalid: markInvalid,
     onTermsChanged: reloadCard,
   }
@@ -161,6 +165,8 @@ interface JoinFormProps {
   courseKey: string
   /** The revision of the terms in force, from the card: the consent is to it. */
   termsVersion: string
+  /** Validated `?src=<tag>` campaign source tag, if present. */
+  sourceTag?: string
   /** The server says the link leads nowhere (any more). */
   onInvalid: () => void
   /** The server says the terms changed: read the card again; true when it was read. */
@@ -194,6 +200,7 @@ function JoinWithLogin({
   tenantId,
   courseKey,
   termsVersion,
+  sourceTag,
   onInvalid,
   onTermsChanged,
 }: JoinFormProps) {
@@ -218,6 +225,7 @@ function JoinWithLogin({
         adult: true,
         terms_version: termsVersion,
         text_sha256: await consentSha256(joinConsentLines(language)),
+        ...(sourceTag !== undefined ? { source_tag: sourceTag } : {}),
       })
       if (res.status === 'already_enrolled') {
         setOutcome({ kind: 'already', courseId: res.course_id })
@@ -288,13 +296,14 @@ function SignupForm({
   tenantId,
   courseKey,
   termsVersion,
+  sourceTag,
   onInvalid,
   onTermsChanged,
 }: JoinFormProps) {
   const language = useLanguage()
   const t = useT()
   const navigate = useNavigate()
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const { marks, ready, askAgain } = useJoinMarks()
 
   const [login, setLogin] = useState('')
@@ -331,6 +340,7 @@ function SignupForm({
         adult: true,
         terms_version: termsVersion,
         text_sha256: await consentSha256(joinConsentLines(language)),
+        ...(sourceTag !== undefined ? { source_tag: sourceTag } : {}),
       })
       const sent: JoinSentState = { emailMasked: res.email_masked }
       navigate(joinSentAddress(tenantId, courseKey, res.signup_id), {
@@ -361,7 +371,7 @@ function SignupForm({
           id="portal.join.haveLogin"
           values={{
             login: (chunks) => (
-              <Link to={loginAddress(tenantId, pathname)} className={SITE_TEXT_LINK_CLASS}>
+              <Link to={loginAddress(tenantId, pathname + search)} className={SITE_TEXT_LINK_CLASS}>
                 {chunks}
               </Link>
             ),
