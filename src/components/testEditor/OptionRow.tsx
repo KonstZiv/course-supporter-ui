@@ -58,7 +58,7 @@ export const OptionRow = memo(function OptionRow({
           checked={option.correct}
           onChange={(event) => onCorrect(event.target.checked)}
           aria-label={correctLabel(language, letter)}
-          className="h-4 w-4 accent-navy rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-navy/30"
+          className="h-4 w-4 accent-navy rounded focus-visible:ring-2 focus-visible:ring-navy/30"
         />
         {texts.correct}
       </label>

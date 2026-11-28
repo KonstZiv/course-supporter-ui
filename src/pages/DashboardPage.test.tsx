@@ -109,7 +109,7 @@ describe('DashboardPage — required course language (Task 2.4.13)', () => {
     // Wait for language list to populate, then pick.
     const select = s.getByRole('combobox')
     await waitFor(() => {
-      expect(within(select).getByText('Ukrainian')).toBeInTheDocument()
+      expect(within(select).getByText('українська')).toBeInTheDocument()
     })
     fireEvent.change(select, { target: { value: 'ukr' } })
     expect(submit).toBeEnabled()
@@ -124,7 +124,7 @@ describe('DashboardPage — required course language (Task 2.4.13)', () => {
 
     const select = s.getByRole('combobox')
     await waitFor(() => {
-      expect(within(select).getByText('English')).toBeInTheDocument()
+      expect(within(select).getByText('англійська')).toBeInTheDocument()
     })
     fireEvent.change(select, { target: { value: 'eng' } })
 

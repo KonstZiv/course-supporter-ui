@@ -22,6 +22,8 @@ vi.mock('../api/portalClient', async (importOriginal) => {
 import { PortalApp } from '../App'
 import { PortalApiError } from '../api/portalClient'
 import { usePortalSession } from '../stores/session'
+import { LanguageProvider } from '../../i18n/LanguageProvider'
+import type { Language } from '../../i18n/languages'
 
 const T = '019eda80-67ea-7060-b4c4-9dc85761690e'
 const COURSE = 'c0ffee00-0000-7000-8000-000000000001'
@@ -30,11 +32,12 @@ function outlook(paidBy: 'self' | 'author') {
   return { reviews_left: null, warning: null, expiring_soon: null, paid_by: paidBy }
 }
 
-function renderAt(path: string) {
+function renderAt(path: string, language?: Language) {
   const router = createMemoryRouter([{ path: '*', element: <PortalApp /> }], {
     initialEntries: [path],
   })
-  render(<RouterProvider router={router} />)
+  const element = <RouterProvider router={router} />
+  render(language ? <LanguageProvider language={language}>{element}</LanguageProvider> : element)
   return router
 }
 
@@ -88,22 +91,26 @@ describe('PortalHeader', () => {
     ['home', `/${T}/home`, 'Мої курси'],
     ['course', `/${T}/courses/${COURSE}`, 'Мої курси'],
     ['units', `/${T}/billing`, 'Юніти'],
-  ])('on the %s page: the name, two items, "Вийти"; the current item marked', async (_, path, current) => {
+  ])('on the %s page: the name, three items, "Вийти"; the current item marked', async (_, path, current) => {
     renderAt(path)
     expect(screen.getByText('Навчальний портал')).toBeInTheDocument()
     expect(screen.getAllByRole('banner')).toHaveLength(1)
     const links = within(nav()).getAllByRole('link')
-    expect(links.map((l) => l.textContent)).toEqual(['Мої курси', 'Юніти'])
+    expect(links.map((l) => l.textContent)).toEqual(['Мої курси', 'Юніти', 'Довідка'])
     expect(links[0]).toHaveAttribute('href', `/${T}/home`)
     expect(links[1]).toHaveAttribute('href', `/${T}/billing`)
+    expect(links[2]).toHaveAttribute('href', 'https://about.pythoncourse.me/uk/students/')
+    expect(links[2]).toHaveAttribute('target', '_blank')
+    expect(links[2]!.getAttribute('rel')).toContain('noopener')
     expect(screen.getByRole('button', { name: 'Вийти' })).toBeInTheDocument()
 
     const marked = within(nav()).getByRole('link', { name: current })
     expect(marked).toHaveAttribute('aria-current')
     expect(marked).toHaveClass('font-semibold', 'underline')
-    const other = links.find((l) => l !== marked)!
-    expect(other).not.toHaveAttribute('aria-current')
-    expect(other).not.toHaveClass('font-semibold')
+    for (const other of links.filter((l) => l !== marked)) {
+      expect(other).not.toHaveAttribute('aria-current')
+      expect(other).not.toHaveClass('font-semibold')
+    }
     await waitFor(() => expect(api.billingOutlook).toHaveBeenCalledWith())
   })
 
@@ -122,13 +129,28 @@ describe('PortalHeader', () => {
     ).toBeInTheDocument()
   })
 
-  it('no "Юніти" when the author pays for the student\'s reviews', async () => {
+  it('no "Юніти" when the author pays for the student\'s reviews, while "Довідка" stays', async () => {
     api.billingOutlook.mockResolvedValue(outlook('author'))
     renderAt(`/${T}/home`)
     await waitFor(() =>
       expect(within(nav()).queryByRole('link', { name: 'Юніти' })).toBeNull(),
     )
     expect(within(nav()).getByRole('link', { name: 'Мої курси' })).toBeInTheDocument()
+    const help = within(nav()).getByRole('link', { name: 'Довідка' })
+    expect(help).toHaveAttribute('href', 'https://about.pythoncourse.me/uk/students/')
+    expect(help).toHaveAttribute('target', '_blank')
+    expect(help.getAttribute('rel')).toContain('noopener')
+  })
+
+  it('in English: "Help" points to the English student docs in a new tab', async () => {
+    renderAt(`/${T}/home`, 'en')
+    const englishNav = screen.getByRole('navigation', { name: 'Portal sections' })
+    const help = within(englishNav).getByRole('link', { name: 'Help' })
+    expect(help).toHaveAttribute('href', 'https://about.pythoncourse.me/en/students/')
+    expect(help).toHaveAttribute('target', '_blank')
+    expect(help.getAttribute('rel')).toContain('noopener')
+    expect(help).not.toHaveAttribute('aria-current')
+    await waitFor(() => expect(api.billingOutlook).toHaveBeenCalledWith())
   })
 
   it('the units page still opens by its address when the author pays', async () => {

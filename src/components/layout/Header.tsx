@@ -47,10 +47,10 @@ export function Header({
     clsx(
       // Д2: below `sm` (the 320 floor) the nav icons take the tightest padding.
       // 1Б: with eight controls the icon-only row overran 640 at px-4, so from
-      // `sm` to `xl` it is px-2.5; from `xl`, where the labels show, px-4 returns.
+      // `sm` to `2xl` it is px-2.5; from `2xl`, where the labels show, px-3 returns.
       // Below `sm` the row scrolls and would clip the focus outline drawn around
       // a control: there the outline is drawn inside it (NAV_FOCUS).
-      'flex items-center gap-2 px-2 sm:px-2.5 xl:px-4 py-2 rounded-xl text-sm font-medium transition-colors',
+      'flex items-center gap-2 px-2 sm:px-2.5 2xl:px-3 py-2 rounded-xl text-sm font-medium transition-colors',
       NAV_FOCUS,
       active
         ? 'bg-navy-pale text-navy'
@@ -88,26 +88,11 @@ export function Header({
             a narrow window. Independent of the remaining width. */}
         <div className="w-px h-6 bg-canvas-dark/60 shrink-0" aria-hidden />
 
-        {/* Nav. ONE switching point for the whole header (§3 c7): below `xl` every
-            label collapses to its icon so the strip keeps its width (В4) — a single
-            breakpoint, so the labels never vanish at a different width than the one
-            the strip flexes at. (1Б: the point moved from `lg` to `xl` — seven
-            labels already overran 1024 by 134px, the eighth by 236px, measured.) The name lives on in aria-label + title, so screen
-            readers and hover survive the collapse (the c4 source-type-icon rule).
-            О5 (ratified 2026-08-17): with Довідка the row is seven controls. The
-            baseline six filled the 320 floor exactly, so the seventh overran it by
-            17px (measured). The inter-item gap tightens on the narrow tier only
-            (gap-0.5, from gap-1); together with the container gap (gap-1, above) that
-            reclaims the 17px, so seven controls clear 320 — the ratified envelope
-            (О5): gaps only, no new breakpoint, no glyph shrink, no hidden item.
-            1Б: «Юніти» makes eight controls, 27px past the 320 floor with the
-            gaps already at their least (measured). Below `sm` the row scrolls
-            sideways inside itself — no visible bar, the page itself never
-            scrolls sideways. A control reached by Tab is brought fully into
-            view (the browser does so only for one wholly out of view), and its
-            focus outline is drawn inside it, where the row cannot clip it. From
-            `sm` the row does not scroll, and the page does not scroll sideways
-            at any width. */}
+        {/* Nav. ONE switching point for the whole header (§3 c7): below `2xl` every
+            label collapses to its icon so the strip and language switcher keep room
+            from 1024 to 1600 px in both languages — a single breakpoint, so all
+            labels appear or hide together. The name lives on in aria-label + title,
+            so screen readers and hover survive the collapse (the c4 source-type-icon rule). */}
         <nav
           className="flex items-center gap-0.5 sm:gap-1 min-w-0 overflow-x-auto
                      [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
@@ -125,7 +110,7 @@ export function Header({
               className={linkClass(location.pathname === to)}
             >
               <Icon size={16} />
-              <span className="hidden xl:inline">{label}</span>
+              <span className="hidden 2xl:inline">{label}</span>
             </Link>
           ))}
           {/* A move to /logout, not the key dropped here: a page that holds
@@ -135,13 +120,13 @@ export function Header({
             aria-label={t('panel.header.logout')}
             title={t('panel.header.logout')}
             className={clsx(
-              'flex items-center gap-2 px-2 sm:px-2.5 xl:px-4 py-2 rounded-xl text-sm font-medium',
+              'flex items-center gap-2 px-2 sm:px-2.5 2xl:px-3 py-2 rounded-xl text-sm font-medium',
               'text-ink-muted hover:bg-coral-pale hover:text-coral transition-colors ml-1 sm:ml-2',
               NAV_FOCUS,
             )}
           >
             <LogOut size={16} />
-            <span className="hidden xl:inline">{t('panel.header.logout')}</span>
+            <span className="hidden 2xl:inline">{t('panel.header.logout')}</span>
           </button>
         </nav>
         <PanelLanguageSwitcher className="shrink-0" />

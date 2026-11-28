@@ -22,6 +22,7 @@
  */
 
 import { configApi } from '../api/config'
+import { localeOf, type Language } from '../i18n/languages'
 import type { LanguageEntry } from '../types/api'
 
 let _cache: LanguageEntry[] | null = null
@@ -54,4 +55,30 @@ export function getCachedLanguages(): LanguageEntry[] | null {
 export function findLanguage(code: string | null | undefined): LanguageEntry | null {
   if (!code || _cache === null) return null
   return _cache.find((l) => l.code === code) ?? null
+}
+
+/**
+ * Localized display name for a language code in the given interface language.
+ * Falls back to ``fallbackNameEn`` (or cached ``name_en`` / ``code``) when
+ * ``Intl.DisplayNames`` does not recognize the code or throws.
+ */
+export function languageDisplayName(
+  code: string,
+  interfaceLanguage: Language,
+  fallbackNameEn?: string,
+): string {
+  const fallback = fallbackNameEn ?? findLanguage(code)?.name_en ?? code
+  if (!code) return fallback
+  try {
+    const names = new Intl.DisplayNames([localeOf(interfaceLanguage)], {
+      type: 'language',
+    })
+    const label = names.of(code)
+    if (label && label.toLowerCase() !== code.toLowerCase()) {
+      return label
+    }
+  } catch {
+    // Unknown/malformed codes or unsupported Intl.DisplayNames fall back below.
+  }
+  return fallback
 }

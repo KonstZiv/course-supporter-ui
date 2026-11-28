@@ -5,7 +5,7 @@ import { usePortalSession } from '../stores/session'
 import { portalApi, PortalApiError } from '../api/portalClient'
 import { PortalHeader } from '../components/PortalHeader'
 import { RecoveryEmailSection } from '../components/RecoveryEmailSection'
-import type { PortalCourseListItem } from '../types'
+import type { PortalBillingOutlook, PortalCourseListItem } from '../types'
 import { useAvailableUnits, useStudentOutlook } from '../hooks/useStudentOutlook'
 import { UnitsReminders } from '../components/billing/UnitsReminders'
 import { SITE_TEXT_LINK_CLASS } from '../../components/site/siteLinks'
@@ -18,8 +18,13 @@ import { useLanguage, useT } from '../../i18n/LanguageContext'
  * the answers are on their way, when one failed, when the author pays, or
  * while charging is off (operator 2026-11-16, A).
  */
-function UnitsOutlook({ tenantId }: { tenantId: string | undefined }) {
-  const { outlook } = useStudentOutlook()
+function UnitsOutlook({
+  tenantId,
+  outlook,
+}: {
+  tenantId: string | undefined
+  outlook: PortalBillingOutlook | null
+}) {
   const available = useAvailableUnits()
   const language = useLanguage()
   const t = useT()
@@ -57,6 +62,7 @@ export function PortalHomePage() {
   const navigate = useNavigate()
   const t = useT()
 
+  const { outlook } = useStudentOutlook()
   const [courses, setCourses] = useState<PortalCourseListItem[] | null>(null)
   const [error, setError] = useState(false)
 
@@ -77,11 +83,11 @@ export function PortalHomePage() {
 
   return (
     <div className="flex-1">
-      <PortalHeader current="courses" />
+      <PortalHeader current="courses" paidBy={outlook?.paid_by ?? null} />
 
       <main className="max-w-4xl mx-auto px-6 py-12">
         <h1 className="page-title">{t('portal.home.greeting', { name })}</h1>
-        <UnitsOutlook tenantId={tenantId} />
+        <UnitsOutlook tenantId={tenantId} outlook={outlook} />
         <p className="page-subtitle">{t('portal.home.subtitle')}</p>
 
         {error && (

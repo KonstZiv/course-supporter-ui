@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { BookOpen, LogOut, Package } from 'lucide-react'
+import { BookOpen, HelpCircle, LogOut, Package } from 'lucide-react'
 import { clsx } from 'clsx'
 import { usePortalSession } from '../stores/session'
 import { portalApi } from '../api/portalClient'
 import type { PortalBillingOutlook } from '../types'
-import { useT } from '../../i18n/LanguageContext'
+import { docsUrl } from '../../components/site/siteLinks'
+import { useLanguage, useT } from '../../i18n/LanguageContext'
 import { LanguageSwitcher } from './LanguageSwitcher'
 
 /** The portal's sections; the header marks the one a page belongs to. */
@@ -15,10 +16,15 @@ export type PortalSection = 'courses' | 'units'
  * Who pays for this student's reviews, by the outlook without a course: only
  * a payment rule for the student counts (a course's own rule is the task
  * page's business). Null while there is no answer, or the ask failed.
+ * When ``override`` is passed (including ``null`` while the parent's own
+ * outlook request is still in flight), no duplicate request is made.
  */
-function usePaidBy(): PortalBillingOutlook['paid_by'] | null {
+function usePaidBy(
+  override?: PortalBillingOutlook['paid_by'] | null,
+): PortalBillingOutlook['paid_by'] | null {
   const [paidBy, setPaidBy] = useState<PortalBillingOutlook['paid_by'] | null>(null)
   useEffect(() => {
+    if (override !== undefined) return
     let cancelled = false
     portalApi
       .billingOutlook()
@@ -31,8 +37,8 @@ function usePaidBy(): PortalBillingOutlook['paid_by'] | null {
     return () => {
       cancelled = true
     }
-  }, [])
-  return paidBy
+  }, [override])
+  return override !== undefined ? override : paidBy
 }
 
 const ITEM =
@@ -43,12 +49,19 @@ const ITEM =
  * "Юніти" (unless the author pays for the student's reviews), the language
  * switcher and "Вийти".
  */
-export function PortalHeader({ current }: { current: PortalSection }) {
+export function PortalHeader({
+  current,
+  paidBy: paidByOverride,
+}: {
+  current: PortalSection
+  paidBy?: PortalBillingOutlook['paid_by'] | null
+}) {
   const { tenantId } = useParams()
   const { pathname } = useLocation()
   const clear = usePortalSession((s) => s.clear)
   const navigate = useNavigate()
-  const paidBy = usePaidBy()
+  const paidBy = usePaidBy(paidByOverride)
+  const language = useLanguage()
   const t = useT()
 
   const items: { section: PortalSection; label: string; to: string; icon?: React.ReactNode }[] = [
@@ -99,6 +112,17 @@ export function PortalHeader({ current }: { current: PortalSection }) {
                 </li>
               )
             })}
+            <li>
+              <a
+                href={docsUrl(language, 'students/')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={clsx(ITEM, 'text-ink no-underline hover:underline')}
+              >
+                <HelpCircle size={16} aria-hidden />
+                {t('portal.nav.help')}
+              </a>
+            </li>
           </ul>
         </nav>
         <LanguageSwitcher className="ms-auto" />

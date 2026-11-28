@@ -14,11 +14,15 @@ vi.mock('../api/students', () => ({
   },
 }))
 
-vi.mock('../utils/languages', () => ({
-  findLanguage: vi.fn((code: string | null | undefined) =>
-    code === 'ukr' ? { code: 'ukr', name_en: 'Ukrainian', name_native: 'Українська' } : null,
-  ),
-}))
+vi.mock('../utils/languages', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../utils/languages')>()
+  return {
+    ...actual,
+    findLanguage: vi.fn((code: string | null | undefined) =>
+      code === 'ukr' ? { code: 'ukr', name_en: 'Ukrainian', name_native: 'Українська' } : null,
+    ),
+  }
+})
 
 function makeDetail(
   overrides: Partial<AuthorSubmissionDetail> = {},
@@ -123,7 +127,7 @@ describe('StudentSubmissionPage', () => {
     ).toBeInTheDocument()
     expect(screen.getByText('Alice')).toBeInTheDocument()
     expect(screen.getByText('Спроба 2')).toBeInTheDocument()
-    expect(screen.getByText('Мова рецензії: Ukrainian')).toBeInTheDocument()
+    expect(screen.getByText('Мова рецензії: українська')).toBeInTheDocument()
 
     expect(screen.getByRole('link', { name: '← Здачі студента' })).toHaveAttribute(
       'href',
@@ -368,5 +372,68 @@ describe('StudentSubmissionPage', () => {
     expect(screen.getByRole('heading', { name: 'Good job' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Переписка' })).toBeNull()
     expect(screen.queryByText(/Comments unavailable/)).toBeNull()
+  })
+
+  it('renders backtick code spans in criterion text in breakdown and thread headers', async () => {
+    vi.mocked(studentsApi.submission).mockResolvedValue(
+      makeDetail({
+        criteria: [
+          {
+            item_id: 'c1',
+            item_kind: 'criterion',
+            text: 'Use `binary_search()` helper',
+            weight: 'must',
+            must_by_author: true,
+            verdict: 'met',
+            quote: null,
+            quote_line_start: null,
+            missing: null,
+            remark_state: null,
+          },
+        ],
+      }),
+    )
+    vi.mocked(studentsApi.submissionComments).mockResolvedValueOnce({
+      accepting_replies: true,
+      threads: [
+        {
+          item_id: 'c1',
+          comments: [
+            {
+              id: 'cm-1',
+              submission_id: 'sub-2',
+              item_id: 'c1',
+              parent_id: null,
+              author: 'student',
+              kind: 'question',
+              body: 'Why?',
+              created_at: '2026-11-12T10:00:00Z',
+              answered_in_submission_id: null,
+            },
+          ],
+        },
+      ],
+    })
+
+    renderPage()
+    const codes = await screen.findAllByText('binary_search()', { selector: 'code' })
+    expect(codes).toHaveLength(2)
+  })
+
+  it('omits a duplicate leading "Рецензія" / "Review" heading from review_markdown while keeping other headings', async () => {
+    vi.mocked(studentsApi.submission).mockResolvedValueOnce(
+      makeDetail({
+        review_markdown: '# Рецензія\n\n## Підсумок\n\nДобре виконано.',
+      }),
+    )
+    renderPage()
+
+    expect(
+      await screen.findByRole('heading', { name: 'Підсумок' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getAllByRole('heading', { name: 'Рецензія' }),
+    ).toHaveLength(1)
+    expect(screen.getByText('Добре виконано.')).toBeInTheDocument()
   })
 })
