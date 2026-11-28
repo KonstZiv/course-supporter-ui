@@ -15,7 +15,10 @@ import { PortalCheckoutNotice } from '../components/billing/PortalCheckoutNotice
 import { PortalPackagesSection } from '../components/billing/PortalPackagesSection'
 import { billingText } from '../billingTexts'
 import { useLanguage, useT } from '../../i18n/LanguageContext'
-import { useStudentOutlook } from '../hooks/useStudentOutlook'
+import {
+  useStudentOutlook,
+  useZeroUnitsNumbers,
+} from '../hooks/useStudentOutlook'
 import { UnitsReminders } from '../components/billing/UnitsReminders'
 import { SITE_TEXT_LINK_CLASS } from '../../components/site/siteLinks'
 import { reviewsLeftLine } from '../unitsTexts'
@@ -55,13 +58,24 @@ function scrollToPackages() {
  * on (operator 2026-11-16, A: while it is off, nothing about units running
  * short).
  */
-function OutlookLines({ outlook }: { outlook: PortalBillingOutlook | null }) {
+function OutlookLines({
+  outlook,
+  available,
+}: {
+  outlook: PortalBillingOutlook | null
+  available: number
+}) {
+  const eligible =
+    outlook?.paid_by === 'self' && outlook.charging_enabled && available === 0
+  const publicNumbers = useZeroUnitsNumbers(eligible)
   const language = useLanguage()
   const t = useT()
   if (outlook?.paid_by !== 'self' || !outlook.charging_enabled) return null
   return (
     <UnitsReminders
       outlook={outlook}
+      available={available}
+      publicNumbers={publicNumbers}
       lead={
         outlook.reviews_left === null || outlook.reviews_left === 0
           ? null
@@ -213,7 +227,7 @@ export function PortalBillingPage() {
           <BalanceCard
             balance={balance}
             withDifference={false}
-            reminders={<OutlookLines outlook={outlook} />}
+            reminders={<OutlookLines outlook={outlook} available={balance.available} />}
           />
         ) : (
           !loadFailed && <Loading />

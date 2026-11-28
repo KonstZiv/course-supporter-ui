@@ -43,6 +43,7 @@ import type {
   SubmissionPolicyResponse,
   PortalMe,
   PortalMediaResponse,
+  PortalPublicNumbers,
   PortalReviewEstimate,
   PortalSubmissionDetail,
   PortalSubmissionListItem,
@@ -447,6 +448,12 @@ export const portalApi = {
   // Without ``course_id``: only a payment rule for the student counts.
   billingOutlook: () =>
     authGet<PortalBillingOutlook>('/api/v1/portal/billing/outlook'),
+  // Public package list and typical review costs (no student token).
+  publicNumbers: async (): Promise<PortalPublicNumbers> => {
+    const res = await fetch(`${BASE_URL}/api/v1/public/numbers`)
+    if (!res.ok) throw await parseError(res)
+    return res.json() as Promise<PortalPublicNumbers>
+  },
 }
 
 // The request a ``login_taken`` refusal of the confirm names

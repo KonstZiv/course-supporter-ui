@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { portalApi } from '../api/portalClient'
-import type { PortalBillingBalance, PortalBillingOutlook } from '../types'
+import type {
+  PortalBillingBalance,
+  PortalBillingOutlook,
+  PortalPublicNumbers,
+} from '../types'
 
 /** Calls ``onVisible`` whenever the tab comes back into view. */
 export function useOnVisible(onVisible: () => void) {
@@ -76,4 +80,43 @@ export function useAvailableUnits() {
   useOnVisible(() => void reload())
 
   return balance?.available ?? null
+}
+
+/**
+ * Public review cost and package numbers (`GET /api/v1/public/numbers`), read
+ * once per page open when `eligible` becomes true (self-paying student,
+ * charging enabled, available === 0) — never re-fetched on tab return.
+ * Returns `undefined` while idle/loading, `null` if the request failed, or the
+ * response payload on success.
+ */
+export function useZeroUnitsNumbers(
+  eligible: boolean,
+): PortalPublicNumbers | null | undefined {
+  const [numbers, setNumbers] = useState<PortalPublicNumbers | null | undefined>(
+    undefined,
+  )
+  const started = useRef(false)
+  const alive = useRef(true)
+
+  useEffect(() => {
+    alive.current = true
+    return () => {
+      alive.current = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!eligible || started.current) return
+    started.current = true
+    portalApi
+      .publicNumbers()
+      .then((found) => {
+        if (alive.current) setNumbers(found)
+      })
+      .catch(() => {
+        if (alive.current) setNumbers(null)
+      })
+  }, [eligible])
+
+  return numbers
 }

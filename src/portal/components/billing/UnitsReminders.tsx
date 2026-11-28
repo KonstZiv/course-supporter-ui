@@ -1,6 +1,6 @@
-import type { PortalBillingOutlook } from '../../types'
+import type { PortalBillingOutlook, PortalPublicNumbers } from '../../types'
 import { useLanguage, useT } from '../../../i18n/LanguageContext'
-import { expiringReminder, lowReminder } from '../../unitsTexts'
+import { expiringReminder, lowReminder, zeroUnitsReminder } from '../../unitsTexts'
 
 interface Reminder {
   key: string
@@ -15,17 +15,26 @@ interface Reminder {
  * in the browser: each goes when its condition does. Nothing renders when
  * there is nothing to say.
  *
+ * When the student pays themselves, charging is enabled, and ``available === 0``,
+ * the ``nextMayFail`` line is replaced by the zero-units reminder (priced when
+ * ``publicNumbers`` is ready, plain when unavailable/failed, omitted while
+ * ``publicNumbers === undefined`` so nothing flashes).
+ *
  * ``buy`` — what "buy units" is on this page (a scroll to the packages, or a
  * way to "Юніти"); ``units`` — the way to "Юніти" beside the expiry, when the
  * page is not "Юніти" itself.
  */
 export function UnitsReminders({
   outlook,
+  available = null,
+  publicNumbers,
   lead = null,
   buy,
   units = null,
 }: {
   outlook: PortalBillingOutlook
+  available?: number | null
+  publicNumbers?: PortalPublicNumbers | null
   lead?: string | null
   buy: React.ReactNode
   units?: React.ReactNode
@@ -33,15 +42,27 @@ export function UnitsReminders({
   const language = useLanguage()
   const t = useT()
   const reminders: Reminder[] = []
-  if (outlook.warning === 'low' && outlook.reviews_left !== null) {
-    const text =
-      outlook.reviews_left === 0
-        ? t('portal.units.nextMayFail')
-        : lowReminder(language, outlook.reviews_left)
-    reminders.push({ key: 'low', text, action: buy })
-  }
-  if (outlook.warning === 'next_may_fail') {
-    reminders.push({ key: 'next', text: t('portal.units.nextMayFail'), action: buy })
+  const zeroUnits =
+    outlook.paid_by === 'self' && outlook.charging_enabled && available === 0
+  if (zeroUnits) {
+    if (publicNumbers !== undefined) {
+      reminders.push({
+        key: 'zero',
+        text: zeroUnitsReminder(language, publicNumbers),
+        action: buy,
+      })
+    }
+  } else {
+    if (outlook.warning === 'low' && outlook.reviews_left !== null) {
+      const text =
+        outlook.reviews_left === 0
+          ? t('portal.units.nextMayFail')
+          : lowReminder(language, outlook.reviews_left)
+      reminders.push({ key: 'low', text, action: buy })
+    }
+    if (outlook.warning === 'next_may_fail') {
+      reminders.push({ key: 'next', text: t('portal.units.nextMayFail'), action: buy })
+    }
   }
   if (outlook.expiring_soon) {
     const { units: expiring, expires_on: on } = outlook.expiring_soon
