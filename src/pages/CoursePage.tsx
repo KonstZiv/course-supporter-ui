@@ -11,7 +11,7 @@ import { RunStatePanel } from '../components/flow/RunStatePanel'
 import { RejectionNotice } from '../components/flow/RejectionNotice'
 import { SummaryModal } from '../components/flow/SummaryModal'
 import { MethodistRunDialog } from '../components/flow/MethodistRunDialog'
-import { ArrowLeft, Loader2, AlertTriangle, Pencil, Check, X } from 'lucide-react'
+import { ArrowLeft, Loader2, AlertTriangle, Pencil, Check, X, BarChart3 } from 'lucide-react'
 import { LanguageSelect, LanguageBadge } from '../components/ui/LanguageSelect'
 import { EnrollmentLinkControl } from '../components/course/EnrollmentLinkControl'
 import { findNode } from '../utils/tree'
@@ -224,6 +224,13 @@ export function CoursePage() {
 
         {/* O-3: enrolment by the course link */}
         <EnrollmentLinkControl courseId={tree.id} />
+        <Link
+          to={`/course/${tree.id}/progress`}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-canvas-dark text-sm text-ink"
+        >
+          <BarChart3 size={14} className="text-ink-muted" />
+          {t('panel.courseProgress.button')}
+        </Link>
 
         {/* Course language — inline view / editor */}
         <div className="flex items-center gap-2 shrink-0">

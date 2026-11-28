@@ -128,6 +128,13 @@ describe('CoursePage — ?selected preselect (A-UI-2)', () => {
     await waitFor(() => expect(screen.getByText('root-1')).toBeInTheDocument())
     expect(useCourseStore.getState().selectedNodeId).toBeNull()
   })
+
+  it('показує кнопку «Успішність», що веде на /course/{id}/progress', async () => {
+    getDetailMock.mockResolvedValue(makeNode('root-1'))
+    renderAt('/course/root-1')
+    const progressLink = await screen.findByRole('link', { name: 'Успішність' })
+    expect(progressLink).toHaveAttribute('href', '/course/root-1/progress')
+  })
 })
 
 describe('CoursePage — запуск Методиста через діалог (Г-27)', () => {

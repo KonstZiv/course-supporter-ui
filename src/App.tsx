@@ -5,6 +5,7 @@ import { syncServerPanelLanguage } from './stores/panelLanguage'
 import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { CoursePage } from './pages/CoursePage'
+import { CourseProgressPage } from './pages/CourseProgressPage'
 import { ConfirmRolesPage } from './pages/ConfirmRolesPage'
 import { CostPage } from './pages/CostPage'
 import { HomeworkCostPage } from './pages/HomeworkCostPage'
@@ -84,6 +85,7 @@ export default function App() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="course/:nodeId" element={<CoursePage />} />
+        <Route path="course/:courseId/progress" element={<CourseProgressPage />} />
         <Route
           path="document/:documentId/confirm-roles"
           element={<ConfirmRolesPage />}
