@@ -777,6 +777,40 @@ export interface PortalBillingOutlook {
   charging_enabled: boolean
 }
 
+// GET /api/v1/public/numbers: public package list and typical review costs
+// (no student session). Numbers are already rounded server-side.
+export interface PortalPublicNumbersPackage {
+  id: string
+  units: number
+  price_minor: number
+  currency: string
+  validity_months: number
+  tax_mode: string
+}
+
+export interface PortalPublicNumbersReviewCost {
+  status: string
+  actual: {
+    min: number | null
+    typical: number | null
+    max: number | null
+  } | null
+  smallest_package_reviews: {
+    low: number | null
+    typical: number | null
+    high: number | null
+  } | null
+}
+
+export interface PortalPublicNumbers {
+  contract_version: number
+  packages: PortalPublicNumbersPackage[]
+  review_cost: {
+    homework: PortalPublicNumbersReviewCost
+    project?: PortalPublicNumbersReviewCost
+  }
+}
+
 // POST /portal/tasks/{authored_document_id}/estimate (BIL-E, part B): what a
 // review of this task costs before it is sent — without a file, the task's
 // typical price; with the file about to be sent, the price of that file (the

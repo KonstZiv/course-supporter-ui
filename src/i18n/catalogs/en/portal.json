@@ -16,6 +16,8 @@
   "portal.units.availableWithReviews": "{units} available — enough for about {reviews}.",
   "portal.units.lowReminder": "Your units will last for about {reviews}. Buy a package in advance to keep submitting work without a break.",
   "portal.units.nextMayFail": "You may not have enough units for the next review.",
+  "portal.units.zeroPriced": "Reviews of your work are paid. One review usually costs {typical} (from {min} to {max}; a project review costs more). The smallest package ({package}) covers about {low}–{high, plural, one {# review} other {# reviews}}.",
+  "portal.units.zeroPlain": "Reviews of your work are paid for in units.",
   "portal.units.expiringReminder": "{units} will expire on {date}: that is when the package’s term ends.",
   "portal.units.costOverReserve": "The actual cost ({cost}) exceeded the reserve ({charged}). The review is complete. {charged} were charged — the amount that was reserved; the platform covers the rest of the cost.",
   "portal.billing.subtitle": "Units pay for the automatic review of your work. A unit is not money and not a means of payment, but an amount of the platform’s service.",

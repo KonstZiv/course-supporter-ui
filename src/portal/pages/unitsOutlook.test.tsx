@@ -5,8 +5,11 @@ import type {
   PortalBillingBalance,
   PortalBillingOutlook,
   PortalBillingPackages,
+  PortalPublicNumbers,
 } from '../types'
 import { formatReviews } from '../../utils/units'
+import { LanguageProvider } from '../../i18n/LanguageProvider'
+import type { Language } from '../../i18n/languages'
 
 // Stage 2b, 5.4: "вистачить приблизно на N перевірок" and the reminders, on
 // "Юніти" under what is available and on "Мої курси" under the greeting —
@@ -20,6 +23,7 @@ const api = vi.hoisted(() => ({
   billingPackages: vi.fn(),
   billingStatement: vi.fn(),
   courses: vi.fn(),
+  publicNumbers: vi.fn(),
 }))
 vi.mock('../api/portalClient', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../api/portalClient')>()
@@ -65,7 +69,7 @@ const LOW = 'Юнітів вистачить приблизно на 2 пере�
 const NEXT = 'На наступну перевірку юнітів може не вистачити.'
 const EXPIRY = '500 юнітів згорить 1 грудня 2026: тоді закінчується строк пакета.'
 
-function renderAt(path: string) {
+function renderAt(path: string, language: Language = 'uk') {
   const router = createMemoryRouter(
     [
       { path: '/:tenantId/billing', element: <PortalBillingPage /> },
@@ -73,11 +77,39 @@ function renderAt(path: string) {
     ],
     { initialEntries: [path] },
   )
-  render(<RouterProvider router={router} />)
+  render(
+    <LanguageProvider language={language}>
+      <RouterProvider router={router} />
+    </LanguageProvider>,
+  )
   return router
 }
 
 const settle = () => act(async () => {})
+
+const PUBLIC_NUMBERS: PortalPublicNumbers = {
+  contract_version: 1,
+  packages: [
+    { id: 'units-500-v1', units: 500, price_minor: 999, currency: 'EUR', validity_months: 6, tax_mode: 'exclusive' },
+    { id: 'units-1500-v1', units: 1500, price_minor: 1499, currency: 'EUR', validity_months: 6, tax_mode: 'exclusive' },
+  ],
+  review_cost: {
+    homework: {
+      status: 'ready',
+      actual: { min: 44, typical: 72, max: 163 },
+      smallest_package_reviews: { low: 2, typical: 4, high: 7 },
+    },
+  },
+}
+
+const ZERO_BALANCE: PortalBillingBalance = { ...BALANCE, balance: 0, available: 0 }
+
+const ZERO_PRICED_UK =
+  'Перевірки робіт платні. Одна перевірка зазвичай коштує 72 юніти (від 44 до 163; перевірка проєкту — дорожче). Найменшого пакета (500 юнітів) вистачає приблизно на 2–7 перевірок.'
+const ZERO_PRICED_EN =
+  'Reviews of your work are paid. One review usually costs 72 units (from 44 to 163; a project review costs more). The smallest package (500 units) covers about 2–7 reviews.'
+const ZERO_PLAIN_UK = 'Перевірки робіт оплачуються юнітами.'
+const ZERO_PLAIN_EN = 'Reviews of your work are paid for in units.'
 
 beforeEach(() => {
   for (const mock of Object.values(api)) mock.mockReset()
@@ -86,6 +118,7 @@ beforeEach(() => {
   api.billingStatement.mockResolvedValue({ items: [], next_cursor: null })
   api.courses.mockResolvedValue([])
   api.billingOutlook.mockResolvedValue(outlook())
+  api.publicNumbers.mockResolvedValue(PUBLIC_NUMBERS)
 })
 
 // jsdom draws nothing, so it has no scrolling of its own: a test puts one in
@@ -296,4 +329,107 @@ describe('"Мої курси"', () => {
     await screen.findByText('Вас поки не зараховано на жоден курс.')
     expect(screen.queryByText(/Доступно/)).toBeNull()
   })
+})
+
+describe('zero units line (Г-45)', () => {
+  it.each([
+    ['home', `/${T}/home`, 'link', 'uk', ZERO_PRICED_UK, 'Купити юніти'],
+    ['home', `/${T}/home`, 'link', 'en', ZERO_PRICED_EN, 'Buy units'],
+    ['billing', `/${T}/billing`, 'button', 'uk', ZERO_PRICED_UK, 'Купити юніти'],
+    ['billing', `/${T}/billing`, 'button', 'en', ZERO_PRICED_EN, 'Buy units'],
+  ] as const)(
+    '%s (%s): available 0 + ready numbers → variant A, buy action present, no nextMayFail',
+    async (_, path, actionRole, lang, expectedText, buyLabel) => {
+      api.billingBalance.mockResolvedValue(ZERO_BALANCE)
+      api.billingOutlook.mockResolvedValue(outlook({ reviews_left: 0, warning: 'next_may_fail' }))
+      renderAt(path, lang)
+      const item = (await screen.findByText(expectedText)).closest('li')!
+      expect(within(item).getByRole(actionRole, { name: buyLabel })).toBeInTheDocument()
+      expect(screen.queryByText(NEXT)).toBeNull()
+      expect(screen.queryByText('You may not have enough units for the next review.')).toBeNull()
+      expect(api.publicNumbers).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it('reads publicNumbers only once on open, not again on tab return', async () => {
+    api.billingBalance.mockResolvedValue(ZERO_BALANCE)
+    api.billingOutlook.mockResolvedValue(outlook({ reviews_left: 0, warning: 'next_may_fail' }))
+    renderAt(`/${T}/home`)
+    await screen.findByText(ZERO_PRICED_UK)
+    expect(api.publicNumbers).toHaveBeenCalledTimes(1)
+
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible')
+    await act(async () => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    expect(api.publicNumbers).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ['home', `/${T}/home`, 'uk', ZERO_PLAIN_UK],
+    ['home', `/${T}/home`, 'en', ZERO_PLAIN_EN],
+    ['billing', `/${T}/billing`, 'uk', ZERO_PLAIN_UK],
+    ['billing', `/${T}/billing`, 'en', ZERO_PLAIN_EN],
+  ] as const)(
+    '%s (%s): available 0 + insufficient_data → variant B',
+    async (_, path, lang, expectedText) => {
+      api.billingBalance.mockResolvedValue(ZERO_BALANCE)
+      api.billingOutlook.mockResolvedValue(outlook({ reviews_left: null, warning: null }))
+      api.publicNumbers.mockResolvedValue({
+        ...PUBLIC_NUMBERS,
+        review_cost: {
+          homework: { status: 'insufficient_data', actual: null, smallest_package_reviews: null },
+        },
+      })
+      renderAt(path, lang)
+      expect(await screen.findByText(expectedText)).toBeInTheDocument()
+      expect(screen.queryByRole('alert')).toBeNull()
+    },
+  )
+
+  it.each([
+    ['home', `/${T}/home`],
+    ['billing', `/${T}/billing`],
+  ] as const)(
+    '%s: available 0 + publicNumbers rejected → variant B, no error on page',
+    async (_, path) => {
+      api.billingBalance.mockResolvedValue(ZERO_BALANCE)
+      api.billingOutlook.mockResolvedValue(outlook({ reviews_left: 0, warning: 'next_may_fail' }))
+      api.publicNumbers.mockRejectedValue(new Error('network error'))
+      renderAt(path)
+      expect(await screen.findByText(ZERO_PLAIN_UK)).toBeInTheDocument()
+      expect(screen.queryByRole('alert')).toBeNull()
+      expect(screen.queryByText(NEXT)).toBeNull()
+    },
+  )
+
+  it.each([
+    ['home', `/${T}/home`],
+    ['billing', `/${T}/billing`],
+  ] as const)(
+    '%s: available 5 + warning next_may_fail → nextMayFail as before, no publicNumbers call',
+    async (_, path) => {
+      api.billingBalance.mockResolvedValue({ ...BALANCE, balance: 5, available: 5 })
+      api.billingOutlook.mockResolvedValue(outlook({ reviews_left: 0, warning: 'next_may_fail' }))
+      renderAt(path)
+      expect(await screen.findByText(NEXT)).toBeInTheDocument()
+      expect(api.publicNumbers).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    ['home', `/${T}/home`],
+    ['billing', `/${T}/billing`],
+  ] as const)(
+    '%s: paid_by author with available 0 → nothing new, no publicNumbers call',
+    async (_, path) => {
+      api.billingBalance.mockResolvedValue(ZERO_BALANCE)
+      api.billingOutlook.mockResolvedValue(outlook({ paid_by: 'author', reviews_left: null, warning: null }))
+      renderAt(path)
+      await settle()
+      expect(api.publicNumbers).not.toHaveBeenCalled()
+      expect(screen.queryByText(ZERO_PRICED_UK)).toBeNull()
+      expect(screen.queryByText(ZERO_PLAIN_UK)).toBeNull()
+    },
+  )
 })

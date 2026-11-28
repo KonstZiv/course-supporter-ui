@@ -6,7 +6,11 @@ import { portalApi, PortalApiError } from '../api/portalClient'
 import { PortalHeader } from '../components/PortalHeader'
 import { RecoveryEmailSection } from '../components/RecoveryEmailSection'
 import type { PortalBillingOutlook, PortalCourseListItem } from '../types'
-import { useAvailableUnits, useStudentOutlook } from '../hooks/useStudentOutlook'
+import {
+  useAvailableUnits,
+  useStudentOutlook,
+  useZeroUnitsNumbers,
+} from '../hooks/useStudentOutlook'
 import { UnitsReminders } from '../components/billing/UnitsReminders'
 import { SITE_TEXT_LINK_CLASS } from '../../components/site/siteLinks'
 import { availableLine } from '../unitsTexts'
@@ -26,6 +30,9 @@ function UnitsOutlook({
   outlook: PortalBillingOutlook | null
 }) {
   const available = useAvailableUnits()
+  const eligible =
+    outlook?.paid_by === 'self' && outlook.charging_enabled && available === 0
+  const publicNumbers = useZeroUnitsNumbers(eligible)
   const language = useLanguage()
   const t = useT()
   if (outlook?.paid_by !== 'self' || !outlook.charging_enabled) return null
@@ -34,6 +41,8 @@ function UnitsOutlook({
     <div className="mt-4">
       <UnitsReminders
         outlook={outlook}
+        available={available}
+        publicNumbers={publicNumbers}
         lead={
           available === null ? null : availableLine(language, available, outlook.reviews_left)
         }

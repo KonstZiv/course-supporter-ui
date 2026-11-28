@@ -727,3 +727,34 @@ describe('portalApi.estimateTask (G-33 response_language)', () => {
     expect(fd2.has('response_language')).toBe(false)
   })
 })
+
+describe('portalApi.publicNumbers', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    usePortalSession.getState().setSession({
+      token: 'jwt',
+      tenantId: 't',
+      studentId: 's',
+      displayName: null,
+    })
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('GETs /api/v1/public/numbers without a student token and without triggering 401 redirect', async () => {
+    const payload = { contract_version: 1, packages: [], review_cost: { homework: { status: 'insufficient_data', actual: null, smallest_package_reviews: null } } }
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(payload),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const res = await portalApi.publicNumbers()
+    expect(res).toEqual(payload)
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit | undefined]
+    expect(url).toContain('/api/v1/public/numbers')
+    expect(init?.headers).toBeUndefined()
+  })
+})
